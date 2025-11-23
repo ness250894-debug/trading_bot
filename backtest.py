@@ -31,6 +31,7 @@ class Backtester:
         self.position = 0.0
         self.entry_price = 0.0
         self.trades = []
+        self.error = None
 
     def _load_strategy(self, name):
         if name == 'mean_reversion': return MeanReversion()
@@ -57,7 +58,12 @@ class Backtester:
         while True:
             # Fetch batch
             # Limit is 1000 for ByBit
-            batch_df = self.client.fetch_ohlcv(self.symbol, self.timeframe, limit=1000, since=current_time)
+            try:
+                batch_df = self.client.fetch_ohlcv(self.symbol, self.timeframe, limit=1000, since=current_time)
+            except Exception as e:
+                self.error = str(e)
+                logger.error(f"Failed to fetch data: {e}")
+                break
             
             if batch_df is None or batch_df.empty:
                 break
@@ -90,6 +96,8 @@ class Backtester:
             self.df = self.df.drop_duplicates(subset=['timestamp']).sort_values(by='timestamp').reset_index(drop=True)
             logger.info(f"Loaded {len(self.df)} candles total.")
         else:
+            if not self.error:
+                self.error = "No data found for the specified parameters."
             logger.error("Failed to load data.")
 
     def run(self):

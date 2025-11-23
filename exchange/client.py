@@ -96,6 +96,7 @@ class ExchangeClient:
 
     def fetch_ohlcv(self, symbol, timeframe, limit=100, since=None):
         """Fetches OHLCV data and returns a DataFrame."""
+        last_error = None
         for attempt in range(3):
             try:
                 if self.demo:
@@ -141,12 +142,16 @@ class ExchangeClient:
                         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
                         return df
                     else:
-                        # Log error but truncate result if it's too long (to avoid spamming logs with data if retCode is weird)
+                        # Log error but truncate result if it's too long
                         log_response = response.copy()
                         if 'result' in log_response:
                             log_response['result'] = '...truncated...'
-                        self.logger.error(f"ByBit API Error: {log_response}")
-                        return None
+                        error_msg = f"ByBit API Error: {log_response}"
+                        self.logger.error(error_msg)
+                        last_error = Exception(error_msg)
+                        # Don't retry on API logic errors (like invalid symbol), unless it's rate limit (which is usually handled by ccxt but here we are manual)
+                        # But retCode != 0 could be anything. Let's assume it's fatal for now unless we know otherwise.
+                        raise last_error
                 else:
                     ohlcv = self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit, since=since)
                     df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
@@ -155,16 +160,26 @@ class ExchangeClient:
                     
             except (ccxt.NetworkError, ccxt.RequestTimeout) as e:
                 self.logger.warning(f"Network error fetching OHLCV (Attempt {attempt+1}/3): {e}")
+                last_error = e
                 import time
                 time.sleep(2 * (attempt + 1)) # Exponential backoff
             except ccxt.RateLimitExceeded as e:
                 self.logger.warning(f"Rate limit exceeded fetching OHLCV: {e}")
+                last_error = e
                 import time
                 time.sleep(10) # Wait longer for rate limit
             except Exception as e:
                 self.logger.error(f"Error fetching OHLCV: {e}")
-                return None
-        return None
+                last_error = e
+                # If it's the API error we raised above, we might want to stop retrying if we decide so.
+                # For now, let's just continue to next attempt if any (though usually logic errors shouldn't be retried)
+                if "ByBit API Error" in str(e):
+                     break # Don't retry logic errors
+        
+        # If we get here, we failed
+        if last_error:
+            raise last_error
+        raise Exception("Failed to fetch OHLCV: Unknown error")
 
     def fetch_balance(self):
         """Fetches account balance."""

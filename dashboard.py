@@ -229,7 +229,7 @@ if st.sidebar.button("Run Backtest"):
             else:
                 st.info("No trades executed.")
         else:
-            st.error("No data found.")
+            st.error(f"No data found. Error: {bt.error}")
 
 # --- Optimization Mode ---
 st.sidebar.markdown("---")
@@ -267,6 +267,6 @@ if st.sidebar.checkbox("Enable Optimization Mode"):
                 best = results.iloc[0]
                 st.info(f"🏆 Best Params: {best['params']} | Return: {best['return']:.2f}%")
             else:
-                st.error("Could not fetch data for optimization.")
+                st.error(f"Could not fetch data for optimization. Error: {bt_temp.error}")
 else:
     st.info("Adjust parameters and click 'Run Backtest' to start.")
