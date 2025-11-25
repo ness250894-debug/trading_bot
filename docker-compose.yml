@@ -10,5 +10,5 @@ services:
       - .env
     restart: always
     volumes:
-      - ./backend/app/config.py:/app/backend/app/config.py # Persist config changes
+      - ./backend/app/core/config.py:/app/backend/app/core/config.py # Persist config changes
       - ./trading_bot.log:/app/trading_bot.log # Persist logs
