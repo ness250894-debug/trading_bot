@@ -15,17 +15,17 @@ const Tooltip = ({ content }) => (
 
 const SliderInput = ({ label, value, min, max, step, onChange, description }) => {
     return (
-        <div className="mb-6 group">
-            <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium text-foreground flex items-center gap-2 group-hover:text-primary transition-colors">
+        <div className="mb-3 group">
+            <div className="flex justify-between items-center mb-1">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1 group-hover:text-primary transition-colors">
                     {label}
                     {description && <Tooltip content={description} />}
                 </label>
-                <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
+                <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
                     {value}
                 </span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
                 <input
                     type="range"
                     min={min}
@@ -33,7 +33,7 @@ const SliderInput = ({ label, value, min, max, step, onChange, description }) =>
                     step={step}
                     value={value}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all"
+                    className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all"
                 />
                 <input
                     type="number"
@@ -42,7 +42,7 @@ const SliderInput = ({ label, value, min, max, step, onChange, description }) =>
                     step={step}
                     value={value}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    className="w-20 bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-right focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                    className="w-16 bg-black/20 border border-white/10 rounded-md px-2 py-1 text-xs text-right focus:ring-1 focus:ring-primary/50 outline-none transition-all"
                 />
             </div>
         </div>
@@ -264,10 +264,10 @@ export default function Optimization() {
             </div>
 
             {/* Configuration Panel - Horizontal Layout */}
-            <div className="glass p-6 rounded-2xl">
-                <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                    <h3 className="font-semibold flex items-center gap-2 text-lg text-foreground">
-                        <Settings size={20} className="text-primary" />
+            <div className="glass p-4 rounded-2xl">
+                <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-3">
+                    <h3 className="font-semibold flex items-center gap-2 text-base text-foreground">
+                        <Settings size={18} className="text-primary" />
                         Configuration
                     </h3>
                     <div className="flex items-center gap-4">
@@ -297,13 +297,13 @@ export default function Optimization() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {Object.entries(ranges).map(([param, range]) => {
                         const limits = paramLimits[param] || { min: 0, max: 100, step: 1 };
                         return (
-                            <div key={param} className="p-4 bg-white/5 rounded-xl border border-white/5">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className="text-sm font-bold text-foreground capitalize">
+                            <div key={param} className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-bold text-foreground capitalize">
                                         {param.replace(/_/g, ' ')}
                                     </span>
                                     <Tooltip content={parameterInfo[param]} />
@@ -328,10 +328,10 @@ export default function Optimization() {
                                 />
 
                                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-                                    <label className="text-xs text-muted-foreground">Step</label>
+                                    <label className="text-[10px] text-muted-foreground">Step</label>
                                     <input
                                         type="number"
-                                        className="w-16 bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-right"
+                                        className="w-12 bg-black/20 border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-right"
                                         value={range.step}
                                         min={limits.step}
                                         step={limits.step}
@@ -347,15 +347,15 @@ export default function Optimization() {
                     <button
                         onClick={runOptimization}
                         disabled={loading}
-                        className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed"
+                        className="flex-1 bg-primary hover:bg-primary/90 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
                     >
                         {loading ? (
                             <span className="animate-pulse flex items-center gap-2">
-                                <Activity className="animate-spin" size={18} /> Optimizing...
+                                <Activity className="animate-spin" size={16} /> Optimizing...
                             </span>
                         ) : (
                             <>
-                                <Play size={18} fill="currentColor" /> Run Optimization
+                                <Play size={16} fill="currentColor" /> Run Optimization
                             </>
                         )}
                     </button>
