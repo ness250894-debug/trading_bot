@@ -11,4 +11,4 @@ services:
     restart: always
     volumes:
       - ./backend/app/core/config.py:/app/backend/app/core/config.py # Persist config changes
-      - ./trading_bot.log:/app/trading_bot.log # Persist logs
+      - ./logs:/app/logs # Persist logs

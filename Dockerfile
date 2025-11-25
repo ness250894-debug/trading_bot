@@ -10,6 +10,7 @@ RUN npm run build
 FROM python:3.11-slim
 
 WORKDIR /app
+RUN mkdir -p logs
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
