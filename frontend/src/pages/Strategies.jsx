@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Save, RefreshCw, AlertTriangle, CheckCircle, Power } from 'lucide-react';
+import { Save, RefreshCw, AlertTriangle, CheckCircle, Power, TrendingUp } from 'lucide-react';
 
 const STRATEGY_OPTIONS = [
     { value: 'mean_reversion', label: 'Mean Reversion' },
@@ -19,12 +19,20 @@ export default function Strategies() {
     const [restarting, setRestarting] = useState(false);
     const [message, setMessage] = useState(null);
 
+    const [suggestion, setSuggestion] = useState(null);
+
     const fetchConfig = async () => {
         setLoading(true);
         try {
             const response = await axios.get('/api/status');
             setConfig(response.data.config);
             setMessage(null);
+
+            // Check for suggestion after config is loaded
+            const savedSuggestion = localStorage.getItem('suggested_strategy_params');
+            if (savedSuggestion) {
+                setSuggestion(JSON.parse(savedSuggestion));
+            }
         } catch (err) {
             setMessage({ type: 'error', text: 'Failed to load configuration.' });
         } finally {
@@ -41,6 +49,25 @@ export default function Strategies() {
             ...prev,
             [key]: value
         }));
+    };
+
+    const applySuggestion = () => {
+        if (!suggestion || !config) return;
+
+        setConfig(prev => ({
+            ...prev,
+            strategy: suggestion.strategy,
+            ...suggestion.params
+        }));
+
+        localStorage.removeItem('suggested_strategy_params');
+        setSuggestion(null);
+        setMessage({ type: 'success', text: 'Applied suggested parameters! Click Update to save.' });
+    };
+
+    const dismissSuggestion = () => {
+        localStorage.removeItem('suggested_strategy_params');
+        setSuggestion(null);
     };
 
     const handleSave = async () => {
@@ -130,6 +157,36 @@ export default function Strategies() {
                     <RefreshCw size={20} />
                 </button>
             </div>
+
+            {suggestion && (
+                <div className="mb-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500 rounded-full text-white">
+                            <TrendingUp size={16} />
+                        </div>
+                        <div>
+                            <h4 className="font-semibold text-blue-500">Optimization Result Found</h4>
+                            <p className="text-sm text-muted-foreground">
+                                Apply best parameters for <span className="font-medium text-foreground">{suggestion.strategy}</span>?
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={dismissSuggestion}
+                            className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            Dismiss
+                        </button>
+                        <button
+                            onClick={applySuggestion}
+                            className="px-4 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-md font-medium transition-colors"
+                        >
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {message && (
                 <div className={`mb-6 p-4 rounded-lg flex items-center gap-2 ${message.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'}`}>

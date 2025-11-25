@@ -64,6 +64,8 @@ const parameterInfo = {
     bb_length: "The number of periods used for the Bollinger Bands moving average.",
     bb_std: "Standard Deviations for the bands. Higher values make the bands wider, requiring more extreme price moves to trigger signals.",
     rsi_length: "The lookback period for RSI calculation. Standard is 14.",
+    rsi_buy: "The RSI level considered 'oversold'. Prices below this trigger a buy signal.",
+    rsi_sell: "The RSI level considered 'overbought'. Prices above this trigger a sell signal.",
     period: "The lookback period for the indicator.",
     buy_threshold: "The RSI level considered 'oversold'. Prices below this trigger a buy signal.",
     sell_threshold: "The RSI level considered 'overbought'. Prices above this trigger a sell signal.",
@@ -78,6 +80,8 @@ const paramLimits = {
     bb_length: { min: 5, max: 50, step: 1 },
     bb_std: { min: 0.5, max: 4.0, step: 0.1 },
     rsi_length: { min: 2, max: 30, step: 1 },
+    rsi_buy: { min: 5, max: 45, step: 1 },
+    rsi_sell: { min: 55, max: 95, step: 1 },
     period: { min: 2, max: 50, step: 1 },
     buy_threshold: { min: 5, max: 45, step: 1 },
     sell_threshold: { min: 55, max: 95, step: 1 },
@@ -93,8 +97,8 @@ const presets = {
         { name: 'Wide Search', ranges: { short_window: { start: 2, end: 30, step: 2 }, long_window: { start: 20, end: 150, step: 10 } } }
     ],
     'Mean Reversion': [
-        { name: 'Standard', ranges: { bb_length: { start: 20, end: 20, step: 1 }, bb_std: { start: 2.0, end: 2.0, step: 0.1 }, rsi_length: { start: 14, end: 14, step: 1 } } },
-        { name: 'Volatile Market', ranges: { bb_length: { start: 10, end: 30, step: 5 }, bb_std: { start: 2.0, end: 3.0, step: 0.2 }, rsi_length: { start: 10, end: 20, step: 2 } } }
+        { name: 'Standard', ranges: { bb_length: { start: 20, end: 20, step: 1 }, bb_std: { start: 2.0, end: 2.0, step: 0.1 }, rsi_length: { start: 14, end: 14, step: 1 }, rsi_buy: { start: 30, end: 30, step: 1 }, rsi_sell: { start: 70, end: 70, step: 1 } } },
+        { name: 'Volatile Market', ranges: { bb_length: { start: 10, end: 30, step: 5 }, bb_std: { start: 2.0, end: 3.0, step: 0.2 }, rsi_length: { start: 10, end: 20, step: 2 }, rsi_buy: { start: 20, end: 40, step: 5 }, rsi_sell: { start: 60, end: 80, step: 5 } } }
     ],
     'RSI': [
         { name: 'Scalping', ranges: { period: { start: 5, end: 10, step: 1 }, buy_threshold: { start: 20, end: 30, step: 2 }, sell_threshold: { start: 70, end: 80, step: 2 } } },
@@ -219,6 +223,15 @@ export default function Optimization() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const applyToStrategy = (params) => {
+        const suggestion = {
+            strategy: strategy,
+            params: params
+        };
+        localStorage.setItem('suggested_strategy_params', JSON.stringify(suggestion));
+        window.location.href = '/strategies';
     };
 
     return (
@@ -380,12 +393,13 @@ export default function Optimization() {
                                         <th className="px-6 py-4 text-right">Return</th>
                                         <th className="px-6 py-4 text-right">Win Rate</th>
                                         <th className="px-6 py-4 text-right">Trades</th>
+                                        <th className="px-6 py-4 text-center">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
                                     {results.length === 0 ? (
                                         <tr>
-                                            <td colSpan="5" className="px-6 py-24 text-center">
+                                            <td colSpan="6" className="px-6 py-24 text-center">
                                                 <div className="flex flex-col items-center justify-center text-muted-foreground">
                                                     <Activity size={48} className="mb-4 opacity-20" />
                                                     <p className="text-lg font-medium">No results yet</p>
@@ -430,6 +444,14 @@ export default function Optimization() {
                                                 </td>
                                                 <td className="px-6 py-4 text-right text-muted-foreground font-mono">
                                                     {res.trades}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <button
+                                                        onClick={() => applyToStrategy(res.params)}
+                                                        className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md font-medium transition-colors"
+                                                    >
+                                                        Apply
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))
