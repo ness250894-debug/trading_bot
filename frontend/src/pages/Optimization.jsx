@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle } from 'lucide-react';
+import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders } from 'lucide-react';
 
 // --- Helper Components ---
 
 const Tooltip = ({ content }) => (
     <div className="group relative inline-block ml-2">
-        <Info size={14} className="text-muted-foreground hover:text-primary cursor-help" />
-        <div className="invisible group-hover:visible absolute z-10 w-64 p-2 mt-2 text-xs text-popover-foreground bg-popover rounded-md shadow-lg -left-28 border border-border">
+        <Info size={14} className="text-muted-foreground hover:text-primary cursor-help transition-colors" />
+        <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute z-50 w-64 p-3 mt-2 text-xs text-popover-foreground bg-popover/90 backdrop-blur-md rounded-xl shadow-xl -left-28 border border-white/10 pointer-events-none">
             {content}
         </div>
     </div>
@@ -15,17 +15,17 @@ const Tooltip = ({ content }) => (
 
 const SliderInput = ({ label, value, min, max, step, onChange, description }) => {
     return (
-        <div className="mb-4">
-            <div className="flex justify-between items-center mb-1">
-                <label className="text-sm font-medium text-foreground flex items-center">
+        <div className="mb-6 group">
+            <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2 group-hover:text-primary transition-colors">
                     {label}
                     {description && <Tooltip content={description} />}
                 </label>
-                <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded">
+                <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                     {value}
                 </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
                 <input
                     type="range"
                     min={min}
@@ -33,7 +33,7 @@ const SliderInput = ({ label, value, min, max, step, onChange, description }) =>
                     step={step}
                     value={value}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+                    className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all"
                 />
                 <input
                     type="number"
@@ -42,7 +42,7 @@ const SliderInput = ({ label, value, min, max, step, onChange, description }) =>
                     step={step}
                     value={value}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    className="w-16 bg-background border border-input rounded px-2 py-1 text-sm text-right focus:ring-1 focus:ring-primary outline-none"
+                    className="w-20 bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-right focus:ring-1 focus:ring-primary/50 outline-none transition-all"
                 />
             </div>
         </div>
@@ -118,7 +118,6 @@ export default function Optimization() {
         return saved ? JSON.parse(saved) : [];
     });
 
-    // Ranges state now holds { start, end, step }
     const [ranges, setRanges] = useState(() => {
         const saved = localStorage.getItem('optimization_ranges');
         return saved ? JSON.parse(saved) : {
@@ -133,8 +132,6 @@ export default function Optimization() {
         const newStrategy = e.target.value;
         setStrategy(newStrategy);
         setResults([]);
-
-        // Reset ranges based on strategy with sensible defaults
         if (presets[newStrategy] && presets[newStrategy].length > 0) {
             setRanges(presets[newStrategy][0].ranges);
         }
@@ -150,26 +147,19 @@ export default function Optimization() {
             let newValue = parseFloat(value);
             let newRange = { ...currentRange, [field]: newValue };
 
-            // Clamp values to prevent start > end
             if (field === 'start') {
                 if (newValue > currentRange.end) {
-                    // If start is dragged past end, push end or clamp start?
-                    // User requested "not moving other slider", so we clamp start to end.
                     newValue = Math.min(newValue, currentRange.end);
                     newRange.start = newValue;
                 }
             } else if (field === 'end') {
                 if (newValue < currentRange.start) {
-                    // If end is dragged below start, clamp end to start.
                     newValue = Math.max(newValue, currentRange.start);
                     newRange.end = newValue;
                 }
             }
 
-            return {
-                ...prev,
-                [param]: newRange
-            };
+            return { ...prev, [param]: newRange };
         });
     };
 
@@ -193,14 +183,11 @@ export default function Optimization() {
     const runOptimization = async () => {
         setLoading(true);
         try {
-            // Convert ranges to lists
             const param_ranges = {};
             for (const [key, range] of Object.entries(ranges)) {
                 const values = [];
                 let current = range.start;
-                // Safety check to prevent infinite loops if step is 0 or negative
                 const step = Math.max(range.step, 0.1);
-
                 while (current <= range.end) {
                     values.push(Number(current.toFixed(2)));
                     current += step;
@@ -235,11 +222,10 @@ export default function Optimization() {
     };
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div className="max-w-7xl mx-auto space-y-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold flex items-center gap-3 text-foreground">
-                        <Activity className="text-primary" />
+                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                         Strategy Optimization
                     </h2>
                     <p className="text-muted-foreground mt-1">
@@ -251,8 +237,8 @@ export default function Optimization() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Configuration Panel */}
                 <div className="lg:col-span-4 space-y-6">
-                    <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
-                        <h3 className="font-semibold mb-6 flex items-center gap-2 text-lg">
+                    <div className="glass p-6 rounded-2xl">
+                        <h3 className="font-semibold mb-6 flex items-center gap-2 text-lg text-foreground">
                             <Settings size={20} className="text-primary" />
                             Configuration
                         </h3>
@@ -264,7 +250,7 @@ export default function Optimization() {
                                     <Tooltip content={strategyInfo[strategy]} />
                                 </label>
                                 <select
-                                    className="w-full bg-background border border-input rounded-lg p-2.5 text-foreground focus:ring-2 focus:ring-primary outline-none transition-all"
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all"
                                     value={strategy}
                                     onChange={handleStrategyChange}
                                 >
@@ -286,7 +272,7 @@ export default function Optimization() {
                                             <button
                                                 key={idx}
                                                 onClick={() => applyPreset(preset)}
-                                                className="px-3 py-1.5 text-xs font-medium bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-md transition-colors border border-border/50"
+                                                className="px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-foreground rounded-lg transition-colors border border-white/5"
                                             >
                                                 {preset.name}
                                             </button>
@@ -295,13 +281,16 @@ export default function Optimization() {
                                 </div>
                             )}
 
-                            <div className="border-t border-border pt-6">
-                                <h4 className="text-sm font-semibold mb-4 text-primary uppercase tracking-wider">Parameter Ranges</h4>
+                            <div className="border-t border-white/10 pt-6">
+                                <h4 className="text-sm font-semibold mb-4 text-primary uppercase tracking-wider flex items-center gap-2">
+                                    <Sliders size={16} />
+                                    Parameter Ranges
+                                </h4>
                                 {Object.entries(ranges).map(([param, range]) => {
                                     const limits = paramLimits[param] || { min: 0, max: 100, step: 1 };
                                     return (
-                                        <div key={param} className="mb-6 p-4 bg-muted/30 rounded-lg border border-border/50">
-                                            <div className="flex items-center gap-2 mb-3">
+                                        <div key={param} className="mb-6 p-4 bg-white/5 rounded-xl border border-white/5">
+                                            <div className="flex items-center gap-2 mb-4">
                                                 <span className="text-sm font-bold text-foreground capitalize">
                                                     {param.replace(/_/g, ' ')}
                                                 </span>
@@ -320,17 +309,17 @@ export default function Optimization() {
                                             <SliderInput
                                                 label="End Value"
                                                 value={range.end}
-                                                min={limits.min} // Fixed min to prevent jumping
+                                                min={limits.min}
                                                 max={limits.max}
                                                 step={limits.step}
                                                 onChange={(val) => handleRangeChange(param, 'end', val)}
                                             />
 
-                                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-border/50">
+                                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
                                                 <label className="text-xs text-muted-foreground">Step Size</label>
                                                 <input
                                                     type="number"
-                                                    className="w-16 bg-background border border-input rounded px-2 py-1 text-xs text-right"
+                                                    className="w-16 bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-right"
                                                     value={range.step}
                                                     min={limits.step}
                                                     step={limits.step}
@@ -345,7 +334,7 @@ export default function Optimization() {
                             <button
                                 onClick={runOptimization}
                                 disabled={loading}
-                                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                                className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
                                 {loading ? (
                                     <span className="animate-pulse flex items-center gap-2">
@@ -363,20 +352,20 @@ export default function Optimization() {
 
                 {/* Results Panel */}
                 <div className="lg:col-span-8">
-                    <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden h-full flex flex-col">
-                        <div className="p-6 border-b border-border flex justify-between items-center bg-muted/10">
+                    <div className="glass rounded-2xl overflow-hidden h-full flex flex-col">
+                        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
                             <h3 className="font-semibold flex items-center gap-2 text-lg">
-                                <TrendingUp size={20} className="text-green-500" />
+                                <TrendingUp size={20} className="text-green-400" />
                                 Optimization Results
                             </h3>
                             <div className="flex items-center gap-4">
-                                <span className="text-sm text-muted-foreground bg-background px-3 py-1 rounded-full border border-border">
+                                <span className="text-sm text-muted-foreground bg-black/20 px-3 py-1 rounded-full border border-white/5">
                                     {results.length} combinations
                                 </span>
                                 {results.length > 0 && (
                                     <button
                                         onClick={clearResults}
-                                        className="text-xs text-destructive hover:text-destructive/80 font-medium px-3 py-1 hover:bg-destructive/10 rounded transition-colors"
+                                        className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors"
                                     >
                                         Clear
                                     </button>
@@ -386,7 +375,7 @@ export default function Optimization() {
 
                         <div className="overflow-x-auto flex-1">
                             <table className="w-full text-sm text-left">
-                                <thead className="bg-muted/50 text-muted-foreground uppercase text-xs font-medium">
+                                <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium">
                                     <tr>
                                         <th className="px-6 py-4">Rank</th>
                                         <th className="px-6 py-4">Parameters</th>
@@ -396,7 +385,7 @@ export default function Optimization() {
                                         <th className="px-6 py-4 text-center">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-border">
+                                <tbody className="divide-y divide-white/5">
                                     {results.length === 0 ? (
                                         <tr>
                                             <td colSpan="6" className="px-6 py-24 text-center">
@@ -411,10 +400,10 @@ export default function Optimization() {
                                         </tr>
                                     ) : (
                                         results.map((res, i) => (
-                                            <tr key={i} className="hover:bg-muted/30 transition-colors group">
+                                            <tr key={i} className="hover:bg-white/5 transition-colors group">
                                                 <td className="px-6 py-4 font-mono text-muted-foreground">
                                                     {i === 0 ? (
-                                                        <span className="flex items-center gap-1 text-yellow-500 font-bold">
+                                                        <span className="flex items-center gap-1 text-yellow-400 font-bold">
                                                             <CheckCircle size={14} /> #1
                                                         </span>
                                                     ) : `#${i + 1}`}
@@ -422,18 +411,18 @@ export default function Optimization() {
                                                 <td className="px-6 py-4">
                                                     <div className="flex flex-wrap gap-2">
                                                         {Object.entries(res.params).map(([k, v]) => (
-                                                            <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-secondary text-secondary-foreground border border-border/50">
+                                                            <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
                                                                 {k}: {v}
                                                             </span>
                                                         ))}
                                                     </div>
                                                 </td>
-                                                <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                                     {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
-                                                        <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                                        <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
                                                             <div
                                                                 className="h-full bg-primary"
                                                                 style={{ width: `${res.win_rate}%` }}
@@ -448,7 +437,7 @@ export default function Optimization() {
                                                 <td className="px-6 py-4 text-center">
                                                     <button
                                                         onClick={() => applyToStrategy(res.params)}
-                                                        className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md font-medium transition-colors"
+                                                        className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-primary/20"
                                                     >
                                                         Apply
                                                     </button>

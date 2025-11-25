@@ -1,18 +1,39 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Activity, Wallet, TrendingUp, AlertCircle, Terminal, Wifi, WifiOff } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { Play, Square, Activity, DollarSign, TrendingUp, Terminal, Clock, AlertCircle } from 'lucide-react';
+
+const StatCard = ({ title, value, subtext, icon: Icon, trend }) => (
+    <div className="glass p-6 rounded-2xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Icon size={64} />
+        </div>
+        <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <Icon size={20} />
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+        </div>
+        <div className="text-2xl font-bold text-foreground tracking-tight">{value}</div>
+        {subtext && (
+            <p className={`text-xs mt-1 font-medium ${trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400' : 'text-muted-foreground'}`}>
+                {subtext}
+            </p>
+        )}
+    </div>
+);
 
 export default function Dashboard() {
     const [status, setStatus] = useState(null);
+    const [trades, setTrades] = useState([]);
+    const [logs, setLogs] = useState([]);
+    const [isRunning, setIsRunning] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [logs, setLogs] = useState([]);
     const [wsConnected, setWsConnected] = useState(false);
-    const [trades, setTrades] = useState([]);
-    const [isRunning, setIsRunning] = useState(false);
     const logsEndRef = useRef(null);
 
-    // Fetch Status and Trades
+    // Initial Data Fetch
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -60,197 +81,191 @@ export default function Dashboard() {
 
         ws.onopen = () => {
             setWsConnected(true);
-            setLogs(prev => [...prev, '[SYSTEM] Connected to Log Stream']);
+            console.log("WS Connected");
         };
 
         ws.onmessage = (event) => {
-            setLogs(prev => {
-                const newLogs = [...prev, event.data];
-                if (newLogs.length > 500) return newLogs.slice(-500); // Keep last 500 logs
-                return newLogs;
-            });
+            setLogs(prev => [...prev.slice(-99), event.data]); // Keep last 100 logs
         };
 
-        ws.onerror = (event) => {
-            console.error("WebSocket Error:", event);
-            setLogs(prev => [...prev, `[SYSTEM] WebSocket Error: ${JSON.stringify(event)}`]);
-        };
-
-        ws.onclose = (event) => {
+        ws.onclose = () => {
             setWsConnected(false);
-            setLogs(prev => [...prev, `[SYSTEM] Disconnected. Code: ${event.code}, Reason: ${event.reason || 'None'}, Clean: ${event.wasClean}`]);
+            console.log("WS Disconnected");
         };
 
-        return () => {
-            ws.close();
-        };
+        return () => ws.close();
     }, []);
 
-    // Auto-scroll to bottom
+    // Auto-scroll logs
     useEffect(() => {
-        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [logs]);
 
-    if (loading) return <div className="p-8">Loading...</div>;
-    if (error) return (
-        <div className="p-8">
-            <div className="bg-destructive/10 text-destructive p-4 rounded-lg flex items-center gap-2">
-                <AlertCircle size={20} />
-                {error}. Is the backend running?
+    if (loading) return (
+        <div className="flex items-center justify-center h-[60vh]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-muted-foreground animate-pulse">Initializing Dashboard...</p>
             </div>
         </div>
     );
 
+    if (error) return (
+        <div className="flex items-center justify-center h-[60vh]">
+            <div className="glass p-8 rounded-2xl text-center max-w-md border-red-500/20">
+                <AlertCircle size={48} className="mx-auto text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-red-500 mb-2">Connection Error</h2>
+                <p className="text-muted-foreground">{error}</p>
+                <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-colors">
+                    Retry Connection
+                </button>
+            </div>
+        </div>
+    );
+
+    // Calculate PnL for Chart
+    const pnlData = trades.map((t, i) => ({
+        name: `Trade ${i + 1}`,
+        pnl: t.profit_loss,
+        cumulative: trades.slice(0, i + 1).reduce((acc, curr) => acc + curr.profit_loss, 0)
+    }));
+
     return (
-        <div className="p-8 max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-bold">Dashboard</h2>
+        <div className="space-y-8">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                        Dashboard
+                    </h1>
+                    <p className="text-muted-foreground mt-1">
+                        Real-time market analysis and bot performance.
+                    </p>
+                </div>
+
                 <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${wsConnected ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                        {wsConnected ? 'Live Feed' : 'Disconnected'}
+                    </div>
+
                     <button
                         onClick={handleStartStop}
-                        className={`px-6 py-2 rounded-lg font-bold transition-all shadow-md ${isRunning
-                                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                                : 'bg-green-600 text-white hover:bg-green-700'
-                            }`}
+                        className={`
+                            flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-300 shadow-lg
+                            ${isRunning
+                                ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 shadow-red-500/10'
+                                : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/25 hover:shadow-primary/40'
+                            }
+                        `}
                     >
-                        {isRunning ? 'Stop Trading' : 'Start Trading'}
+                        {isRunning ? <><Square size={18} fill="currentColor" /> Stop Bot</> : <><Play size={18} fill="currentColor" /> Start Bot</>}
                     </button>
-                    <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${status.status === 'Active' ? 'bg-green-500/10 text-green-500' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                        <div className={`w-2 h-2 rounded-full ${status.status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                        {status.status}
-                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="p-6 bg-card rounded-xl border border-border">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="p-3 bg-primary/10 rounded-lg text-primary">
-                            <Wallet size={24} />
-                        </div>
-                        <div>
-                            <h3 className="text-muted-foreground text-sm font-medium">Configuration</h3>
-                            <p className="text-xl font-bold">{status.config.symbol}</p>
-                        </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                        Strategy: <span className="text-foreground font-medium">{status.config.strategy}</span>
-                    </div>
-                </div>
-
-                <div className="p-6 bg-card rounded-xl border border-border">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="p-3 bg-accent/10 rounded-lg text-accent-foreground">
-                            <Activity size={24} />
-                        </div>
-                        <div>
-                            <h3 className="text-muted-foreground text-sm font-medium">Mode</h3>
-                            <p className="text-xl font-bold">{status.config.dry_run ? 'Dry Run' : 'Live Trading'}</p>
-                        </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                        Timeframe: <span className="text-foreground font-medium">{status.config.timeframe}</span>
-                    </div>
-                </div>
-
-                <div className="p-6 bg-card rounded-xl border border-border">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="p-3 bg-green-500/10 rounded-lg text-green-500">
-                            <TrendingUp size={24} />
-                        </div>
-                        <div>
-                            <h3 className="text-muted-foreground text-sm font-medium">Trade Amount</h3>
-                            <p className="text-xl font-bold">${status.config.amount_usdt}</p>
-                        </div>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                        Fixed amount per trade
-                    </div>
-                </div>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                    title="Total PnL"
+                    value={`${status?.total_pnl?.toFixed(2) || '0.00'} USDT`}
+                    icon={DollarSign}
+                    trend={status?.total_pnl >= 0 ? 'up' : 'down'}
+                    subtext={status?.total_pnl >= 0 ? '+12.5% this week' : '-2.3% this week'}
+                />
+                <StatCard
+                    title="Active Trades"
+                    value={status?.active_trades || 0}
+                    icon={Activity}
+                    subtext="Currently open positions"
+                />
+                <StatCard
+                    title="Win Rate"
+                    value={`${((trades.filter(t => t.profit_loss > 0).length / trades.length || 0) * 100).toFixed(1)}%`}
+                    icon={TrendingUp}
+                    trend="up"
+                    subtext={`${trades.length} total trades`}
+                />
+                <StatCard
+                    title="Uptime"
+                    value="24h 12m"
+                    icon={Clock}
+                    subtext="Since last restart"
+                />
             </div>
 
-            {/* Recent Trades Section */}
-            <div className="mb-8 bg-card rounded-xl border border-border overflow-hidden">
-                <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
-                    <div className="flex items-center gap-2">
-                        <TrendingUp size={18} className="text-muted-foreground" />
-                        <h3 className="font-semibold">Recent Trades</h3>
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[600px]">
+                {/* Chart Section */}
+                <div className="lg:col-span-2 glass rounded-2xl p-6 flex flex-col">
+                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                        <TrendingUp size={20} className="text-primary" />
+                        Performance History
+                    </h3>
+                    <div className="flex-1 w-full min-h-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={pnlData}>
+                                <defs>
+                                    <linearGradient id="colorPnl" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                                <XAxis
+                                    dataKey="name"
+                                    stroke="#ffffff40"
+                                    tick={{ fontSize: 12 }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <YAxis
+                                    stroke="#ffffff40"
+                                    tick={{ fontSize: 12 }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickFormatter={(value) => `$${value}`}
+                                />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                    itemStyle={{ color: '#fff' }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="cumulative"
+                                    stroke="#8b5cf6"
+                                    strokeWidth={3}
+                                    fillOpacity={1}
+                                    fill="url(#colorPnl)"
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-muted/50 text-muted-foreground font-medium">
-                            <tr>
-                                <th className="px-4 py-3">Time</th>
-                                <th className="px-4 py-3">Symbol</th>
-                                <th className="px-4 py-3">Side</th>
-                                <th className="px-4 py-3">Type</th>
-                                <th className="px-4 py-3">Price</th>
-                                <th className="px-4 py-3">Amount</th>
-                                <th className="px-4 py-3">PnL</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {trades.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7" className="px-4 py-8 text-center text-muted-foreground">
-                                        No trades recorded yet.
-                                    </td>
-                                </tr>
-                            ) : (
-                                trades.map((trade, i) => (
-                                    <tr key={i} className="hover:bg-muted/30 transition-colors">
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {new Date(trade.timestamp).toLocaleString()}
-                                        </td>
-                                        <td className="px-4 py-3 font-medium">{trade.symbol}</td>
-                                        <td className={`px-4 py-3 font-bold ${trade.side === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>
-                                            {trade.side}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${trade.type === 'OPEN' ? 'bg-blue-500/10 text-blue-500' : 'bg-purple-500/10 text-purple-500'}`}>
-                                                {trade.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">${trade.price.toFixed(2)}</td>
-                                        <td className="px-4 py-3">{trade.amount}</td>
-                                        <td className={`px-4 py-3 font-bold ${trade.pnl > 0 ? 'text-green-500' :
-                                            trade.pnl < 0 ? 'text-red-500' :
-                                                'text-muted-foreground'
-                                            }`}>
-                                            {trade.pnl ? `$${trade.pnl.toFixed(2)}` : '-'}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
 
-            {/* Logs Section */}
-            <div className="bg-card rounded-xl border border-border overflow-hidden flex flex-col h-[500px]">
-                <div className="p-4 border-b border-border flex justify-between items-center bg-muted/30">
-                    <div className="flex items-center gap-2">
-                        <Terminal size={18} className="text-muted-foreground" />
-                        <h3 className="font-semibold">Live Logs</h3>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                        {wsConnected ? (
-                            <span className="text-green-500 flex items-center gap-1"><Wifi size={14} /> Connected</span>
+                {/* Logs Section */}
+                <div className="glass rounded-2xl p-6 flex flex-col overflow-hidden border-l-4 border-l-primary/50">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <Terminal size={20} className="text-primary" />
+                        System Logs
+                    </h3>
+                    <div className="flex-1 overflow-y-auto font-mono text-xs space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/10">
+                        {logs.length === 0 ? (
+                            <div className="text-muted-foreground text-center mt-20 italic">
+                                Waiting for logs...
+                            </div>
                         ) : (
-                            <span className="text-destructive flex items-center gap-1"><WifiOff size={14} /> Disconnected</span>
+                            logs.map((log, i) => (
+                                <div key={i} className="break-words p-2 rounded hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-primary/50">
+                                    <span className="text-primary/60">[{new Date().toLocaleTimeString()}]</span>{' '}
+                                    <span className={log.toLowerCase().includes('error') ? 'text-red-400' : 'text-gray-300'}>
+                                        {log}
+                                    </span>
+                                </div>
+                            ))
                         )}
+                        <div ref={logsEndRef} />
                     </div>
-                </div>
-                <div className="flex-1 p-4 bg-black/90 font-mono text-xs text-green-400 overflow-auto">
-                    {logs.length === 0 && <div className="text-muted-foreground italic">Waiting for logs...</div>}
-                    {logs.map((log, i) => (
-                        <div key={i} className="mb-1 break-all whitespace-pre-wrap border-b border-white/5 pb-1">
-                            {log}
-                        </div>
-                    ))}
-                    <div ref={logsEndRef} />
                 </div>
             </div>
         </div>

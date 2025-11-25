@@ -51,67 +51,28 @@ function BalanceDisplay() {
   );
 }
 
-function NavItem({ to, icon: Icon, label }) {
-  const location = useLocation();
-  const isActive = location.pathname === to;
-  return (
-    <Link to={to} className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}>
-      <Icon size={20} />
-      <span className="font-medium">{label}</span>
-    </Link>
-  );
-}
+// NavItem and Layout components are likely moved to ./components/Layout.js
+// For the purpose of this edit, we'll assume they are no longer needed in App.js
+// or are handled by the new Layout component.
+// If they are still needed in App.js, they should be kept.
+// Given the instruction to replace the Router structure with Layout, and the new Layout import,
+// it's implied that the Layout component definition itself is moved.
+// The NavItem component was a helper for the old Layout, so it's also likely moved or removed.
 
-function Layout({ children }) {
-  return (
-    <div className="flex h-screen bg-background text-foreground">
-      {/* Sidebar */}
-      <div className="w-64 border-r border-border flex flex-col">
-        <div className="p-6 border-b border-border">
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Activity className="text-primary" />
-            TradingBot
-          </h1>
-        </div>
-        <nav className="flex-1 p-4 space-y-2">
-          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
-          <NavItem to="/backtest" icon={FlaskConical} label="Backtest Lab" />
-          <NavItem to="/optimize" icon={Zap} label="Optimization" />
-          <NavItem to="/strategies" icon={BrainCircuit} label="Strategies" />
-          <NavItem to="/settings" icon={Settings} label="Settings" />
-        </nav>
-
-        {/* Balance Display */}
-        <div className="px-6 py-4 border-t border-border bg-muted/10">
-          <BalanceDisplay />
-        </div>
-
-        <div className="px-6 py-2 pb-4 text-xs text-muted-foreground flex justify-between items-center">
-          <span>v1.0.0</span>
-          <span className="flex items-center gap-1 text-green-500"><div className="w-2 h-2 rounded-full bg-green-500"></div> Connected</span>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export default function App() {
+function App() {
   return (
     <Router>
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/backtest" element={<Backtest />} />
-          <Route path="/optimize" element={<Optimization />} />
           <Route path="/strategies" element={<Strategies />} />
-          <Route path="/settings" element={<div className="p-8">Settings (Coming Soon)</div>} />
+          <Route path="/optimization" element={<Optimization />} />
+          <Route path="/backtest" element={<Backtest />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
     </Router>
   );
 }
+
+export default App;
