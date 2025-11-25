@@ -202,7 +202,7 @@ export default function Optimization() {
         }
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/api/ws/optimize`;
+        const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/optimize`;
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
