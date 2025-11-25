@@ -169,7 +169,8 @@ async def websocket_optimize(websocket: WebSocket):
         bt.fetch_data()
         
         if bt.df is None or bt.df.empty:
-             await websocket.send_json({"error": "No data found for the specified parameters."})
+             error_msg = bt.error if bt.error else "No data found for the specified parameters."
+             await websocket.send_json({"error": error_msg})
              return
 
         # Progress Callback

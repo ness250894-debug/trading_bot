@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Play, Square, Activity, DollarSign, TrendingUp, Terminal, Clock, AlertCircle } from 'lucide-react';
+import TradeHistory from '../components/TradeHistory';
 
 const StatCard = ({ title, value, subtext, icon: Icon, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group">
@@ -267,6 +268,11 @@ export default function Dashboard() {
                         <div ref={logsEndRef} />
                     </div>
                 </div>
+            </div>
+
+            {/* Trade History Section */}
+            <div className="h-[500px]">
+                <TradeHistory trades={trades} />
             </div>
         </div>
     );

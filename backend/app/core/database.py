@@ -67,6 +67,9 @@ class DuckDBHandler:
             logger.error(f"Error fetching leaderboard: {e}")
             return pd.DataFrame()
 
+    def clear_leaderboard(self):
+        """Clears all backtest results."""
+        try:
             self.conn.execute("DELETE FROM backtest_results")
             logger.info("Leaderboard cleared.")
         except Exception as e:

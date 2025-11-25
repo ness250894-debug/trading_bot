@@ -52,21 +52,6 @@ def main():
         strategy = MACDStrategy()
     elif strategy_name == 'rsi':
         from .strategies.rsi import RSIStrategy
-        strategy = RSIStrategy()
-    else:
-        logger.warning(f"Unknown strategy '{strategy_name}'. Defaulting to Mean Reversion.")
-        from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion()
-
-    # Initialize Trend Filter
-    from .strategies.filters import TrendFilter
-    trend_filter = TrendFilter(client, config.SYMBOL, config.HIGHER_TIMEFRAME)
-
-    # Initialize Database for Trade Logging
-    from .database import DuckDBHandler
-    db = DuckDBHandler()
-
-    logger.info("Bot initialized. Waiting for start signal...")
 
     while True:
         try:
@@ -89,17 +74,20 @@ def main():
                 current_price = df.iloc[-1]['close']
                 
                 # --- Multi-Timeframe Analysis (Trend Filter) ---
-                trend, price_high, ema_200 = trend_filter.check_trend()
-                logger.info(f"Trend ({config.HIGHER_TIMEFRAME}): {trend} | Price: {price_high} | EMA 200: {ema_200:.2f}")
-                # -----------------------------------------------
-
-                # Apply Filter
-                if signal == 'BUY' and trend == 'DOWNTREND':
-                    logger.info("Signal is BUY but Trend is DOWNTREND. Filtering signal.")
-                    signal = 'HOLD'
-                elif signal == 'SELL' and trend == 'UPTREND':
-                    logger.info("Signal is SELL but Trend is UPTREND. Filtering signal.")
-                    signal = 'HOLD'
+                if trend_filter:
+                    try:
+                        trend, price_high, ema_200 = trend_filter.check_trend()
+                        logger.info(f"Trend ({config.HIGHER_TIMEFRAME}): {trend} | Price: {price_high} | EMA 200: {ema_200:.2f}")
+                        
+                        # Apply Filter
+                        if signal == 'BUY' and trend == 'DOWNTREND':
+                            logger.info("Signal is BUY but Trend is DOWNTREND. Filtering signal.")
+                            signal = 'HOLD'
+                        elif signal == 'SELL' and trend == 'UPTREND':
+                            logger.info("Signal is SELL but Trend is UPTREND. Filtering signal.")
+                            signal = 'HOLD'
+                    except Exception as e:
+                        logger.error(f"TrendFilter check failed: {e}")
                 # -----------------------------------------------
                 
                 # Log Indicators
@@ -117,7 +105,7 @@ def main():
                 current_pos_size = position.get('size', 0.0)
                 current_pos_side = position.get('side', 'None') # 'Buy', 'Sell', 'None'
                 
-            break
+                # break # REMOVED: This break was killing the bot after one loop!
         except Exception as e:
             logger.error(f"An error occurred: {e}")
             # Add a small delay to avoid rapid error loops

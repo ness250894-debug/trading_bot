@@ -17,8 +17,10 @@ class ExchangeClient:
                 'recvWindow': 10000,
             }
         })
+        
         if demo:
-            # Use ByBit Demo Trading (UTA Demo) endpoints
+            self.exchange.set_sandbox_mode(True)
+            # Force Bybit UTA Demo URLs (ccxt uses testnet by default)
             self.exchange.urls['api']['public'] = 'https://api-demo.bybit.com'
             self.exchange.urls['api']['private'] = 'https://api-demo.bybit.com'
         
@@ -42,8 +44,6 @@ class ExchangeClient:
             self.exchange.load_markets()
         except Exception as e:
              self.logger.error(f"Failed to load markets: {e}")
-             if self.demo:
-                 self._load_demo_precisions()
 
     def _load_demo_precisions(self):
         """Manually load precisions for Demo if load_markets fails."""
