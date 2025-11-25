@@ -13,7 +13,7 @@ function BalanceDisplay() {
 
   const fetchBalance = async () => {
     try {
-      const res = await axios.get('http://localhost:8000/api/balance');
+      const res = await axios.get('/api/balance');
       setBalance(res.data);
     } catch (err) {
       console.error("Failed to fetch balance", err);
