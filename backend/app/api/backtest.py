@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, WebSocket
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Dict, Any, List, Optional
 import pandas as pd
 import logging
@@ -19,6 +19,20 @@ class BacktestRequest(BaseModel):
     days: int = 5
     strategy: str
     params: Dict[str, Any] = {}
+    
+    @validator('days')
+    def days_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('days must be positive')
+        if v > 30:
+            raise ValueError('days cannot exceed 30')
+        return v
+    
+    @validator('symbol')
+    def symbol_must_be_valid(cls, v):
+        if '/' not in v:
+            raise ValueError('symbol must contain /')
+        return v
 
 @router.post("/backtest")
 async def run_backtest(request: BacktestRequest):
@@ -88,6 +102,20 @@ class OptimizeRequest(BaseModel):
     days: int = 5
     strategy: str
     param_ranges: Dict[str, List[Any]]
+    
+    @validator('days')
+    def days_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('days must be positive')
+        if v > 30:
+            raise ValueError('days cannot exceed 30')
+        return v
+    
+    @validator('symbol')
+    def symbol_must_be_valid(cls, v):
+        if '/' not in v:
+            raise ValueError('symbol must contain /')
+        return v
 
 @router.post("/optimize")
 async def run_optimization(request: OptimizeRequest):

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import Dict, Any
 import logging
 import os
@@ -35,6 +35,20 @@ class ConfigUpdate(BaseModel):
     amount_usdt: float
     strategy: str
     dry_run: bool
+    
+    @validator('amount_usdt')
+    def amount_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('amount_usdt must be positive')
+        if v > 10000:
+            raise ValueError('amount_usdt cannot exceed 10000')
+        return v
+    
+    @validator('symbol')
+    def symbol_must_be_valid(cls, v):
+        if '/' not in v:
+            raise ValueError('symbol must contain /')
+        return v
 
 @router.post("/start")
 async def start_bot():

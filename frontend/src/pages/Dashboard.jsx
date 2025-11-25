@@ -46,7 +46,9 @@ export default function Dashboard() {
                 setIsRunning(statusRes.data.is_running);
                 setTrades(tradesRes.data);
             } catch (err) {
-                setError('Failed to connect to bot');
+                const errorMsg = err.response?.data?.detail || 'Failed to connect to bot';
+                setError(errorMsg);
+                console.error('Dashboard data fetch error:', err);
             } finally {
                 setLoading(false);
             }
@@ -69,8 +71,9 @@ export default function Dashboard() {
             setStatus(res.data);
             setIsRunning(res.data.is_running);
         } catch (err) {
-            console.error("Failed to toggle bot:", err);
-            alert("Failed to toggle bot status");
+            const errorMsg = err.response?.data?.detail || `Failed to ${isRunning ? 'stop' : 'start'} bot`;
+            setError(errorMsg);
+            console.error('Start/Stop error:', err);
         }
     };
 

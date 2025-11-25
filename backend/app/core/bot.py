@@ -52,6 +52,25 @@ def main():
         strategy = MACDStrategy()
     elif strategy_name == 'rsi':
         from .strategies.rsi import RSIStrategy
+        strategy = RSIStrategy()
+    else:
+        logger.warning(f"Unknown strategy '{strategy_name}'. Defaulting to Mean Reversion.")
+        from .strategies.mean_reversion import MeanReversion
+        strategy = MeanReversion()
+
+    # Initialize Trend Filter with error handling
+    try:
+        from .strategies.filters import TrendFilter
+        trend_filter = TrendFilter(client, config.SYMBOL, config.HIGHER_TIMEFRAME)
+    except Exception as e:
+        logger.error(f"Failed to initialize TrendFilter: {e}")
+        trend_filter = None
+
+    # Initialize Database for Trade Logging
+    from .database import DuckDBHandler
+    db = DuckDBHandler()
+
+    logger.info("Bot initialized. Waiting for start signal...")
 
     while True:
         try:
@@ -104,6 +123,92 @@ def main():
                 position = client.fetch_position(config.SYMBOL)
                 current_pos_size = position.get('size', 0.0)
                 current_pos_side = position.get('side', 'None') # 'Buy', 'Sell', 'None'
+                
+                logger.info(f"Current Position: {current_pos_side} | Size: {current_pos_size}")
+                
+                # Execute Trading Logic
+                if signal == 'BUY' and current_pos_side != 'Buy':
+                    # Close short if exists
+                    if current_pos_side == 'Sell':
+                        logger.info("Closing SHORT position before opening LONG")
+                        client.close_position(config.SYMBOL)
+                        # Log trade to database
+                        db.save_trade({
+                            'symbol': config.SYMBOL,
+                            'side': 'CLOSE_SHORT',
+                            'price': current_price,
+                            'amount': current_pos_size,
+                            'type': 'CLOSE',
+                            'pnl': 0.0,  # PnL calculated by exchange
+                            'strategy': strategy_name
+                        })
+                    
+                    # Open new LONG position
+                    logger.info(f"Opening LONG position | Signal Score: {score}")
+                    try:
+                        order = client.create_order(
+                            symbol=config.SYMBOL,
+                            side='Buy',
+                            amount=config.AMOUNT_USDT / current_price,
+                            take_profit_pct=config.TAKE_PROFIT_PCT,
+                            stop_loss_pct=config.STOP_LOSS_PCT
+                        )
+                        logger.info(f"LONG order placed: {order}")
+                        # Log trade to database
+                        db.save_trade({
+                            'symbol': config.SYMBOL,
+                            'side': 'Buy',
+                            'price': current_price,
+                            'amount': config.AMOUNT_USDT / current_price,
+                            'type': 'OPEN',
+                            'pnl': None,
+                            'strategy': strategy_name
+                        })
+                    except Exception as e:
+                        logger.error(f"Failed to open LONG: {e}")
+                
+                elif signal == 'SELL' and current_pos_side != 'Sell':
+                    # Close long if exists
+                    if current_pos_side == 'Buy':
+                        logger.info("Closing LONG position before opening SHORT")
+                        client.close_position(config.SYMBOL)
+                        # Log trade to database
+                        db.save_trade({
+                            'symbol': config.SYMBOL,
+                            'side': 'CLOSE_LONG',
+                            'price': current_price,
+                            'amount': current_pos_size,
+                            'type': 'CLOSE',
+                            'pnl': 0.0,  # PnL calculated by exchange
+                            'strategy': strategy_name
+                        })
+                    
+                    # Open new SHORT position
+                    logger.info(f"Opening SHORT position | Signal Score: {score}")
+                    try:
+                        order = client.create_order(
+                            symbol=config.SYMBOL,
+                            side='Sell',
+                            amount=config.AMOUNT_USDT / current_price,
+                            take_profit_pct=config.TAKE_PROFIT_PCT,
+                            stop_loss_pct=config.STOP_LOSS_PCT
+                        )
+                        logger.info(f"SHORT order placed: {order}")
+                        # Log trade to database
+                        db.save_trade({
+                            'symbol': config.SYMBOL,
+                            'side': 'Sell',
+                            'price': current_price,
+                            'amount': config.AMOUNT_USDT / current_price,
+                            'type': 'OPEN',
+                            'pnl': None,
+                            'strategy': strategy_name
+                        })
+                    except Exception as e:
+                        logger.error(f"Failed to open SHORT: {e}")
+                
+            # Sleep to prevent API spam (configurable delay)
+            time.sleep(config.LOOP_DELAY_SECONDS)
                 
                 # break # REMOVED: This break was killing the bot after one loop!
         except Exception as e:

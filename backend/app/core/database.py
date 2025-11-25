@@ -10,7 +10,8 @@ logger = logging.getLogger("Database")
 class DuckDBHandler:
     def __init__(self, db_file="trading_bot.duckdb"):
         self.db_file = db_file
-        self.conn = duckdb.connect(db_file)
+        # Use read-write mode explicitly to avoid conflicts
+        self.conn = duckdb.connect(db_file, read_only=False)
         self.create_tables()
 
     def create_tables(self):
