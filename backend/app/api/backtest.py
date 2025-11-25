@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, WebSocket
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import pandas as pd
@@ -116,7 +116,7 @@ async def run_optimization(request: OptimizeRequest):
              
         # Run Optimization
         optimizer = Optimizer(request.symbol, request.timeframe, strategy_class, bt.df)
-        results_df = optimizer.optimize(request.param_ranges)
+        results_df = await optimizer.optimize(request.param_ranges)
         
         # Save Successful Runs to DB
         from ..core.database import DuckDBHandler
@@ -141,3 +141,70 @@ async def run_optimization(request: OptimizeRequest):
     except Exception as e:
         logger.error(f"Optimization error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.websocket("/ws/optimize")
+async def websocket_optimize(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        data = await websocket.receive_json()
+        request = OptimizeRequest(**data)
+        
+        # Initialize Strategy Class
+        strategy_class = None
+        if request.strategy == "Mean Reversion":
+            strategy_class = MeanReversion
+        elif request.strategy == "SMA Crossover":
+            strategy_class = SMACrossover
+        elif request.strategy == "MACD":
+            strategy_class = MACDStrategy
+        elif request.strategy == "RSI":
+            strategy_class = RSIStrategy
+        else:
+            await websocket.send_json({"error": f"Unknown strategy: {request.strategy}"})
+            return
+
+        # Fetch Data Once
+        dummy_strategy = strategy_class()
+        bt = Backtester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
+        bt.fetch_data()
+        
+        if bt.df is None or bt.df.empty:
+             await websocket.send_json({"error": "No data found for the specified parameters."})
+             return
+
+        # Progress Callback
+        async def progress(current, total):
+            await websocket.send_json({
+                "type": "progress",
+                "current": current,
+                "total": total
+            })
+
+        # Run Optimization
+        optimizer = Optimizer(request.symbol, request.timeframe, strategy_class, bt.df)
+        results_df = await optimizer.optimize(request.param_ranges, progress_callback=progress)
+        
+        # Save Successful Runs to DB
+        from ..core.database import DuckDBHandler
+        db = DuckDBHandler()
+        
+        saved_count = 0
+        for result in optimizer.results:
+            if result['return'] > 0 or result['win_rate'] > 50:
+                result['strategy'] = request.strategy
+                db.save_result(result)
+                saved_count += 1
+        
+        if saved_count > 0:
+            logger.info(f"Saved {saved_count} successful optimization runs to DB.")
+
+        await websocket.send_json({
+            "type": "complete",
+            "results": results_df.to_dict(orient="records")
+        })
+        
+    except Exception as e:
+        logger.error(f"Optimization error: {e}")
+        await websocket.send_json({"error": str(e)})
+    finally:
+        await websocket.close()

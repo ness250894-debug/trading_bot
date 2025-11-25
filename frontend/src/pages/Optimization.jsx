@@ -126,6 +126,9 @@ export default function Optimization() {
         };
     });
 
+    const [progress, setProgress] = useState({ current: 0, total: 0 });
+    const [isOptimizing, setIsOptimizing] = useState(false);
+
     const strategies = Object.keys(strategyInfo);
 
     const handleStrategyChange = (e) => {
@@ -182,34 +185,60 @@ export default function Optimization() {
 
     const runOptimization = async () => {
         setLoading(true);
-        try {
-            const param_ranges = {};
-            for (const [key, range] of Object.entries(ranges)) {
-                const values = [];
-                let current = range.start;
-                const step = Math.max(range.step, 0.1);
-                while (current <= range.end) {
-                    values.push(Number(current.toFixed(2)));
-                    current += step;
-                }
-                param_ranges[key] = values;
-            }
+        setIsOptimizing(true);
+        setProgress({ current: 0, total: 0 });
+        setResults([]);
 
-            const response = await axios.post('/api/optimize', {
+        const param_ranges = {};
+        for (const [key, range] of Object.entries(ranges)) {
+            const values = [];
+            let current = range.start;
+            const step = Math.max(range.step, 0.1);
+            while (current <= range.end) {
+                values.push(Number(current.toFixed(2)));
+                current += step;
+            }
+            param_ranges[key] = values;
+        }
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.hostname}:8000/api/ws/optimize`;
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            ws.send(JSON.stringify({
                 symbol: 'BTC/USDT',
                 timeframe: '1m',
                 days: 3,
                 strategy: strategy,
                 param_ranges: param_ranges
-            });
+            }));
+        };
 
-            setResults(response.data.results);
-        } catch (err) {
-            console.error(err);
-            alert('Optimization failed: ' + (err.response?.data?.detail || err.message));
-        } finally {
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'progress') {
+                setProgress({ current: data.current, total: data.total });
+            } else if (data.type === 'complete') {
+                setResults(data.results);
+                setLoading(false);
+                setIsOptimizing(false);
+                ws.close();
+            } else if (data.error) {
+                console.error(data.error);
+                alert('Optimization failed: ' + data.error);
+                setLoading(false);
+                setIsOptimizing(false);
+                ws.close();
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            alert('WebSocket connection failed.');
             setLoading(false);
-        }
+            setIsOptimizing(false);
+        };
     };
 
     const applyToStrategy = (params) => {
@@ -234,220 +263,216 @@ export default function Optimization() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Configuration Panel */}
-                <div className="lg:col-span-4 space-y-6">
-                    <div className="glass p-6 rounded-2xl">
-                        <h3 className="font-semibold mb-6 flex items-center gap-2 text-lg text-foreground">
-                            <Settings size={20} className="text-primary" />
-                            Configuration
-                        </h3>
-
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium mb-2 text-foreground">
-                                    Select Strategy
-                                    <Tooltip content={strategyInfo[strategy]} />
-                                </label>
-                                <select
-                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all"
-                                    value={strategy}
-                                    onChange={handleStrategyChange}
-                                >
-                                    {strategies.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                                    {strategyInfo[strategy]}
-                                </p>
-                            </div>
-
-                            {/* Presets */}
-                            {presets[strategy] && (
-                                <div>
-                                    <label className="block text-xs font-medium mb-2 text-muted-foreground uppercase tracking-wider">
-                                        Quick Presets
-                                    </label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {presets[strategy].map((preset, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => applyPreset(preset)}
-                                                className="px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-foreground rounded-lg transition-colors border border-white/5"
-                                            >
-                                                {preset.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="border-t border-white/10 pt-6">
-                                <h4 className="text-sm font-semibold mb-4 text-primary uppercase tracking-wider flex items-center gap-2">
-                                    <Sliders size={16} />
-                                    Parameter Ranges
-                                </h4>
-                                {Object.entries(ranges).map(([param, range]) => {
-                                    const limits = paramLimits[param] || { min: 0, max: 100, step: 1 };
-                                    return (
-                                        <div key={param} className="mb-6 p-4 bg-white/5 rounded-xl border border-white/5">
-                                            <div className="flex items-center gap-2 mb-4">
-                                                <span className="text-sm font-bold text-foreground capitalize">
-                                                    {param.replace(/_/g, ' ')}
-                                                </span>
-                                                <Tooltip content={parameterInfo[param]} />
-                                            </div>
-
-                                            <SliderInput
-                                                label="Start Value"
-                                                value={range.start}
-                                                min={limits.min}
-                                                max={limits.max}
-                                                step={limits.step}
-                                                onChange={(val) => handleRangeChange(param, 'start', val)}
-                                            />
-
-                                            <SliderInput
-                                                label="End Value"
-                                                value={range.end}
-                                                min={limits.min}
-                                                max={limits.max}
-                                                step={limits.step}
-                                                onChange={(val) => handleRangeChange(param, 'end', val)}
-                                            />
-
-                                            <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-                                                <label className="text-xs text-muted-foreground">Step Size</label>
-                                                <input
-                                                    type="number"
-                                                    className="w-16 bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-right"
-                                                    value={range.step}
-                                                    min={limits.step}
-                                                    step={limits.step}
-                                                    onChange={(e) => handleRangeChange(param, 'step', e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <button
-                                onClick={runOptimization}
-                                disabled={loading}
-                                className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed"
+            {/* Configuration Panel - Horizontal Layout */}
+            <div className="glass p-6 rounded-2xl">
+                <div className="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                    <h3 className="font-semibold flex items-center gap-2 text-lg text-foreground">
+                        <Settings size={20} className="text-primary" />
+                        Configuration
+                    </h3>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-foreground">Strategy:</label>
+                            <select
+                                className="bg-black/20 border border-white/10 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm"
+                                value={strategy}
+                                onChange={handleStrategyChange}
                             >
-                                {loading ? (
-                                    <span className="animate-pulse flex items-center gap-2">
-                                        <Activity className="animate-spin" size={18} /> Optimizing...
-                                    </span>
-                                ) : (
-                                    <>
-                                        <Play size={18} fill="currentColor" /> Run Optimization
-                                    </>
-                                )}
-                            </button>
+                                {strategies.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
                         </div>
+                        {presets[strategy] && (
+                            <div className="flex gap-2">
+                                {presets[strategy].map((preset, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => applyPreset(preset)}
+                                        className="px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-foreground rounded-lg transition-colors border border-white/5"
+                                    >
+                                        {preset.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Results Panel */}
-                <div className="lg:col-span-8">
-                    <div className="glass rounded-2xl overflow-hidden h-full flex flex-col">
-                        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
-                            <h3 className="font-semibold flex items-center gap-2 text-lg">
-                                <TrendingUp size={20} className="text-green-400" />
-                                Optimization Results
-                            </h3>
-                            <div className="flex items-center gap-4">
-                                <span className="text-sm text-muted-foreground bg-black/20 px-3 py-1 rounded-full border border-white/5">
-                                    {results.length} combinations
-                                </span>
-                                {results.length > 0 && (
-                                    <button
-                                        onClick={clearResults}
-                                        className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors"
-                                    >
-                                        Clear
-                                    </button>
-                                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {Object.entries(ranges).map(([param, range]) => {
+                        const limits = paramLimits[param] || { min: 0, max: 100, step: 1 };
+                        return (
+                            <div key={param} className="p-4 bg-white/5 rounded-xl border border-white/5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <span className="text-sm font-bold text-foreground capitalize">
+                                        {param.replace(/_/g, ' ')}
+                                    </span>
+                                    <Tooltip content={parameterInfo[param]} />
+                                </div>
+
+                                <SliderInput
+                                    label="Start"
+                                    value={range.start}
+                                    min={limits.min}
+                                    max={limits.max}
+                                    step={limits.step}
+                                    onChange={(val) => handleRangeChange(param, 'start', val)}
+                                />
+
+                                <SliderInput
+                                    label="End"
+                                    value={range.end}
+                                    min={limits.min}
+                                    max={limits.max}
+                                    step={limits.step}
+                                    onChange={(val) => handleRangeChange(param, 'end', val)}
+                                />
+
+                                <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+                                    <label className="text-xs text-muted-foreground">Step</label>
+                                    <input
+                                        type="number"
+                                        className="w-16 bg-black/20 border border-white/10 rounded px-2 py-1 text-xs text-right"
+                                        value={range.step}
+                                        min={limits.step}
+                                        step={limits.step}
+                                        onChange={(e) => handleRangeChange(param, 'step', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <div className="mt-6 flex items-center gap-4">
+                    <button
+                        onClick={runOptimization}
+                        disabled={loading}
+                        className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {loading ? (
+                            <span className="animate-pulse flex items-center gap-2">
+                                <Activity className="animate-spin" size={18} /> Optimizing...
+                            </span>
+                        ) : (
+                            <>
+                                <Play size={18} fill="currentColor" /> Run Optimization
+                            </>
+                        )}
+                    </button>
+                    {isOptimizing && (
+                        <div className="flex-1 flex flex-col gap-1">
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Progress</span>
+                                <span>{progress.current} / {progress.total}</span>
+                            </div>
+                            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-primary transition-all duration-300"
+                                    style={{ width: `${(progress.current / Math.max(progress.total, 1)) * 100}%` }}
+                                />
                             </div>
                         </div>
+                    )}
+                </div>
+            </div>
 
-                        <div className="overflow-x-auto flex-1">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium">
+            {/* Results Panel - Below Configuration */}
+            <div className="glass rounded-2xl overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                    <h3 className="font-semibold flex items-center gap-2 text-lg">
+                        <TrendingUp size={20} className="text-green-400" />
+                        Optimization Results
+                    </h3>
+                    <div className="flex items-center gap-4">
+                        <span className="text-sm text-muted-foreground bg-black/20 px-3 py-1 rounded-full border border-white/5">
+                            {results.length} combinations
+                        </span>
+                        {results.length > 0 && (
+                            <button
+                                onClick={clearResults}
+                                className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <div className="max-h-[500px] overflow-y-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
+                                <tr>
+                                    <th className="px-6 py-4">Rank</th>
+                                    <th className="px-6 py-4">Parameters</th>
+                                    <th className="px-6 py-4 text-right">Return</th>
+                                    <th className="px-6 py-4 text-right">Win Rate</th>
+                                    <th className="px-6 py-4 text-right">Trades</th>
+                                    <th className="px-6 py-4 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {results.length === 0 ? (
                                     <tr>
-                                        <th className="px-6 py-4">Rank</th>
-                                        <th className="px-6 py-4">Parameters</th>
-                                        <th className="px-6 py-4 text-right">Return</th>
-                                        <th className="px-6 py-4 text-right">Win Rate</th>
-                                        <th className="px-6 py-4 text-right">Trades</th>
-                                        <th className="px-6 py-4 text-center">Action</th>
+                                        <td colSpan="6" className="px-6 py-24 text-center">
+                                            <div className="flex flex-col items-center justify-center text-muted-foreground">
+                                                <Activity size={48} className="mb-4 opacity-20" />
+                                                <p className="text-lg font-medium">No results yet</p>
+                                                <p className="text-sm opacity-70 max-w-xs mt-2">
+                                                    Configure your parameters above and click "Run Optimization" to find the best strategy settings.
+                                                </p>
+                                            </div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                    {results.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="6" className="px-6 py-24 text-center">
-                                                <div className="flex flex-col items-center justify-center text-muted-foreground">
-                                                    <Activity size={48} className="mb-4 opacity-20" />
-                                                    <p className="text-lg font-medium">No results yet</p>
-                                                    <p className="text-sm opacity-70 max-w-xs mt-2">
-                                                        Configure your parameters on the left and click "Run Optimization" to find the best strategy settings.
-                                                    </p>
+                                ) : (
+                                    results.map((res, i) => (
+                                        <tr key={i} className="hover:bg-white/5 transition-colors group">
+                                            <td className="px-6 py-4 font-mono text-muted-foreground">
+                                                {i === 0 ? (
+                                                    <span className="flex items-center gap-1 text-yellow-400 font-bold">
+                                                        <CheckCircle size={14} /> #1
+                                                    </span>
+                                                ) : `#${i + 1}`}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-wrap gap-2">
+                                                    {Object.entries(res.params).map(([k, v]) => (
+                                                        <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
+                                                            {k}: {v}
+                                                        </span>
+                                                    ))}
                                                 </div>
                                             </td>
+                                            <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-primary"
+                                                            style={{ width: `${res.win_rate}%` }}
+                                                        />
+                                                    </div>
+                                                    {res.win_rate.toFixed(1)}%
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right text-muted-foreground font-mono">
+                                                {res.trades}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => applyToStrategy(res.params)}
+                                                    className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-primary/20"
+                                                >
+                                                    Apply
+                                                </button>
+                                            </td>
                                         </tr>
-                                    ) : (
-                                        results.map((res, i) => (
-                                            <tr key={i} className="hover:bg-white/5 transition-colors group">
-                                                <td className="px-6 py-4 font-mono text-muted-foreground">
-                                                    {i === 0 ? (
-                                                        <span className="flex items-center gap-1 text-yellow-400 font-bold">
-                                                            <CheckCircle size={14} /> #1
-                                                        </span>
-                                                    ) : `#${i + 1}`}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {Object.entries(res.params).map(([k, v]) => (
-                                                            <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
-                                                                {k}: {v}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                    {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                                            <div
-                                                                className="h-full bg-primary"
-                                                                style={{ width: `${res.win_rate}%` }}
-                                                            />
-                                                        </div>
-                                                        {res.win_rate.toFixed(1)}%
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right text-muted-foreground font-mono">
-                                                    {res.trades}
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <button
-                                                        onClick={() => applyToStrategy(res.params)}
-                                                        className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-primary/20"
-                                                    >
-                                                        Apply
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

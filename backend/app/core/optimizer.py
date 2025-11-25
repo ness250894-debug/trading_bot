@@ -15,7 +15,7 @@ class Optimizer:
         self.data = data
         self.results = []
 
-    def optimize(self, param_ranges):
+    async def optimize(self, param_ranges, progress_callback=None):
         """
         Runs a grid search over the parameter ranges.
         param_ranges: dict of parameter names and their list of values to test.
@@ -57,7 +57,9 @@ class Optimizer:
             }
             self.results.append(result)
             
-            if (i + 1) % 10 == 0:
+            if (i + 1) % 1 == 0:
+                if progress_callback:
+                    await progress_callback(i + 1, total_combinations)
                 logger.info(f"Processed {i + 1}/{total_combinations} combinations.")
                 
         # Convert to DataFrame
