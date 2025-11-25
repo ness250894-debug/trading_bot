@@ -17,8 +17,8 @@ export default function Dashboard() {
         const fetchData = async () => {
             try {
                 const [statusRes, tradesRes] = await Promise.all([
-                    axios.get('http://localhost:8000/api/status'),
-                    axios.get('http://localhost:8000/api/trades')
+                    axios.get('/api/status'),
+                    axios.get('/api/trades')
                 ]);
                 setStatus(statusRes.data);
                 setIsRunning(statusRes.data.is_running);
@@ -38,12 +38,12 @@ export default function Dashboard() {
     const handleStartStop = async () => {
         try {
             if (isRunning) {
-                await axios.post('http://localhost:8000/api/stop');
+                await axios.post('/api/stop');
             } else {
-                await axios.post('http://localhost:8000/api/start');
+                await axios.post('/api/start');
             }
             // Refresh status immediately
-            const res = await axios.get('http://localhost:8000/api/status');
+            const res = await axios.get('/api/status');
             setStatus(res.data);
             setIsRunning(res.data.is_running);
         } catch (err) {
@@ -54,7 +54,9 @@ export default function Dashboard() {
 
     // WebSocket for Logs
     useEffect(() => {
-        const ws = new WebSocket('ws://127.0.0.1:8000/ws/logs');
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/logs`;
+        const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
             setWsConnected(true);

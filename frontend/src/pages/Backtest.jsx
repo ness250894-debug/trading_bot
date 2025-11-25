@@ -31,7 +31,7 @@ export default function Backtest() {
         setLoading(true);
         setError(null);
         try {
-            const response = await axios.post('http://localhost:8000/api/backtest', {
+            const response = await axios.post('/api/backtest', {
                 symbol: 'BTC/USDT',
                 timeframe: '1m',
                 days: 5,

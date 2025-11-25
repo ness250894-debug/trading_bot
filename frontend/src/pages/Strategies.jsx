@@ -22,7 +22,7 @@ export default function Strategies() {
     const fetchConfig = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('http://localhost:8000/api/status');
+            const response = await axios.get('/api/status');
             setConfig(response.data.config);
             setMessage(null);
         } catch (err) {
@@ -50,18 +50,18 @@ export default function Strategies() {
         setMessage(null);
         try {
             // 1. Save Config
-            await axios.post('http://localhost:8000/api/config', config);
+            await axios.post('/api/config', config);
             setMessage({ type: 'success', text: 'Configuration saved. Restarting bot...' });
 
             // 2. Trigger Restart
-            await axios.post('http://localhost:8000/api/restart');
+            await axios.post('/api/restart');
             setRestarting(true);
 
             // 3. Poll for recovery
             let retries = 0;
             const interval = setInterval(async () => {
                 try {
-                    await axios.get('http://localhost:8000/api/status');
+                    await axios.get('/api/status');
                     clearInterval(interval);
                     setRestarting(false);
                     setSaving(false);
@@ -91,13 +91,13 @@ export default function Strategies() {
         if (!confirm("Are you sure you want to restart the bot?")) return;
         setRestarting(true);
         try {
-            await axios.post('http://localhost:8000/api/restart');
+            await axios.post('/api/restart');
             setMessage({ type: 'success', text: 'Bot is restarting...' });
             // Poll for status
             let retries = 0;
             const interval = setInterval(async () => {
                 try {
-                    await axios.get('http://localhost:8000/api/status');
+                    await axios.get('/api/status');
                     clearInterval(interval);
                     setRestarting(false);
                     setMessage({ type: 'success', text: 'Bot restarted!' });

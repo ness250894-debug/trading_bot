@@ -204,7 +204,7 @@ export default function Optimization() {
                 param_ranges[key] = values;
             }
 
-            const response = await axios.post('http://localhost:8000/api/optimize', {
+            const response = await axios.post('/api/optimize', {
                 symbol: 'BTC/USDT',
                 timeframe: '1m',
                 days: 3,
