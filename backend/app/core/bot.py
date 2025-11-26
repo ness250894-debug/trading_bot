@@ -127,11 +127,46 @@ def main():
                 logger.info(f"Current Position: {current_pos_side} | Size: {current_pos_size}")
                 
                 # Execute Trading Logic
+                
+                # --- Trailing Stop Logic ---
+                if current_pos_side == 'Buy':
+                    # Update highest price for Long
+                    if not hasattr(strategy, 'highest_price') or current_price > strategy.highest_price:
+                        strategy.highest_price = current_price
+                    
+                    # Check Trailing Stop
+                    stop_price = strategy.highest_price * (1 - config.TRAILING_STOP_PCT)
+                    if current_price < stop_price:
+                        logger.info(f"📉 Trailing Stop Triggered for LONG! Current: {current_price}, High: {strategy.highest_price}, Stop: {stop_price}")
+                        signal = 'SELL' # Force sell signal
+                        details['reason'] = 'Trailing Stop'
+
+                elif current_pos_side == 'Sell':
+                    # Update lowest price for Short
+                    if not hasattr(strategy, 'lowest_price') or current_price < strategy.lowest_price:
+                        strategy.lowest_price = current_price
+                    
+                    # Check Trailing Stop
+                    stop_price = strategy.lowest_price * (1 + config.TRAILING_STOP_PCT)
+                    if current_price > stop_price:
+                        logger.info(f"📈 Trailing Stop Triggered for SHORT! Current: {current_price}, Low: {strategy.lowest_price}, Stop: {stop_price}")
+                        signal = 'BUY' # Force buy signal (to cover short)
+                        details['reason'] = 'Trailing Stop'
+                else:
+                    # Reset tracking when no position
+                    strategy.highest_price = 0
+                    strategy.lowest_price = float('inf')
+                # ---------------------------
+
                 if signal == 'BUY' and current_pos_side != 'Buy':
                     # Close short if exists
                     if current_pos_side == 'Sell':
                         logger.info("Closing SHORT position before opening LONG")
                         client.close_position(config.SYMBOL)
+                        
+                        # Calculate Fee
+                        fee = current_pos_size * current_price * config.TAKER_FEE_PCT
+                        
                         # Log trade to database
                         db.save_trade({
                             'symbol': config.SYMBOL,
@@ -139,8 +174,9 @@ def main():
                             'price': current_price,
                             'amount': current_pos_size,
                             'type': 'CLOSE',
-                            'pnl': 0.0,  # PnL calculated by exchange
-                            'strategy': strategy_name
+                            'pnl': 0.0 - fee,  # Exchange PnL + Fee deduction (simplified)
+                            'strategy': strategy_name,
+                            'fee': fee
                         })
                     
                     # Open new LONG position
@@ -154,15 +190,24 @@ def main():
                             stop_loss_pct=config.STOP_LOSS_PCT
                         )
                         logger.info(f"LONG order placed: {order}")
+                        
+                        # Initialize Trailing Stop
+                        strategy.highest_price = current_price
+                        
+                        # Calculate Fee
+                        trade_amount = config.AMOUNT_USDT / current_price
+                        fee = trade_amount * current_price * config.TAKER_FEE_PCT
+                        
                         # Log trade to database
                         db.save_trade({
                             'symbol': config.SYMBOL,
                             'side': 'Buy',
                             'price': current_price,
-                            'amount': config.AMOUNT_USDT / current_price,
+                            'amount': trade_amount,
                             'type': 'OPEN',
-                            'pnl': None,
-                            'strategy': strategy_name
+                            'pnl': -fee, # Initial PnL is just the fee
+                            'strategy': strategy_name,
+                            'fee': fee
                         })
                     except Exception as e:
                         logger.error(f"Failed to open LONG: {e}")
@@ -172,6 +217,10 @@ def main():
                     if current_pos_side == 'Buy':
                         logger.info("Closing LONG position before opening SHORT")
                         client.close_position(config.SYMBOL)
+                        
+                        # Calculate Fee
+                        fee = current_pos_size * current_price * config.TAKER_FEE_PCT
+                        
                         # Log trade to database
                         db.save_trade({
                             'symbol': config.SYMBOL,
@@ -179,8 +228,9 @@ def main():
                             'price': current_price,
                             'amount': current_pos_size,
                             'type': 'CLOSE',
-                            'pnl': 0.0,  # PnL calculated by exchange
-                            'strategy': strategy_name
+                            'pnl': 0.0 - fee, # Exchange PnL + Fee deduction
+                            'strategy': strategy_name,
+                            'fee': fee
                         })
                     
                     # Open new SHORT position
@@ -194,15 +244,24 @@ def main():
                             stop_loss_pct=config.STOP_LOSS_PCT
                         )
                         logger.info(f"SHORT order placed: {order}")
+                        
+                        # Initialize Trailing Stop
+                        strategy.lowest_price = current_price
+                        
+                        # Calculate Fee
+                        trade_amount = config.AMOUNT_USDT / current_price
+                        fee = trade_amount * current_price * config.TAKER_FEE_PCT
+                        
                         # Log trade to database
                         db.save_trade({
                             'symbol': config.SYMBOL,
                             'side': 'Sell',
                             'price': current_price,
-                            'amount': config.AMOUNT_USDT / current_price,
+                            'amount': trade_amount,
                             'type': 'OPEN',
-                            'pnl': None,
-                            'strategy': strategy_name
+                            'pnl': -fee, # Initial PnL is just the fee
+                            'strategy': strategy_name,
+                            'fee': fee
                         })
                     except Exception as e:
                         logger.error(f"Failed to open SHORT: {e}")
