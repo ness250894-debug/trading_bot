@@ -12,3 +12,4 @@ services:
     volumes:
       - ./backend/app/core/config.py:/app/backend/app/core/config.py # Persist config changes
       - ./logs:/app/logs # Persist logs
+      - ./trading_bot.duckdb:/app/trading_bot.duckdb # Persist database
