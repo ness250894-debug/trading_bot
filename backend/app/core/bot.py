@@ -70,7 +70,18 @@ def main():
     from .database import DuckDBHandler
     db = DuckDBHandler()
 
+    # Initialize Scanner
+    scanner = None
+    last_scan_time = 0
+    if getattr(config, 'SCANNER_ENABLED', False):
+        from .scanner import Scanner
+        scanner = Scanner(client)
+        logger.info("Market Scanner Enabled")
+
     logger.info("Bot initialized. Waiting for start signal...")
+
+    # Track position duration
+    position_start_time = None
 
     while True:
         try:
@@ -79,7 +90,22 @@ def main():
                 running_event.wait()
                 logger.info("▶️ Bot resumed trading.")
 
-            logger.info("Fetching market data...")
+            # --- Market Scanner Logic ---
+            if scanner and (time.time() - last_scan_time > config.SCANNER_INTERVAL_MINUTES * 60):
+                # Only scan if no position is open
+                position = client.fetch_position(config.SYMBOL)
+                if position.get('size', 0.0) == 0:
+                    new_symbol = scanner.get_best_pair()
+                    if new_symbol and new_symbol != config.SYMBOL:
+                        logger.info(f"🔄 Switching symbol from {config.SYMBOL} to {new_symbol}")
+                        config.SYMBOL = new_symbol
+                        # Re-initialize trend filter if needed
+                        if trend_filter:
+                            trend_filter.symbol = new_symbol
+                    last_scan_time = time.time()
+            # ----------------------------
+
+            logger.info(f"Fetching market data for {config.SYMBOL}...")
             # Fetch OHLCV data
             df = client.fetch_ohlcv(config.SYMBOL, config.TIMEFRAME)
             
@@ -109,13 +135,6 @@ def main():
                         logger.error(f"TrendFilter check failed: {e}")
                 # -----------------------------------------------
                 
-                # Log Indicators
-                # sma_short = df.iloc[-1].get('sma_short', 0)
-                # sma_long = df.iloc[-1].get('sma_long', 0)
-                # rsi = df.iloc[-1].get('rsi', 0)
-                # macd = df.iloc[-1].get('macd', 0)
-                
-                # logger.info(f"Price: {current_price} | SMA: {details.get('sma', 'N/A')} | RSI: {details.get('rsi', 'N/A')} | MACD: {details.get('macd', 'N/A')}")
                 logger.info(f"Price: {current_price} | Signal: {signal} | Score: {score}/3")
                 logger.info(f"Details: {details}")
                 
@@ -126,8 +145,34 @@ def main():
                 
                 logger.info(f"Current Position: {current_pos_side} | Size: {current_pos_size}")
                 
+                # Update Position Start Time
+                if current_pos_size > 0 and position_start_time is None:
+                    position_start_time = time.time() # Start tracking
+                elif current_pos_size == 0:
+                    position_start_time = None # Reset
+                
                 # Execute Trading Logic
                 
+                # --- Smart ROI Logic ---
+                if current_pos_size > 0 and position_start_time:
+                    duration_minutes = (time.time() - position_start_time) / 60
+                    
+                    # Calculate current unrealized PnL %
+                    if current_pos_side == 'Buy':
+                        pnl_pct = (current_price - float(position.get('avgPrice', current_price))) / float(position.get('avgPrice', current_price))
+                    else:
+                        pnl_pct = (float(position.get('avgPrice', current_price)) - current_price) / float(position.get('avgPrice', current_price))
+                    
+                    # Check against Smart ROI table
+                    for time_threshold, target_roi in sorted(config.SMART_ROI.items()):
+                        if duration_minutes >= time_threshold:
+                            if pnl_pct >= target_roi:
+                                logger.info(f"🧠 Smart ROI Triggered! Duration: {duration_minutes:.1f}m, PnL: {pnl_pct*100:.2f}%, Target: {target_roi*100}%")
+                                signal = 'SELL' if current_pos_side == 'Buy' else 'BUY'
+                                details['reason'] = 'Smart ROI'
+                                break
+                # -----------------------
+
                 # --- Trailing Stop Logic ---
                 if current_pos_side == 'Buy':
                     # Update highest price for Long
@@ -193,6 +238,7 @@ def main():
                         
                         # Initialize Trailing Stop
                         strategy.highest_price = current_price
+                        position_start_time = time.time() # Reset start time
                         
                         # Calculate Fee
                         trade_amount = config.AMOUNT_USDT / current_price
@@ -247,6 +293,7 @@ def main():
                         
                         # Initialize Trailing Stop
                         strategy.lowest_price = current_price
+                        position_start_time = time.time() # Reset start time
                         
                         # Calculate Fee
                         trade_amount = config.AMOUNT_USDT / current_price
@@ -269,7 +316,6 @@ def main():
             # Sleep to prevent API spam (configurable delay)
             time.sleep(config.LOOP_DELAY_SECONDS)
                 
-                # break # REMOVED: This break was killing the bot after one loop!
         except Exception as e:
             logger.error(f"An error occurred: {e}")
             # Add a small delay to avoid rapid error loops

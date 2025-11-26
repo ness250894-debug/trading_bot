@@ -29,3 +29,17 @@ DRY_RUN = True
 
 # Bot Settings
 LOOP_DELAY_SECONDS = 30  # Delay between trading loop iterations
+
+# Smart ROI (Time-based Take Profit)
+# Format: { minutes: profit_pct }
+# Example: After 10 mins, accept 2%. After 30 mins, accept 1%.
+SMART_ROI = {
+    10: 0.02,
+    30: 0.01,
+    60: 0.005
+}
+
+# Market Scanner Settings
+SCANNER_ENABLED = True
+SCANNER_INTERVAL_MINUTES = 60
+SCANNER_TOP_N = 20 # Scan top 20 coins by volume
