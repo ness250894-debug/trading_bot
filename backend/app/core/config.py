@@ -25,7 +25,7 @@ STRATEGY = 'mean_reversion'
 HIGHER_TIMEFRAME = '5m' # For Trend Filter
 
 # Mode
-DRY_RUN = False
+DRY_RUN = True
 
 # Bot Settings
 LOOP_DELAY_SECONDS = 30  # Delay between trading loop iterations

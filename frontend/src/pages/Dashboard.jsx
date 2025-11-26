@@ -100,9 +100,9 @@ export default function Dashboard() {
         return () => ws.close();
     }, []);
 
-    // Auto-scroll logs
+    // Auto-scroll logs (only within container, not entire page)
     useEffect(() => {
-        logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        logsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }, [logs]);
 
     if (loading) return (
@@ -171,11 +171,17 @@ export default function Dashboard() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
+                    title="Account Balance"
+                    value={`${status?.balance?.total?.toFixed(2) || '0.00'} USDT`}
+                    icon={DollarSign}
+                    subtext={`Free: ${status?.balance?.free?.toFixed(2) || '0.00'} USDT`}
+                />
+                <StatCard
                     title="Total PnL"
                     value={`${status?.total_pnl?.toFixed(2) || '0.00'} USDT`}
-                    icon={DollarSign}
+                    icon={TrendingUp}
                     trend={status?.total_pnl >= 0 ? 'up' : 'down'}
-                    subtext={status?.total_pnl >= 0 ? '+12.5% this week' : '-2.3% this week'}
+                    subtext={status?.total_pnl >= 0 ? 'Profitable' : 'Loss'}
                 />
                 <StatCard
                     title="Active Trades"
@@ -186,15 +192,9 @@ export default function Dashboard() {
                 <StatCard
                     title="Win Rate"
                     value={`${((trades.filter(t => t.profit_loss > 0).length / trades.length || 0) * 100).toFixed(1)}%`}
-                    icon={TrendingUp}
+                    icon={Clock}
                     trend="up"
                     subtext={`${trades.length} total trades`}
-                />
-                <StatCard
-                    title="Uptime"
-                    value="24h 12m"
-                    icon={Clock}
-                    subtext="Since last restart"
                 />
             </div>
 

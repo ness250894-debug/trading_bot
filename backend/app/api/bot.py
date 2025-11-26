@@ -64,20 +64,75 @@ async def stop_bot():
 
 @router.get("/status")
 async def get_status():
-    # Reload config module to get latest values if they changed on disk (though python caches modules)
-    # In production, we'd use a database or a proper config loader.
-    # For now, we rely on the process restart for full effect, but we can return what's in memory.
-    return {
-        "status": "Active" if running_event.is_set() else "Paused",
-        "is_running": running_event.is_set(),
-        "config": {
-            "symbol": config.SYMBOL,
-            "timeframe": config.TIMEFRAME,
-            "amount_usdt": config.AMOUNT_USDT,
-            "strategy": getattr(config, 'STRATEGY', 'mean_reversion'),
-            "dry_run": getattr(config, 'DRY_RUN', True)
+    try:
+        # Fetch balance from exchange
+        if getattr(config, 'DRY_RUN', False):
+            client = PaperExchange(config.API_KEY, config.API_SECRET)
+        else:
+            client = ExchangeClient(config.API_KEY, config.API_SECRET, demo=config.DEMO)
+        
+        balance_data = client.fetch_balance()
+        
+        # Get USDT balance (free + used)
+        usdt_balance = balance_data.get('USDT', {})
+        total_balance = usdt_balance.get('total', 0.0)
+        free_balance = usdt_balance.get('free', 0.0)
+        used_balance = usdt_balance.get('used', 0.0)
+        
+        # Calculate total PnL from database
+        from ..core.database import DuckDBHandler
+        db = DuckDBHandler()
+        df = db.get_trades()
+        
+        total_pnl = 0.0
+        if not df.empty and 'profit_loss' in df.columns:
+            # Sum all profit/loss values (ignoring None/null)
+            total_pnl = df['profit_loss'].sum()
+        
+        # Get active trades count from position
+        position = client.fetch_position(config.SYMBOL)
+        active_trades = 1 if position.get('size', 0.0) > 0 else 0
+        
+        return {
+            "status": "Active" if running_event.is_set() else "Paused",
+            "is_running": running_event.is_set(),
+            "balance": {
+                "total": total_balance,
+                "free": free_balance,
+                "used": used_balance
+            },
+            "total_pnl": total_pnl,
+            "active_trades": active_trades,
+            "config": {
+                "symbol": config.SYMBOL,
+                "timeframe": config.TIMEFRAME,
+                "amount_usdt": config.AMOUNT_USDT,
+                "strategy": getattr(config, 'STRATEGY', 'mean_reversion'),
+                "dry_run": getattr(config, 'DRY_RUN', True)
+            }
         }
-    }
+    except Exception as e:
+        logger.error(f"Error getting status: {e}")
+        # Return a fallback status if exchange is unreachable
+        return {
+            "status": "Active" if running_event.is_set() else "Paused",
+            "is_running": running_event.is_set(),
+            "balance": {
+                "total": 0.0,
+                "free": 0.0,
+                "used": 0.0
+            },
+            "total_pnl": 0.0,
+            "active_trades": 0,
+            "config": {
+                "symbol": config.SYMBOL,
+                "timeframe": config.TIMEFRAME,
+                "amount_usdt": config.AMOUNT_USDT,
+                "strategy": getattr(config, 'STRATEGY', 'mean_reversion'),
+                "dry_run": getattr(config, 'DRY_RUN', True)
+            },
+            "error": str(e)
+        }
 
 @router.post("/config")
 async def update_config(update: ConfigUpdate):
