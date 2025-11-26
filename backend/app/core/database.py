@@ -7,9 +7,13 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("Database")
 
+import os
+
 class DuckDBHandler:
-    def __init__(self, db_file="trading_bot.duckdb"):
+    def __init__(self, db_file="data/trading_bot.duckdb"):
         self.db_file = db_file
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(db_file), exist_ok=True)
         # Use read-write mode explicitly to avoid conflicts
         self.conn = duckdb.connect(db_file, read_only=False)
         self.create_tables()
