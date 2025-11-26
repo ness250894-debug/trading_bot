@@ -74,8 +74,14 @@ if os.path.exists(frontend_dist):
     async def serve_frontend(full_path: str):
         # If API path, let it pass through (handled by routers above)
         # Also exclude assets and favicon to prevent returning index.html for them
-        if full_path.startswith("api") or full_path.startswith("ws") or full_path.startswith("assets") or full_path == "favicon.ico":
+        if full_path.startswith("api") or full_path.startswith("ws") or full_path.startswith("assets"):
             return {"status": 404, "message": "Not Found"}
+        
+        # Serve favicon if requested
+        if full_path == "favicon.ico" or full_path == "vite.svg":
+             if os.path.exists(os.path.join(frontend_dist, full_path)):
+                 return FileResponse(os.path.join(frontend_dist, full_path))
+             return {"status": 404, "message": "Not Found"}
             
         # Serve index.html for any other path (SPA)
         if os.path.exists(os.path.join(frontend_dist, "index.html")):

@@ -136,10 +136,12 @@ export default function Dashboard() {
     const pnlData = React.useMemo(() => {
         let cumulative = 0;
         return trades.map((t, i) => {
-            cumulative += t.profit_loss || 0;
+            // Backend returns 'pnl', frontend was using 'profit_loss'
+            const value = t.pnl !== undefined ? t.pnl : (t.profit_loss || 0);
+            cumulative += value;
             return {
                 name: `Trade ${i + 1}`,
-                pnl: t.profit_loss,
+                pnl: value,
                 cumulative: cumulative
             };
         });

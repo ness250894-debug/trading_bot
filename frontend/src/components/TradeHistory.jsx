@@ -49,8 +49,8 @@ const TradeHistory = ({ trades }) => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold uppercase ${trade.side === 'buy'
-                                                    ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                                                    : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
                                                 }`}>
                                                 {trade.side}
                                             </span>
@@ -61,14 +61,15 @@ const TradeHistory = ({ trades }) => {
                                         <td className="px-6 py-4 text-right font-mono">
                                             {trade.amount}
                                         </td>
-                                        <td className={`px-6 py-4 text-right font-bold font-mono ${trade.profit_loss >= 0 ? 'text-green-400' : 'text-red-400'
+                                        <td className={`px-6 py-4 text-right font-bold font-mono ${(trade.pnl !== undefined ? trade.pnl : trade.profit_loss) >= 0 ? 'text-green-400' : 'text-red-400'
                                             }`}>
-                                            {trade.profit_loss > 0 ? '+' : ''}{trade.profit_loss?.toFixed(2)}
+                                            {(trade.pnl !== undefined ? trade.pnl : trade.profit_loss) > 0 ? '+' : ''}
+                                            {(trade.pnl !== undefined ? trade.pnl : trade.profit_loss)?.toFixed(2)}
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`text-xs px-2 py-1 rounded-full border ${trade.status === 'closed'
-                                                    ? 'bg-white/5 text-muted-foreground border-white/10'
-                                                    : 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse'
+                                                ? 'bg-white/5 text-muted-foreground border-white/10'
+                                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse'
                                                 }`}>
                                                 {trade.status || 'Closed'}
                                             </span>
