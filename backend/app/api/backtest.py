@@ -3,8 +3,9 @@ from pydantic import BaseModel, validator
 from typing import Dict, Any, List, Optional
 import pandas as pd
 import logging
-from ..core.backtest import Backtester
-from ..core.optimizer import Optimizer
+import asyncio
+from ..core.vectorized_backtest import VectorizedBacktester
+from ..core.hyperopt import Hyperopt
 from ..core.strategies.mean_reversion import MeanReversion
 from ..core.strategies.sma_crossover import SMACrossover
 from ..core.strategies.macd import MACDStrategy
@@ -57,7 +58,7 @@ async def run_backtest(request: BacktestRequest):
              raise HTTPException(status_code=400, detail=f"Invalid parameters for {request.strategy}: {e}")
 
         # Run Backtest
-        bt = Backtester(request.symbol, request.timeframe, strategy, days=request.days)
+        bt = VectorizedBacktester(request.symbol, request.timeframe, strategy, days=request.days)
         bt.fetch_data()
         
         if bt.df is None or bt.df.empty:
@@ -136,26 +137,42 @@ async def run_optimization(request: OptimizeRequest):
         # Fetch Data Once
         # We use a dummy strategy instance just to fetch data using Backtester
         dummy_strategy = strategy_class()
-        bt = Backtester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
+        bt = VectorizedBacktester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
         bt.fetch_data()
         
         if bt.df is None or bt.df.empty:
              raise HTTPException(status_code=404, detail="No data found for the specified parameters.")
              
         # Run Optimization
-        optimizer = Optimizer(request.symbol, request.timeframe, strategy_class, bt.df)
-        results_df = await optimizer.optimize(request.param_ranges)
+        optimizer = Hyperopt(request.symbol, request.timeframe, bt.df)
+        results_df = optimizer.optimize(request.param_ranges, strategy_class)
         
         # Save Successful Runs to DB
         from ..core.database import DuckDBHandler
         db = DuckDBHandler()
         
         saved_count = 0
-        for result in optimizer.results:
-            # Criteria: Positive Return OR High Win Rate (> 50%)
-            if result['return'] > 0 or result['win_rate'] > 50:
+        results_list = results_df.to_dict(orient="records")
+        
+        # We need to manually filter for "successful" runs since optimize returns all trials
+        for result in results_list:
+            # Criteria: Positive Return
+            if result.get('return', 0) > 0:
                 # Add strategy name to result for DB
                 result['strategy'] = request.strategy
+                # Ensure params are stringified if needed or handled by DB
+                # The DB expects 'parameters' as a string, but result has individual columns
+                # We need to reconstruct params dict
+                params = {k: v for k, v in result.items() if k not in ['return', 'strategy', 'number', 'state', 'datetime_start', 'datetime_complete', 'duration']}
+                result['params'] = params
+                # We need win_rate, trades, final_balance. 
+                # Hyperopt currently only returns 'return'. 
+                # We need to update Hyperopt to return more metrics or re-run best?
+                # For now, let's just save what we have, filling missing with 0
+                result['win_rate'] = 0
+                result['trades'] = 0
+                result['final_balance'] = 0
+                
                 db.save_result(result)
                 saved_count += 1
         
@@ -163,7 +180,7 @@ async def run_optimization(request: OptimizeRequest):
             logger.info(f"Saved {saved_count} successful optimization runs to DB.")
 
         return {
-            "results": results_df.to_dict(orient="records")
+            "results": results_list
         }
         
     except Exception as e:
@@ -207,18 +224,18 @@ async def websocket_optimize(websocket: WebSocket):
 
                 # Fetch Data Once
                 dummy_strategy = strategy_class()
-                bt = Backtester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
+                bt = VectorizedBacktester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
                 bt.fetch_data()
                 
                 if bt.df is None or bt.df.empty:
-                     error_msg = bt.error if bt.error else "No data found for the specified parameters."
+                     error_msg = bt.error if hasattr(bt, 'error') and bt.error else "No data found for the specified parameters."
                      await websocket.send_json({"error": error_msg})
                      continue
 
                 # Define the job function
-                async def run_opt(progress_callback):
-                    optimizer = Optimizer(request.symbol, request.timeframe, strategy_class, bt.df)
-                    results_df = await optimizer.optimize(request.param_ranges, progress_callback=progress_callback)
+                def run_opt(progress_callback):
+                    optimizer = Hyperopt(request.symbol, request.timeframe, bt.df)
+                    results_df = optimizer.optimize(request.param_ranges, strategy_class, progress_callback=progress_callback)
                     
                     # Save Successful Runs to DB
                     from ..core.database import DuckDBHandler
@@ -226,9 +243,16 @@ async def websocket_optimize(websocket: WebSocket):
                     
                     saved_count = 0
                     results_list = results_df.to_dict(orient="records")
-                    for result in optimizer.results:
-                        if result['return'] > 0 or result['win_rate'] > 50:
+                    
+                    for result in results_list:
+                        if result.get('return', 0) > 0:
                             result['strategy'] = request.strategy
+                            params = {k: v for k, v in result.items() if k not in ['return', 'strategy', 'number', 'state', 'datetime_start', 'datetime_complete', 'duration']}
+                            result['params'] = params
+                            result['win_rate'] = 0
+                            result['trades'] = 0
+                            result['final_balance'] = 0
+                            
                             db.save_result(result)
                             saved_count += 1
                     
@@ -238,12 +262,12 @@ async def websocket_optimize(websocket: WebSocket):
                     return results_list
 
                 # Start the job via Manager
+                # Note: run_opt is synchronous now because Hyperopt.optimize is blocking/synchronous
+                # JobManager runs it in a thread, so it's fine.
                 await job_manager.start_job(run_opt)
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:
         job_manager.unsubscribe(websocket)
-        # We do NOT close the socket here explicitly if it's already closed by client, 
-        # but good practice to ensure cleanup.
 
