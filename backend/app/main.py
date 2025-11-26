@@ -15,6 +15,8 @@ logger = logging.getLogger("API")
 app = FastAPI(title="Trading Bot API", version="1.0.0")
 
 
+from fastapi import Request
+
 # CORS (Allow Frontend)
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +25,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Incoming Request: {request.method} {request.url.path}")
+    response = await call_next(request)
+    logger.info(f"Response Status: {response.status_code} for {request.url.path}")
+    return response
 
 @app.websocket("/ws/logs")
 async def websocket_endpoint(websocket: WebSocket):
