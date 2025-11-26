@@ -203,6 +203,21 @@ export default function Dashboard() {
                     subtext="Currently open positions"
                 />
                 <StatCard
+                    title="Active Strategy"
+                    value={status?.config?.strategy?.replace('_', ' ').toUpperCase() || 'N/A'}
+                    icon={Activity}
+                    subtext={
+                        <span className="flex flex-col gap-1">
+                            <span className={status?.config?.dry_run ? 'text-yellow-400' : 'text-green-400'}>
+                                {status?.config?.dry_run ? '⚠️ Dry Run Mode' : '🚀 Live Trading'}
+                            </span>
+                            <span className="text-[10px] opacity-70">
+                                {status?.config?.parameters ? Object.entries(status.config.parameters).map(([k,v]) => `${k}: ${v}`).join(', ') : ''}
+                            </span>
+                        </span>
+                    }
+                />
+                <StatCard
                     title="Win Rate"
                     value={`${((trades.filter(t => t.profit_loss > 0).length / trades.length || 0) * 100).toFixed(1)}%`}
                     icon={Clock}

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, validator
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import logging
 import os
 import re
@@ -35,6 +35,7 @@ class ConfigUpdate(BaseModel):
     amount_usdt: float
     strategy: str
     dry_run: bool
+    parameters: Optional[Dict[str, Any]] = {}
     
     @validator('amount_usdt')
     def amount_must_be_positive(cls, v):
@@ -73,6 +74,12 @@ async def get_status():
         
         balance_data = client.fetch_balance()
         
+        # print(f"DEBUG: config file: {config.__file__}")
+        # print(f"DEBUG: config dir: {dir(config)}")
+        # print(f"DEBUG: STRATEGY_PARAMS: {getattr(config, 'STRATEGY_PARAMS', 'NOT FOUND')}")
+        
+        # raise Exception(f"DEBUG: STRATEGY_PARAMS: {getattr(config, 'STRATEGY_PARAMS', 'NOT FOUND')} | File: {config.__file__}")
+
         # Get USDT balance (free + used)
         usdt_balance = balance_data.get('USDT', {})
         total_balance = usdt_balance.get('total', 0.0)
@@ -89,7 +96,7 @@ async def get_status():
         active_trades = 1 if position.get('size', 0.0) > 0 else 0
         
         return {
-            "status": "Active" if running_event.is_set() else "Paused",
+            "status": "DEBUG_ACTIVE" if running_event.is_set() else "DEBUG_PAUSED",
             "is_running": running_event.is_set(),
             "balance": {
                 "total": total_balance,
@@ -103,7 +110,8 @@ async def get_status():
                 "timeframe": config.TIMEFRAME,
                 "amount_usdt": config.AMOUNT_USDT,
                 "strategy": getattr(config, 'STRATEGY', 'mean_reversion'),
-                "dry_run": getattr(config, 'DRY_RUN', True)
+                "dry_run": getattr(config, 'DRY_RUN', True),
+                "parameters": getattr(config, 'STRATEGY_PARAMS', {})
             }
         }
     except Exception as e:
@@ -124,7 +132,8 @@ async def get_status():
                 "timeframe": config.TIMEFRAME,
                 "amount_usdt": config.AMOUNT_USDT,
                 "strategy": getattr(config, 'STRATEGY', 'mean_reversion'),
-                "dry_run": getattr(config, 'DRY_RUN', True)
+                "dry_run": getattr(config, 'DRY_RUN', True),
+                "parameters": getattr(config, 'STRATEGY_PARAMS', {})
             },
             "error": str(e)
         }
@@ -160,6 +169,7 @@ async def update_config(update: ConfigUpdate):
         content = replace_var('AMOUNT_USDT', update.amount_usdt, content)
         content = replace_var('STRATEGY', update.strategy, content)
         content = replace_var('DRY_RUN', update.dry_run, content)
+        content = replace_var('STRATEGY_PARAMS', update.parameters, content)
         # Symbol is usually hardcoded or we can update it too
         content = replace_var('SYMBOL', update.symbol, content)
 

@@ -287,7 +287,7 @@ export default function Strategies() {
                                             step={def.step}
                                             value={config.parameters?.[key] ?? def.default}
                                             onChange={(e) => handleParamChange(key, parseFloat(e.target.value))}
-                                            className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono focus:border-primary/50 outline-none transition-all"
+                                            className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono focus:border-primary/50 outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         />
                                     </div>
                                 ))}

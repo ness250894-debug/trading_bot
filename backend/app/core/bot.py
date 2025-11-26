@@ -36,27 +36,28 @@ def main():
     
     # Initialize Strategy
     strategy_name = getattr(config, 'STRATEGY', 'mean_reversion')
-    logger.info(f"Selected Strategy: {strategy_name}")
+    strategy_params = getattr(config, 'STRATEGY_PARAMS', {})
+    logger.info(f"Selected Strategy: {strategy_name} with params: {strategy_params}")
 
     if strategy_name == 'mean_reversion':
         from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion()
+        strategy = MeanReversion(**strategy_params)
     elif strategy_name == 'sma_crossover':
         from .strategies.sma_crossover import SMACrossover
-        strategy = SMACrossover()
+        strategy = SMACrossover(**strategy_params)
     elif strategy_name == 'combined':
         from .strategies.combined import CombinedStrategy
-        strategy = CombinedStrategy()
+        strategy = CombinedStrategy(**strategy_params)
     elif strategy_name == 'macd':
         from .strategies.macd import MACDStrategy
-        strategy = MACDStrategy()
+        strategy = MACDStrategy(**strategy_params)
     elif strategy_name == 'rsi':
         from .strategies.rsi import RSIStrategy
-        strategy = RSIStrategy()
+        strategy = RSIStrategy(**strategy_params)
     else:
         logger.warning(f"Unknown strategy '{strategy_name}'. Defaulting to Mean Reversion.")
         from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion()
+        strategy = MeanReversion(**strategy_params)
 
     # Initialize Trend Filter with error handling
     try:
