@@ -51,6 +51,14 @@ logger.info(f"Frontend Dist Path: {frontend_dist}")
 logger.info(f"Frontend Dist Exists: {os.path.exists(frontend_dist)}")
 
 if os.path.exists(frontend_dist):
+    logger.info(f"Contents of {frontend_dist}: {os.listdir(frontend_dist)}")
+    assets_path = os.path.join(frontend_dist, "assets")
+    if os.path.exists(assets_path):
+        logger.info(f"Contents of {assets_path}: {os.listdir(assets_path)}")
+    else:
+        logger.warning(f"Assets directory not found at {assets_path}")
+
+if os.path.exists(frontend_dist):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
     
     @app.get("/{full_path:path}")
