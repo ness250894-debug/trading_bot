@@ -56,7 +56,8 @@ if os.path.exists(frontend_dist):
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         # If API path, let it pass through (handled by routers above)
-        if full_path.startswith("api") or full_path.startswith("ws"):
+        # Also exclude assets and favicon to prevent returning index.html for them
+        if full_path.startswith("api") or full_path.startswith("ws") or full_path.startswith("assets") or full_path == "favicon.ico":
             return {"status": 404, "message": "Not Found"}
             
         # Serve index.html for any other path (SPA)
