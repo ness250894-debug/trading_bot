@@ -173,67 +173,77 @@ async def run_optimization(request: OptimizeRequest):
 @router.websocket("/ws/optimize")
 async def websocket_optimize(websocket: WebSocket):
     await websocket.accept()
+    from ..core.job_manager import job_manager
+    
+    # Subscribe to updates immediately
+    await job_manager.subscribe(websocket)
+    
     try:
-        data = await websocket.receive_json()
-        request = OptimizeRequest(**data)
-        
-        # Initialize Strategy Class
-        strategy_class = None
-        if request.strategy == "Mean Reversion":
-            strategy_class = MeanReversion
-        elif request.strategy == "SMA Crossover":
-            strategy_class = SMACrossover
-        elif request.strategy == "MACD":
-            strategy_class = MACDStrategy
-        elif request.strategy == "RSI":
-            strategy_class = RSIStrategy
-        else:
-            await websocket.send_json({"error": f"Unknown strategy: {request.strategy}"})
-            return
+        while True:
+            # Wait for commands
+            data = await websocket.receive_json()
+            
+            # If user wants to start a new optimization
+            if "strategy" in data:
+                if job_manager.status == "running":
+                    await websocket.send_json({"error": "Optimization already running"})
+                    continue
 
-        # Fetch Data Once
-        dummy_strategy = strategy_class()
-        bt = Backtester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
-        bt.fetch_data()
-        
-        if bt.df is None or bt.df.empty:
-             error_msg = bt.error if bt.error else "No data found for the specified parameters."
-             await websocket.send_json({"error": error_msg})
-             return
+                request = OptimizeRequest(**data)
+                
+                # Initialize Strategy Class
+                strategy_class = None
+                if request.strategy == "Mean Reversion":
+                    strategy_class = MeanReversion
+                elif request.strategy == "SMA Crossover":
+                    strategy_class = SMACrossover
+                elif request.strategy == "MACD":
+                    strategy_class = MACDStrategy
+                elif request.strategy == "RSI":
+                    strategy_class = RSIStrategy
+                else:
+                    await websocket.send_json({"error": f"Unknown strategy: {request.strategy}"})
+                    continue
 
-        # Progress Callback
-        async def progress(current, total):
-            await websocket.send_json({
-                "type": "progress",
-                "current": current,
-                "total": total
-            })
+                # Fetch Data Once
+                dummy_strategy = strategy_class()
+                bt = Backtester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
+                bt.fetch_data()
+                
+                if bt.df is None or bt.df.empty:
+                     error_msg = bt.error if bt.error else "No data found for the specified parameters."
+                     await websocket.send_json({"error": error_msg})
+                     continue
 
-        # Run Optimization
-        optimizer = Optimizer(request.symbol, request.timeframe, strategy_class, bt.df)
-        results_df = await optimizer.optimize(request.param_ranges, progress_callback=progress)
-        
-        # Save Successful Runs to DB
-        from ..core.database import DuckDBHandler
-        db = DuckDBHandler()
-        
-        saved_count = 0
-        for result in optimizer.results:
-            if result['return'] > 0 or result['win_rate'] > 50:
-                result['strategy'] = request.strategy
-                db.save_result(result)
-                saved_count += 1
-        
-        if saved_count > 0:
-            logger.info(f"Saved {saved_count} successful optimization runs to DB.")
+                # Define the job function
+                async def run_opt(progress_callback):
+                    optimizer = Optimizer(request.symbol, request.timeframe, strategy_class, bt.df)
+                    results_df = await optimizer.optimize(request.param_ranges, progress_callback=progress_callback)
+                    
+                    # Save Successful Runs to DB
+                    from ..core.database import DuckDBHandler
+                    db = DuckDBHandler()
+                    
+                    saved_count = 0
+                    results_list = results_df.to_dict(orient="records")
+                    for result in optimizer.results:
+                        if result['return'] > 0 or result['win_rate'] > 50:
+                            result['strategy'] = request.strategy
+                            db.save_result(result)
+                            saved_count += 1
+                    
+                    if saved_count > 0:
+                        logger.info(f"Saved {saved_count} successful optimization runs to DB.")
+                        
+                    return results_list
 
-        await websocket.send_json({
-            "type": "complete",
-            "results": results_df.to_dict(orient="records")
-        })
-        
+                # Start the job via Manager
+                await job_manager.start_job(run_opt)
+
     except Exception as e:
-        logger.error(f"Optimization error: {e}")
-        await websocket.send_json({"error": str(e)})
+        logger.error(f"WebSocket error: {e}")
     finally:
-        await websocket.close()
+        job_manager.unsubscribe(websocket)
+        # We do NOT close the socket here explicitly if it's already closed by client, 
+        # but good practice to ensure cleanup.
+

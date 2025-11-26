@@ -183,7 +183,57 @@ export default function Optimization() {
         localStorage.removeItem('optimization_results');
     };
 
-    const runOptimization = async () => {
+    const [ws, setWs] = useState(null);
+
+    // Persistent WebSocket Connection
+    useEffect(() => {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/optimize`;
+        const socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+            console.log("Connected to Optimization WS");
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'progress') {
+                setIsOptimizing(true);
+                setLoading(true);
+                setProgress({ current: data.current, total: data.total });
+            } else if (data.type === 'complete') {
+                setResults(data.results);
+                setLoading(false);
+                setIsOptimizing(false);
+                // Don't close socket, keep it open for next run
+            } else if (data.type === 'error') {
+                console.error(data.error);
+                alert('Optimization error: ' + data.error);
+                setLoading(false);
+                setIsOptimizing(false);
+            } else if (data.error) {
+                 alert(data.error);
+                 setLoading(false);
+            }
+        };
+
+        socket.onclose = () => {
+            console.log("Optimization WS Closed");
+        };
+
+        setWs(socket);
+
+        return () => {
+            socket.close();
+        };
+    }, []);
+
+    const runOptimization = () => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            alert("WebSocket not connected. Please refresh.");
+            return;
+        }
+
         setLoading(true);
         setIsOptimizing(true);
         setProgress({ current: 0, total: 0 });
@@ -201,44 +251,13 @@ export default function Optimization() {
             param_ranges[key] = values;
         }
 
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/api/ws/optimize`;
-        const ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => {
-            ws.send(JSON.stringify({
-                symbol: 'BTC/USDT',
-                timeframe: '1m',
-                days: 3,
-                strategy: strategy,
-                param_ranges: param_ranges
-            }));
-        };
-
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'progress') {
-                setProgress({ current: data.current, total: data.total });
-            } else if (data.type === 'complete') {
-                setResults(data.results);
-                setLoading(false);
-                setIsOptimizing(false);
-                ws.close();
-            } else if (data.error) {
-                console.error(data.error);
-                alert('Optimization failed: ' + data.error);
-                setLoading(false);
-                setIsOptimizing(false);
-                ws.close();
-            }
-        };
-
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
-            alert('WebSocket connection failed.');
-            setLoading(false);
-            setIsOptimizing(false);
-        };
+        ws.send(JSON.stringify({
+            symbol: 'BTC/USDT',
+            timeframe: '1m',
+            days: 3,
+            strategy: strategy,
+            param_ranges: param_ranges
+        }));
     };
 
     const applyToStrategy = (params) => {
@@ -252,6 +271,32 @@ export default function Optimization() {
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
+            <style>{`
+                /* Hide number input spinners */
+                input[type=number]::-webkit-inner-spin-button, 
+                input[type=number]::-webkit-outer-spin-button { 
+                    -webkit-appearance: none; 
+                    margin: 0; 
+                }
+                input[type=number] {
+                    -moz-appearance: textfield;
+                }
+                /* Dark scrollbar for table */
+                ::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+                ::-webkit-scrollbar-track {
+                    background: rgba(0, 0, 0, 0.1); 
+                }
+                ::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.2); 
+                    border-radius: 4px;
+                }
+                ::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 255, 255, 0.3); 
+                }
+            `}</style>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
@@ -274,7 +319,7 @@ export default function Optimization() {
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-foreground">Strategy:</label>
                             <select
-                                className="bg-black/20 border border-white/10 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm"
+                                className="bg-black/20 border border-white/10 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm [&>option]:bg-zinc-900 [&>option]:text-white"
                                 value={strategy}
                                 onChange={handleStrategyChange}
                             >
