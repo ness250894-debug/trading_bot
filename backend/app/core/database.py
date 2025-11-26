@@ -135,6 +135,17 @@ class DuckDBHandler:
             logger.error(f"Error fetching trades: {e}")
             return pd.DataFrame()
 
+    def get_recent_trades(self, limit=10):
+        """Returns recent trades as a list of dictionaries for internal logic."""
+        try:
+            df = self.get_trades(limit)
+            if df.empty:
+                return []
+            return df.to_dict('records')
+        except Exception as e:
+            logger.error(f"Error fetching recent trades: {e}")
+            return []
+
     def get_total_pnl(self):
         """Returns the sum of PnL for all trades."""
         try:

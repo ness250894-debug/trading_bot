@@ -47,3 +47,8 @@ ORDER_TIMEOUT_SECONDS = 30 # Timeout for limit orders before converting to marke
 SCANNER_ENABLED = True
 SCANNER_INTERVAL_MINUTES = 60
 SCANNER_TOP_N = 20 # Scan top 20 coins by volume
+
+# Edge Positioning Settings (Advanced Market Filter)
+EDGE_ENABLED = True
+EDGE_WINDOW_TRADES = 10 # Calculate edge based on last 10 trades
+EDGE_MIN_EXPECTANCY = 0.0 # Minimum expectancy to trade (0.0 = breakeven)
