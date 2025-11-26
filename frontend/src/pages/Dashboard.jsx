@@ -102,7 +102,12 @@ export default function Dashboard() {
 
     // Auto-scroll logs (only within container, not entire page)
     useEffect(() => {
-        logsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        if (logsEndRef.current) {
+            const container = logsEndRef.current.parentElement;
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
     }, [logs]);
 
     if (loading) return (

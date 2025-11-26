@@ -12,6 +12,56 @@ const STRATEGY_OPTIONS = [
 
 const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
+const STRATEGY_PARAMS = {
+    mean_reversion: {
+        rsi_period: { label: 'RSI Period', type: 'number', min: 2, max: 50, default: 14 },
+        rsi_overbought: { label: 'RSI Overbought', type: 'number', min: 50, max: 100, default: 70 },
+        rsi_oversold: { label: 'RSI Oversold', type: 'number', min: 0, max: 50, default: 30 },
+        bb_period: { label: 'Bollinger Period', type: 'number', min: 5, max: 50, default: 20 },
+        bb_std: { label: 'Bollinger Std Dev', type: 'number', min: 1, max: 5, step: 0.1, default: 2.0 }
+    },
+    sma_crossover: {
+        fast_period: { label: 'Fast SMA', type: 'number', min: 2, max: 100, default: 10 },
+        slow_period: { label: 'Slow SMA', type: 'number', min: 5, max: 200, default: 50 }
+    },
+    macd: {
+        fast_period: { label: 'Fast Period', type: 'number', min: 2, max: 50, default: 12 },
+        slow_period: { label: 'Slow Period', type: 'number', min: 10, max: 100, default: 26 },
+        signal_period: { label: 'Signal Period', type: 'number', min: 2, max: 50, default: 9 }
+    },
+    rsi: {
+        period: { label: 'RSI Period', type: 'number', min: 2, max: 50, default: 14 },
+        overbought: { label: 'Overbought', type: 'number', min: 50, max: 100, default: 70 },
+        oversold: { label: 'Oversold', type: 'number', min: 0, max: 50, default: 30 }
+    },
+    combined: {
+        rsi_period: { label: 'RSI Period', type: 'number', min: 2, max: 50, default: 14 },
+        fast_sma: { label: 'Fast SMA', type: 'number', min: 2, max: 100, default: 10 },
+        slow_sma: { label: 'Slow SMA', type: 'number', min: 5, max: 200, default: 50 }
+    }
+};
+
+const STRATEGY_PRESETS = {
+    mean_reversion: [
+        { name: 'Conservative', params: { rsi_period: 14, rsi_overbought: 75, rsi_oversold: 25, bb_period: 20, bb_std: 2.5 } },
+        { name: 'Moderate', params: { rsi_period: 14, rsi_overbought: 70, rsi_oversold: 30, bb_period: 20, bb_std: 2.0 } },
+        { name: 'Aggressive', params: { rsi_period: 7, rsi_overbought: 65, rsi_oversold: 35, bb_period: 14, bb_std: 1.5 } }
+    ],
+    sma_crossover: [
+        { name: 'Scalping', params: { fast_period: 5, slow_period: 20 } },
+        { name: 'Swing', params: { fast_period: 20, slow_period: 50 } },
+        { name: 'Trend', params: { fast_period: 50, slow_period: 200 } }
+    ],
+    macd: [
+        { name: 'Standard', params: { fast_period: 12, slow_period: 26, signal_period: 9 } },
+        { name: 'Quick', params: { fast_period: 5, slow_period: 35, signal_period: 5 } }
+    ],
+    rsi: [
+        { name: 'Standard', params: { period: 14, overbought: 70, oversold: 30 } },
+        { name: 'Sensitive', params: { period: 7, overbought: 80, oversold: 20 } }
+    ]
+};
+
 export default function Strategies() {
     const [config, setConfig] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -49,9 +99,26 @@ export default function Strategies() {
         }));
     };
 
+    const handleParamChange = (param, value) => {
+        setConfig(prev => ({
+            ...prev,
+            parameters: {
+                ...prev.parameters,
+                [param]: value
+            }
+        }));
+    };
+
+    const applyPreset = (presetParams) => {
+        setConfig(prev => ({
+            ...prev,
+            parameters: { ...presetParams }
+        }));
+    };
+
     const applySuggestion = () => {
         if (!suggestion || !config) return;
-        setConfig(prev => ({ ...prev, strategy: suggestion.strategy, ...suggestion.params }));
+        setConfig(prev => ({ ...prev, strategy: suggestion.strategy, parameters: { ...suggestion.params } }));
         localStorage.removeItem('suggested_strategy_params');
         setSuggestion(null);
         setMessage({ type: 'success', text: 'Applied suggested parameters! Click Update to save.' });
@@ -101,6 +168,9 @@ export default function Strategies() {
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
     );
+
+    const currentParams = STRATEGY_PARAMS[config.strategy] || {};
+    const currentPresets = STRATEGY_PRESETS[config.strategy] || [];
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
@@ -187,6 +257,44 @@ export default function Strategies() {
                         </div>
                     </div>
 
+                    {/* Strategy Parameters Section */}
+                    {Object.keys(currentParams).length > 0 && (
+                        <div className="space-y-4 p-6 bg-white/5 rounded-xl border border-white/5">
+                            <div className="flex justify-between items-center mb-4">
+                                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Strategy Parameters</label>
+                                {currentPresets.length > 0 && (
+                                    <div className="flex gap-2">
+                                        {currentPresets.map(preset => (
+                                            <button
+                                                key={preset.name}
+                                                onClick={() => applyPreset(preset.params)}
+                                                className="px-3 py-1 text-xs rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                            >
+                                                {preset.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {Object.entries(currentParams).map(([key, def]) => (
+                                    <div key={key} className="space-y-2">
+                                        <label className="text-xs text-muted-foreground">{def.label}</label>
+                                        <input
+                                            type={def.type}
+                                            min={def.min}
+                                            max={def.max}
+                                            step={def.step}
+                                            value={config.parameters?.[key] ?? def.default}
+                                            onChange={(e) => handleParamChange(key, parseFloat(e.target.value))}
+                                            className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono focus:border-primary/50 outline-none transition-all"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">
                             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Timeframe</label>
@@ -224,7 +332,13 @@ export default function Strategies() {
                     </div>
 
                     <div className="pt-8 border-t border-white/5 flex items-center justify-between">
-                        <label className="flex items-center gap-4 cursor-pointer group">
+                        <label
+                            className="flex items-center gap-4 cursor-pointer group"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                handleChange('dry_run', !config.dry_run);
+                            }}
+                        >
                             <div className={`
                                 w-14 h-8 rounded-full p-1 transition-colors duration-300
                                 ${config.dry_run ? 'bg-primary' : 'bg-white/10'}
