@@ -110,6 +110,21 @@ export default function Dashboard() {
         }
     }, [logs]);
 
+    // Calculate PnL for Chart
+    const pnlData = React.useMemo(() => {
+        let cumulative = 0;
+        return trades.map((t, i) => {
+            // Backend returns 'pnl', frontend was using 'profit_loss'
+            const value = t.pnl !== undefined ? t.pnl : (t.profit_loss || 0);
+            cumulative += value;
+            return {
+                name: `Trade ${i + 1}`,
+                pnl: value,
+                cumulative: cumulative
+            };
+        });
+    }, [trades]);
+
     if (loading) return (
         <div className="flex items-center justify-center h-[60vh]">
             <div className="flex flex-col items-center gap-4">
@@ -131,21 +146,6 @@ export default function Dashboard() {
             </div>
         </div>
     );
-
-    // Calculate PnL for Chart
-    const pnlData = React.useMemo(() => {
-        let cumulative = 0;
-        return trades.map((t, i) => {
-            // Backend returns 'pnl', frontend was using 'profit_loss'
-            const value = t.pnl !== undefined ? t.pnl : (t.profit_loss || 0);
-            cumulative += value;
-            return {
-                name: `Trade ${i + 1}`,
-                pnl: value,
-                cumulative: cumulative
-            };
-        });
-    }, [trades]);
 
     return (
         <div className="space-y-8">
