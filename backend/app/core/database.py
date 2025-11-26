@@ -134,3 +134,18 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error fetching trades: {e}")
             return pd.DataFrame()
+
+    def get_total_pnl(self):
+        """Returns the sum of PnL for all trades."""
+        try:
+            # Check if table exists first
+            tables = self.conn.execute("SHOW TABLES").fetchall()
+            if ('trades',) not in tables:
+                return 0.0
+            
+            # Sum pnl where it is not null
+            result = self.conn.execute("SELECT SUM(pnl) FROM trades WHERE pnl IS NOT NULL").fetchone()
+            return result[0] if result and result[0] is not None else 0.0
+        except Exception as e:
+            logger.error(f"Error calculating total PnL: {e}")
+            return 0.0

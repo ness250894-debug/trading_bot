@@ -128,11 +128,17 @@ export default function Dashboard() {
     );
 
     // Calculate PnL for Chart
-    const pnlData = trades.map((t, i) => ({
-        name: `Trade ${i + 1}`,
-        pnl: t.profit_loss,
-        cumulative: trades.slice(0, i + 1).reduce((acc, curr) => acc + curr.profit_loss, 0)
-    }));
+    const pnlData = React.useMemo(() => {
+        let cumulative = 0;
+        return trades.map((t, i) => {
+            cumulative += t.profit_loss || 0;
+            return {
+                name: `Trade ${i + 1}`,
+                pnl: t.profit_loss,
+                cumulative: cumulative
+            };
+        });
+    }, [trades]);
 
     return (
         <div className="space-y-8">

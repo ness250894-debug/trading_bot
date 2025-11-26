@@ -82,12 +82,7 @@ async def get_status():
         # Calculate total PnL from database
         from ..core.database import DuckDBHandler
         db = DuckDBHandler()
-        df = db.get_trades()
-        
-        total_pnl = 0.0
-        if not df.empty and 'profit_loss' in df.columns:
-            # Sum all profit/loss values (ignoring None/null)
-            total_pnl = df['profit_loss'].sum()
+        total_pnl = db.get_total_pnl()
         
         # Get active trades count from position
         position = client.fetch_position(config.SYMBOL)
