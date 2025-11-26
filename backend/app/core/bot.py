@@ -82,9 +82,12 @@ def main():
 
     # Track position duration
     position_start_time = None
+<<<<<<< HEAD
     
     # Track Open Orders (Limit Order Management)
     open_order = None # {'id': '...', 'time': 1234567890, 'side': 'Buy', 'type': 'limit'}
+=======
+>>>>>>> 30e635ecbddd76a6df26a431f6a9cfa9c41cacd8
 
     while True:
         try:
@@ -97,7 +100,11 @@ def main():
             if scanner and (time.time() - last_scan_time > config.SCANNER_INTERVAL_MINUTES * 60):
                 # Only scan if no position is open
                 position = client.fetch_position(config.SYMBOL)
+<<<<<<< HEAD
                 if position.get('size', 0.0) == 0 and open_order is None:
+=======
+                if position.get('size', 0.0) == 0:
+>>>>>>> 30e635ecbddd76a6df26a431f6a9cfa9c41cacd8
                     new_symbol = scanner.get_best_pair()
                     if new_symbol and new_symbol != config.SYMBOL:
                         logger.info(f"🔄 Switching symbol from {config.SYMBOL} to {new_symbol}")
@@ -108,6 +115,7 @@ def main():
                     last_scan_time = time.time()
             # ----------------------------
 
+<<<<<<< HEAD
             # --- Limit Order Management ---
             if open_order:
                 # Check if order is still open
@@ -170,6 +178,8 @@ def main():
                 continue 
             # ------------------------------
 
+=======
+>>>>>>> 30e635ecbddd76a6df26a431f6a9cfa9c41cacd8
             logger.info(f"Fetching market data for {config.SYMBOL}...")
             # Fetch OHLCV data
             df = client.fetch_ohlcv(config.SYMBOL, config.TIMEFRAME)
@@ -312,6 +322,7 @@ def main():
                         )
                         logger.info(f"LONG order placed: {order}")
                         
+<<<<<<< HEAD
                         if order_type == 'limit':
                             # Track Open Order
                             open_order = {
@@ -342,6 +353,27 @@ def main():
                                 'fee': fee
                             })
 
+=======
+                        # Initialize Trailing Stop
+                        strategy.highest_price = current_price
+                        position_start_time = time.time() # Reset start time
+                        
+                        # Calculate Fee
+                        trade_amount = config.AMOUNT_USDT / current_price
+                        fee = trade_amount * current_price * config.TAKER_FEE_PCT
+                        
+                        # Log trade to database
+                        db.save_trade({
+                            'symbol': config.SYMBOL,
+                            'side': 'Buy',
+                            'price': current_price,
+                            'amount': trade_amount,
+                            'type': 'OPEN',
+                            'pnl': -fee, # Initial PnL is just the fee
+                            'strategy': strategy_name,
+                            'fee': fee
+                        })
+>>>>>>> 30e635ecbddd76a6df26a431f6a9cfa9c41cacd8
                     except Exception as e:
                         logger.error(f"Failed to open LONG: {e}")
                 
@@ -389,6 +421,7 @@ def main():
                         )
                         logger.info(f"SHORT order placed: {order}")
                         
+<<<<<<< HEAD
                         if order_type == 'limit':
                             # Track Open Order
                             open_order = {
@@ -418,6 +451,27 @@ def main():
                                 'fee': fee
                             })
 
+=======
+                        # Initialize Trailing Stop
+                        strategy.lowest_price = current_price
+                        position_start_time = time.time() # Reset start time
+                        
+                        # Calculate Fee
+                        trade_amount = config.AMOUNT_USDT / current_price
+                        fee = trade_amount * current_price * config.TAKER_FEE_PCT
+                        
+                        # Log trade to database
+                        db.save_trade({
+                            'symbol': config.SYMBOL,
+                            'side': 'Sell',
+                            'price': current_price,
+                            'amount': trade_amount,
+                            'type': 'OPEN',
+                            'pnl': -fee, # Initial PnL is just the fee
+                            'strategy': strategy_name,
+                            'fee': fee
+                        })
+>>>>>>> 30e635ecbddd76a6df26a431f6a9cfa9c41cacd8
                     except Exception as e:
                         logger.error(f"Failed to open SHORT: {e}")
                 
