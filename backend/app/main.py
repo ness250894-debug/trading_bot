@@ -56,7 +56,15 @@ if os.path.exists(frontend_dist):
             return {"status": 404, "message": "Not Found"}
             
         # Serve index.html for any other path (SPA)
-        return FileResponse(os.path.join(frontend_dist, "index.html"))
+        if os.path.exists(os.path.join(frontend_dist, "index.html")):
+             return FileResponse(os.path.join(frontend_dist, "index.html"))
+        return {"status": 404, "message": "Frontend not found"}
+
+    @app.get("/")
+    async def serve_root():
+        if os.path.exists(os.path.join(frontend_dist, "index.html")):
+            return FileResponse(os.path.join(frontend_dist, "index.html"))
+        return {"status": 404, "message": "Frontend not found"}
 
 @app.get("/api/health")
 async def health_check():
