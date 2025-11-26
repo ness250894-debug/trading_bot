@@ -15,8 +15,6 @@ logger = logging.getLogger("API")
 app = FastAPI(title="Trading Bot API", version="1.0.0")
 
 
-from fastapi import Request
-
 # CORS (Allow Frontend)
 app.add_middleware(
     CORSMiddleware,
@@ -25,13 +23,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Incoming Request: {request.method} {request.url.path}")
-    response = await call_next(request)
-    logger.info(f"Response Status: {response.status_code} for {request.url.path}")
-    return response
 
 @app.websocket("/ws/logs")
 async def websocket_endpoint(websocket: WebSocket):
@@ -54,18 +45,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 # Check if dist folder exists (Production)
-# Check if dist folder exists (Production)
 frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "dist")
-logger.info(f"Frontend Dist Path: {frontend_dist}")
-logger.info(f"Frontend Dist Exists: {os.path.exists(frontend_dist)}")
-
-if os.path.exists(frontend_dist):
-    logger.info(f"Contents of {frontend_dist}: {os.listdir(frontend_dist)}")
-    assets_path = os.path.join(frontend_dist, "assets")
-    if os.path.exists(assets_path):
-        logger.info(f"Contents of {assets_path}: {os.listdir(assets_path)}")
-    else:
-        logger.warning(f"Assets directory not found at {assets_path}")
 
 if os.path.exists(frontend_dist):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
