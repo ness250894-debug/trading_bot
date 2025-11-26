@@ -45,7 +45,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 # Check if dist folder exists (Production)
+# Check if dist folder exists (Production)
 frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend", "dist")
+logger.info(f"Frontend Dist Path: {frontend_dist}")
+logger.info(f"Frontend Dist Exists: {os.path.exists(frontend_dist)}")
+
 if os.path.exists(frontend_dist):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
     
