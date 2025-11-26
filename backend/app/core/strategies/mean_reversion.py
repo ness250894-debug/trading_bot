@@ -76,3 +76,17 @@ class MeanReversion(Strategy):
         df = self.calculate_indicators(df)
         last_row = df.iloc[-1]
         return self.check_signal(last_row)
+
+    def populate_buy_trend(self, df):
+        df.loc[
+            (df['close'] < df['bb_lower']) &
+            (df['rsi'] < self.rsi_buy),
+            'buy'] = 1
+        return df
+
+    def populate_sell_trend(self, df):
+        df.loc[
+            (df['close'] > df['bb_upper']) &
+            (df['rsi'] > self.rsi_sell),
+            'sell'] = 1
+        return df

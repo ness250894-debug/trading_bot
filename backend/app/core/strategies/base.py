@@ -25,3 +25,25 @@ class Strategy(ABC):
             dict: {'signal': 'BUY'/'SELL'/'HOLD', 'score': int, 'details': dict}
         """
         return {'signal': 'HOLD', 'score': 0, 'details': {}}
+
+    def populate_indicators(self, dataframe):
+        """
+        Alias for calculate_indicators (Freqtrade compatibility).
+        """
+        return self.calculate_indicators(dataframe)
+
+    def populate_buy_trend(self, dataframe):
+        """
+        Vectorized Buy Signal Generation.
+        Should populate a 'buy' column with 1 (Buy) or 0 (No Buy).
+        """
+        dataframe['buy'] = 0
+        return dataframe
+
+    def populate_sell_trend(self, dataframe):
+        """
+        Vectorized Sell Signal Generation.
+        Should populate a 'sell' column with 1 (Sell) or 0 (No Sell).
+        """
+        dataframe['sell'] = 0
+        return dataframe
