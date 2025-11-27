@@ -139,6 +139,16 @@ class DuckDBHandler:
             logger.error(f"Error fetching trades: {e}")
             return pd.DataFrame()
 
+    def clear_trades(self):
+        """Deletes all trades from the database."""
+        try:
+            self.conn.execute("DELETE FROM trades")
+            logger.info("All trades cleared from database.")
+            return True
+        except Exception as e:
+            logger.error(f"Error clearing trades: {e}")
+            return False
+
     def get_recent_trades(self, limit=10):
         """Returns recent trades as a list of dictionaries for internal logic."""
         try:

@@ -1,7 +1,20 @@
 import React from 'react';
-import { Clock, TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
+import axios from 'axios';
+import { Clock, TrendingUp, TrendingDown, DollarSign, Activity, Trash2 } from 'lucide-react';
 
-const TradeHistory = ({ trades }) => {
+const TradeHistory = ({ trades, onRefresh }) => {
+    const handleClearHistory = async () => {
+        if (!confirm("Are you sure you want to clear all trade history? This cannot be undone.")) return;
+
+        try {
+            await axios.delete('/api/trades');
+            if (onRefresh) onRefresh();
+        } catch (err) {
+            console.error("Failed to clear history:", err);
+            alert("Failed to clear history");
+        }
+    };
+
     return (
         <div className="glass rounded-2xl overflow-hidden flex flex-col h-full">
             <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
@@ -9,9 +22,20 @@ const TradeHistory = ({ trades }) => {
                     <Activity size={20} className="text-primary" />
                     Recent Trades
                 </h3>
-                <span className="text-sm text-muted-foreground bg-black/20 px-3 py-1 rounded-full border border-white/5">
-                    {trades.length} trades
-                </span>
+                <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground bg-black/20 px-3 py-1 rounded-full border border-white/5">
+                        {trades.length} trades
+                    </span>
+                    {trades.length > 0 && (
+                        <button
+                            onClick={handleClearHistory}
+                            className="p-2 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded-lg transition-colors"
+                            title="Clear History"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="overflow-x-auto flex-1">
@@ -36,46 +60,49 @@ const TradeHistory = ({ trades }) => {
                                     </td>
                                 </tr>
                             ) : (
-                                trades.slice().reverse().map((trade, i) => (
-                                    <tr key={i} className="hover:bg-white/5 transition-colors">
-                                        <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                                            <div className="flex items-center gap-2">
-                                                <Clock size={14} />
-                                                {new Date(trade.timestamp || Date.now()).toLocaleString()}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 font-medium">
-                                            {trade.symbol || 'BTC/USDT'}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold uppercase ${trade.side === 'buy'
-                                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                                                : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                trades.slice().reverse().map((trade, i) => {
+                                    const pnl = trade.pnl !== undefined ? trade.pnl : (trade.profit_loss || 0);
+                                    return (
+                                        <tr key={i} className="hover:bg-white/5 transition-colors">
+                                            <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <Clock size={14} />
+                                                    {new Date(trade.timestamp || Date.now()).toLocaleString()}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 font-medium">
+                                                {trade.symbol || 'BTC/USDT'}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold uppercase ${trade.side === 'buy' || trade.side === 'Buy'
+                                                    ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                                    : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                    }`}>
+                                                    {trade.side}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono">
+                                                ${trade.price?.toFixed(2)}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono">
+                                                {trade.amount?.toFixed(4)}
+                                            </td>
+                                            <td className={`px-6 py-4 text-right font-bold font-mono ${pnl >= 0 ? 'text-green-400' : 'text-red-400'
                                                 }`}>
-                                                {trade.side}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-mono">
-                                            ${trade.price?.toFixed(2)}
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-mono">
-                                            {trade.amount}
-                                        </td>
-                                        <td className={`px-6 py-4 text-right font-bold font-mono ${(trade.pnl !== undefined ? trade.pnl : trade.profit_loss) >= 0 ? 'text-green-400' : 'text-red-400'
-                                            }`}>
-                                            {(trade.pnl !== undefined ? trade.pnl : trade.profit_loss) > 0 ? '+' : ''}
-                                            {(trade.pnl !== undefined ? trade.pnl : trade.profit_loss)?.toFixed(2)}
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={`text-xs px-2 py-1 rounded-full border ${trade.status === 'closed'
-                                                ? 'bg-white/5 text-muted-foreground border-white/10'
-                                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse'
-                                                }`}>
-                                                {trade.status || 'Closed'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))
+                                                {pnl > 0 ? '+' : ''}
+                                                {pnl?.toFixed(2)}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`text-xs px-2 py-1 rounded-full border ${trade.status === 'closed'
+                                                    ? 'bg-white/5 text-muted-foreground border-white/10'
+                                                    : 'bg-blue-500/10 text-blue-400 border-blue-500/20 animate-pulse'
+                                                    }`}>
+                                                    {trade.status || 'Closed'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

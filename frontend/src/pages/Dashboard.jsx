@@ -125,6 +125,18 @@ export default function Dashboard() {
         });
     }, [trades]);
 
+    const refreshTrades = async () => {
+        try {
+            const tradesRes = await axios.get('/api/trades');
+            setTrades(tradesRes.data);
+            // Also refresh status to update total PnL
+            const statusRes = await axios.get('/api/status');
+            setStatus(statusRes.data);
+        } catch (err) {
+            console.error('Failed to refresh trades:', err);
+        }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center h-[60vh]">
             <div className="flex flex-col items-center gap-4">
@@ -219,7 +231,7 @@ export default function Dashboard() {
                 />
                 <StatCard
                     title="Win Rate"
-                    value={`${((trades.filter(t => t.profit_loss > 0).length / trades.length || 0) * 100).toFixed(1)}%`}
+                    value={`${((trades.filter(t => (t.pnl !== undefined ? t.pnl : t.profit_loss) > 0).length / trades.length || 0) * 100).toFixed(1)}%`}
                     icon={Clock}
                     trend="up"
                     subtext={`${trades.length} total trades`}
@@ -303,7 +315,7 @@ export default function Dashboard() {
 
             {/* Trade History Section */}
             <div className="h-[500px]">
-                <TradeHistory trades={trades} />
+                <TradeHistory trades={trades} onRefresh={refreshTrades} />
             </div>
         </div>
     );

@@ -22,7 +22,7 @@ POSITION_SIZES = {1: 0.01, 2: 0.02, 3: 0.05} # Risk % per trade based on score
 
 # Strategy Settings
 STRATEGY = 'mean_reversion'
-STRATEGY_PARAMS = {'rsi_period': 20}
+STRATEGY_PARAMS = {'rsi_length': 20}
 HIGHER_TIMEFRAME = '5m' # For Trend Filter
 
 # Mode

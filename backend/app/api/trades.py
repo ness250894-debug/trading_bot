@@ -18,3 +18,14 @@ async def get_trades(limit: int = 50):
     except Exception as e:
         logger.error(f"Error fetching trades: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/trades")
+async def clear_trades():
+    try:
+        success = db.clear_trades()
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to clear trades")
+        return {"status": "success", "message": "Trade history cleared"}
+    except Exception as e:
+        logger.error(f"Error clearing trades: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
