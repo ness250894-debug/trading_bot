@@ -54,13 +54,17 @@ class JobManager:
         self.current_job = asyncio.create_task(job_wrapper())
         return self.current_job
 
-    async def update_progress(self, current, total):
+    async def update_progress(self, current, total, details=None):
         self.progress = {"current": current, "total": total}
-        await self.notify_subscribers({
+        message = {
             "type": "progress",
             "current": current,
             "total": total
-        })
+        }
+        if details:
+            message["details"] = details
+            
+        await self.notify_subscribers(message)
 
     async def subscribe(self, websocket):
         self.subscribers.append(websocket)
