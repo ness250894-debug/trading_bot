@@ -3,12 +3,13 @@ import pandas as pd
 import numpy as np
 
 class MeanReversion(Strategy):
-    def __init__(self, bb_length=20, bb_std=2.0, rsi_length=14, rsi_buy=30, rsi_sell=70):
-        self.bb_length = bb_length
+    def __init__(self, bb_period=20, bb_std=2.0, rsi_period=14, rsi_oversold=30, rsi_overbought=70):
+        # Map to internal naming for consistency
+        self.bb_length = bb_period
         self.bb_std = bb_std
-        self.rsi_length = rsi_length
-        self.rsi_buy = rsi_buy
-        self.rsi_sell = rsi_sell
+        self.rsi_length = rsi_period
+        self.rsi_buy = rsi_oversold
+        self.rsi_sell = rsi_overbought
 
     def calculate_indicators(self, df):
         if df is None or df.empty:
@@ -35,12 +36,12 @@ class MeanReversion(Strategy):
         df['rsi'] = rsi.fillna(50)
         return df
 
-    def check_signal(self, row):
+    def check_signal(self, current_row, previous_row=None):
         # Get values from row
-        current_price = row['close']
-        current_lower = row.get('bb_lower', 0)
-        current_upper = row.get('bb_upper', 0)
-        current_rsi = row.get('rsi', 50)
+        current_price = current_row['close']
+        current_lower = current_row.get('bb_lower', 0)
+        current_upper = current_row.get('bb_upper', 0)
+        current_rsi = current_row.get('rsi', 50)
         
         signal = 'HOLD'
         score = 0
@@ -74,8 +75,12 @@ class MeanReversion(Strategy):
 
         # For backward compatibility / live trading
         df = self.calculate_indicators(df)
+        if len(df) < 2:
+            return {'signal': 'HOLD', 'score': 0, 'details': {}}
+            
         last_row = df.iloc[-1]
-        return self.check_signal(last_row)
+        prev_row = df.iloc[-2]
+        return self.check_signal(last_row, prev_row)
 
     def populate_buy_trend(self, df):
         df.loc[

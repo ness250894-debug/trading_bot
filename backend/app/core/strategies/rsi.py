@@ -21,8 +21,8 @@ class RSIStrategy(Strategy):
         df['rsi'] = 100 - (100 / (1 + rs))
         return df
 
-    def check_signal(self, row):
-        current_rsi = row.get('rsi')
+    def check_signal(self, current_row, previous_row=None):
+        current_rsi = current_row.get('rsi')
         
         if pd.isna(current_rsi):
              return {'signal': 'HOLD', 'score': 0, 'details': {}}
@@ -53,25 +53,21 @@ class RSIStrategy(Strategy):
         
         df = self.calculate_indicators(dataframe)
         
-        # Get last RSI value
-        current_rsi = df.iloc[-1]['rsi']
-        
-        signal = 'HOLD'
-        score = 0
-        
-        if current_rsi < self.oversold:
-            signal = 'BUY'
-            score = 2
-        elif current_rsi > self.overbought:
-            signal = 'SELL'
-            score = 2
+        if len(df) < 2:
+            return {'signal': 'HOLD', 'score': 0, 'details': {}}
             
-        details = {
-            'rsi': round(current_rsi, 2)
-        }
-            
-        return {
-            'signal': signal,
-            'score': score,
-            'details': details
-        }
+        last_row = df.iloc[-1]
+        prev_row = df.iloc[-2]
+        return self.check_signal(last_row, prev_row)
+
+    def populate_buy_trend(self, df):
+        df.loc[
+            (df['rsi'] < self.oversold),
+            'buy'] = 1
+        return df
+
+    def populate_sell_trend(self, df):
+        df.loc[
+            (df['rsi'] > self.overbought),
+            'sell'] = 1
+        return df

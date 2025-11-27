@@ -18,9 +18,12 @@ class Strategy(ABC):
         """
         return dataframe
 
-    def check_signal(self, row):
+    def check_signal(self, current_row, previous_row=None):
         """
         Checks signal for a single row (Series).
+        Args:
+            current_row (pd.Series): The current row of data.
+            previous_row (pd.Series, optional): The previous row of data. Defaults to None.
         Returns:
             dict: {'signal': 'BUY'/'SELL'/'HOLD', 'score': int, 'details': dict}
         """

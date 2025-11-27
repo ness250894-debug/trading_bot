@@ -10,18 +10,18 @@ class TrendFilter:
         self.timeframe = timeframe
         self.ema_period = 200
 
-    def check_trend(self):
+    def check_trend(self, df):
         """
-        Fetches data and determines the trend based on EMA 200.
+        Determines the trend based on EMA 200 from the provided dataframe.
         Returns:
             tuple: (trend_status, current_price, ema_value)
             trend_status: 'UPTREND', 'DOWNTREND', or 'NEUTRAL'
         """
         try:
-            df = self.client.fetch_ohlcv(self.symbol, self.timeframe)
             if df is not None and not df.empty:
-                # Calculate EMA 200 manually
-                df['ema_200'] = df['close'].ewm(span=self.ema_period, adjust=False).mean()
+                # Calculate EMA 200 manually if not present
+                if 'ema_200' not in df.columns:
+                    df['ema_200'] = df['close'].ewm(span=self.ema_period, adjust=False).mean()
                 
                 ema_value = df.iloc[-1]['ema_200']
                 current_price = df.iloc[-1]['close']

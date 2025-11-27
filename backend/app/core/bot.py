@@ -203,7 +203,9 @@ def main():
                 # --- Multi-Timeframe Analysis (Trend Filter) ---
                 if trend_filter:
                     try:
-                        trend, price_high, ema_200 = trend_filter.check_trend()
+                        # Fetch higher timeframe data
+                        df_htf = client.fetch_ohlcv(config.SYMBOL, config.HIGHER_TIMEFRAME)
+                        trend, price_high, ema_200 = trend_filter.check_trend(df_htf)
                         logger.info(f"Trend ({config.HIGHER_TIMEFRAME}): {trend} | Price: {price_high} | EMA 200: {ema_200:.2f}")
                         
                         # Apply Filter

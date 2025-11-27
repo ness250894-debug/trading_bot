@@ -22,11 +22,44 @@ class MACDStrategy(Strategy):
         df['macd_signal'] = signal_line
         return df
 
-    def check_signal(self, row):
-        # Similar to SMA, we use Trend Following logic for stateless check
-        # BUY if MACD > Signal
-        # SELL if MACD < Signal
+    def check_signal(self, current_row, previous_row=None):
+        if previous_row is None:
+            # Fallback to trend following
+            return self._check_trend(current_row)
+
+        current_macd = current_row.get('macd')
+        current_signal = current_row.get('macd_signal')
+        prev_macd = previous_row.get('macd')
+        prev_signal = previous_row.get('macd_signal')
         
+        if pd.isna(current_macd) or pd.isna(current_signal) or pd.isna(prev_macd) or pd.isna(prev_signal):
+             return {'signal': 'HOLD', 'score': 0, 'details': {}}
+
+        signal = 'HOLD'
+        score = 0
+        
+        # Bullish Crossover
+        if prev_macd < prev_signal and current_macd > current_signal:
+            signal = 'BUY'
+            score = 2
+        # Bearish Crossover
+        elif prev_macd > prev_signal and current_macd < current_signal:
+            signal = 'SELL'
+            score = 2
+            
+        details = {
+            'macd': round(current_macd, 2),
+            'macd_signal': round(current_signal, 2),
+            'diff': round(current_macd - current_signal, 2)
+        }
+        
+        return {
+            'signal': signal,
+            'score': score,
+            'details': details
+        }
+
+    def _check_trend(self, row):
         macd = row.get('macd')
         signal_line = row.get('macd_signal')
         
@@ -38,21 +71,15 @@ class MACDStrategy(Strategy):
         
         if macd > signal_line:
             signal = 'BUY'
-            score = 2
+            score = 1
         elif macd < signal_line:
             signal = 'SELL'
-            score = 2
+            score = 1
             
-        details = {
-            'macd': round(macd, 2),
-            'macd_signal': round(signal_line, 2),
-            'diff': round(macd - signal_line, 2)
-        }
-        
         return {
             'signal': signal,
             'score': score,
-            'details': details
+            'details': {'macd': macd, 'macd_signal': signal_line}
         }
 
     def generate_signal(self, dataframe):
@@ -61,34 +88,29 @@ class MACDStrategy(Strategy):
         
         df = self.calculate_indicators(dataframe)
         
-        # Check for crossover (Live Trading)
         if len(df) < 2:
             return {'signal': 'HOLD', 'score': 0, 'details': {}}
             
-        current_macd = df.iloc[-1]['macd']
-        current_signal = df.iloc[-1]['macd_signal']
-        prev_macd = df.iloc[-2]['macd']
-        prev_signal = df.iloc[-2]['macd_signal']
+        last_row = df.iloc[-1]
+        prev_row = df.iloc[-2]
+        return self.check_signal(last_row, prev_row)
+
+    def populate_buy_trend(self, df):
+        df['macd_prev'] = df['macd'].shift(1)
+        df['signal_prev'] = df['macd_signal'].shift(1)
         
-        # Crossover Logic
-        signal = 'HOLD'
-        score = 0
+        df.loc[
+            (df['macd_prev'] < df['signal_prev']) &
+            (df['macd'] > df['macd_signal']),
+            'buy'] = 1
+        return df
+
+    def populate_sell_trend(self, df):
+        df['macd_prev'] = df['macd'].shift(1)
+        df['signal_prev'] = df['macd_signal'].shift(1)
         
-        if prev_macd < prev_signal and current_macd > current_signal:
-            signal = 'BUY'
-            score = 2
-        elif prev_macd > prev_signal and current_macd < current_signal:
-            signal = 'SELL'
-            score = 2
-            
-        details = {
-            'macd': round(current_macd, 2),
-            'macd_signal': round(current_signal, 2),
-            'diff': round(current_macd - current_signal, 2)
-        }
-            
-        return {
-            'signal': signal,
-            'score': score,
-            'details': details
-        }
+        df.loc[
+            (df['macd_prev'] > df['signal_prev']) &
+            (df['macd'] < df['macd_signal']),
+            'sell'] = 1
+        return df
