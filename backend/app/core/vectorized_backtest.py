@@ -73,6 +73,20 @@ class VectorizedBacktester:
                     reason = 'Take Profit'
                     exit_price = self.entry_price * (1 + config.TAKE_PROFIT_PCT)
                 
+                # Trailing Stop Logic
+                if not reason:
+                    # Update High/Low for Trailing Stop
+                    if not hasattr(self, 'highest_price') or row['high'] > self.highest_price:
+                        self.highest_price = row['high']
+                    
+                    # Check Activation
+                    if self.highest_price >= self.entry_price * (1 + config.TRAILING_STOP_ACTIVATION_PCT):
+                        stop_price = self.highest_price * (1 - config.TRAILING_STOP_PCT)
+                        if row['low'] < stop_price:
+                            reason = 'Trailing Stop'
+                            exit_price = stop_price
+
+                
                 if reason:
                     # Close
                     value = self.position_size * exit_price
@@ -81,6 +95,7 @@ class VectorizedBacktester:
                     self.balance += pnl - fee
                     self.trades.append({'pnl': pnl - fee, 'reason': reason, 'time': ts})
                     self.position_size = 0
+                    self.highest_price = 0  # Reset tracking
             
             elif self.position_size == 0:
                 if row.get('buy') == 1:
@@ -88,6 +103,7 @@ class VectorizedBacktester:
                     amount_usdt = self.balance * 0.99
                     self.position_size = amount_usdt / price
                     self.entry_price = price
+                    self.highest_price = price  # Initialize tracking
                     fee = amount_usdt * config.TAKER_FEE_PCT
                     self.balance -= fee
 

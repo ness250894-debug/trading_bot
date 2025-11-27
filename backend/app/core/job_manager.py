@@ -34,11 +34,27 @@ class JobManager:
         self.results = []
         self.error = None
         
-        # Create a wrapper to handle completion/failure
-        async def job_wrapper():
+        loop = asyncio.get_running_loop()
+
+        # Wrapper to run in thread
+        def threaded_job_wrapper():
+            # Define a sync callback that schedules the async update_progress on the main loop
+            def sync_progress_callback(current, total, details=None):
+                asyncio.run_coroutine_threadsafe(
+                    self.update_progress(current, total, details),
+                    loop
+                )
+            
+            # Call the synchronous job function
+            return job_func(*args, **kwargs, progress_callback=sync_progress_callback)
+
+        # Async wrapper to manage the thread execution and state
+        async def job_lifecycle_wrapper():
             try:
-                logger.info("Starting optimization job...")
-                self.results = await job_func(*args, **kwargs, progress_callback=self.update_progress)
+                logger.info("Starting optimization job in background thread...")
+                # Run the blocking job in the default executor
+                self.results = await loop.run_in_executor(None, threaded_job_wrapper)
+                
                 self.status = "completed"
                 await self.notify_subscribers({"type": "complete", "results": self.results})
                 logger.info("Optimization job completed.")
@@ -50,8 +66,8 @@ class JobManager:
             finally:
                 self.current_job = None
 
-        # Schedule the task
-        self.current_job = asyncio.create_task(job_wrapper())
+        # Schedule the lifecycle task
+        self.current_job = asyncio.create_task(job_lifecycle_wrapper())
         return self.current_job
 
     async def update_progress(self, current, total, details=None):

@@ -51,7 +51,14 @@ class TelegramNotifier:
                 f"Side: *{trade['side'].upper()}*\n"
                 f"Price: `${trade['price']}`\n"
                 f"Amount: `{trade['amount']}`\n"
+                f"Value: `${(trade['price'] * trade['amount']):.2f}`\n"
             )
+            
+            # Add Margin info if leverage available
+            leverage = trade.get('leverage', 1)
+            if leverage > 1:
+                margin = (trade['price'] * trade['amount']) / leverage
+                message += f"Margin: `${margin:.2f}` ({leverage}x)\n"
             
             if trade['type'] == 'CLOSE':
                 pnl = trade.get('pnl', 0)

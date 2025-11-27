@@ -95,28 +95,45 @@ class DuckDBHandler:
                     symbol VARCHAR,
                     side VARCHAR,
                     price DOUBLE,
-                    amount DOUBLE,
+                    total_value DOUBLE,
                     type VARCHAR,
                     pnl DOUBLE,
-                    strategy VARCHAR
+                    strategy VARCHAR,
+                    leverage DOUBLE
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_trade_id START 1;
             """)
             
+            # Lazy Migration: Check if columns exist
+            try:
+                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS total_value DOUBLE")
+            except:
+                pass
+            try:
+                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS leverage DOUBLE")
+            except:
+                pass
+            
             query = """
                 INSERT INTO trades 
-                (id, timestamp, symbol, side, price, amount, type, pnl, strategy)
-                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, timestamp, symbol, side, price, amount, total_value, type, pnl, strategy, leverage)
+                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
+            
+            # Calculate total_value if not provided
+            total_value = trade_data.get('total_value', trade_data['price'] * trade_data['amount'])
+            
             self.conn.execute(query, [
                 timestamp,
                 trade_data['symbol'],
                 trade_data['side'],
                 trade_data['price'],
                 trade_data['amount'],
+                total_value,
                 trade_data['type'], # 'OPEN' or 'CLOSE'
                 trade_data.get('pnl'), # None for OPEN
-                trade_data.get('strategy', 'Unknown')
+                trade_data.get('strategy', 'Unknown'),
+                trade_data.get('leverage', 1.0)
             ])
             logger.info(f"Trade saved: {trade_data['side']} {trade_data['symbol']} ({trade_data['type']})")
         except Exception as e:

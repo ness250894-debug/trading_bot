@@ -166,7 +166,8 @@ def main():
                             'type': 'OPEN',
                             'pnl': -fee,
                             'strategy': strategy_name,
-                            'fee': fee
+                            'fee': fee,
+                            'leverage': config.LEVERAGE
                         }
                         db.save_trade(trade_data)
                         notifier.send_trade_alert(trade_data)
@@ -273,24 +274,30 @@ def main():
                     if not hasattr(strategy, 'highest_price') or current_price > strategy.highest_price:
                         strategy.highest_price = current_price
                     
-                    # Check Trailing Stop
-                    stop_price = strategy.highest_price * (1 - config.TRAILING_STOP_PCT)
-                    if current_price < stop_price:
-                        logger.info(f"📉 Trailing Stop Triggered for LONG! Current: {current_price}, High: {strategy.highest_price}, Stop: {stop_price}")
-                        signal = 'SELL' # Force sell signal
-                        details['reason'] = 'Trailing Stop'
+                    # Check Activation
+                    entry_price = float(position.get('avgPrice', current_price))
+                    if strategy.highest_price >= entry_price * (1 + config.TRAILING_STOP_ACTIVATION_PCT):
+                        # Check Trailing Stop
+                        stop_price = strategy.highest_price * (1 - config.TRAILING_STOP_PCT)
+                        if current_price < stop_price:
+                            logger.info(f"📉 Trailing Stop Triggered for LONG! Current: {current_price}, High: {strategy.highest_price}, Stop: {stop_price}")
+                            signal = 'SELL' # Force sell signal
+                            details['reason'] = 'Trailing Stop'
 
                 elif current_pos_side == 'Sell':
                     # Update lowest price for Short
                     if not hasattr(strategy, 'lowest_price') or current_price < strategy.lowest_price:
                         strategy.lowest_price = current_price
                     
-                    # Check Trailing Stop
-                    stop_price = strategy.lowest_price * (1 + config.TRAILING_STOP_PCT)
-                    if current_price > stop_price:
-                        logger.info(f"📈 Trailing Stop Triggered for SHORT! Current: {current_price}, Low: {strategy.lowest_price}, Stop: {stop_price}")
-                        signal = 'BUY' # Force buy signal (to cover short)
-                        details['reason'] = 'Trailing Stop'
+                    # Check Activation
+                    entry_price = float(position.get('avgPrice', current_price))
+                    if strategy.lowest_price <= entry_price * (1 - config.TRAILING_STOP_ACTIVATION_PCT):
+                        # Check Trailing Stop
+                        stop_price = strategy.lowest_price * (1 + config.TRAILING_STOP_PCT)
+                        if current_price > stop_price:
+                            logger.info(f"📈 Trailing Stop Triggered for SHORT! Current: {current_price}, Low: {strategy.lowest_price}, Stop: {stop_price}")
+                            signal = 'BUY' # Force buy signal (to cover short)
+                            details['reason'] = 'Trailing Stop'
                 else:
                     # Reset tracking when no position
                     strategy.highest_price = 0
@@ -315,7 +322,8 @@ def main():
                             'type': 'CLOSE',
                             'pnl': 0.0 - fee,  # Exchange PnL + Fee deduction (simplified)
                             'strategy': strategy_name,
-                            'fee': fee
+                            'fee': fee,
+                            'leverage': config.LEVERAGE
                         }
                         db.save_trade(trade_data)
                         notifier.send_trade_alert(trade_data)
@@ -370,7 +378,8 @@ def main():
                                 'type': 'OPEN',
                                 'pnl': -fee,
                                 'strategy': strategy_name,
-                                'fee': fee
+                                'fee': fee,
+                                'leverage': config.LEVERAGE
                             }
                             db.save_trade(trade_data)
                             notifier.send_trade_alert(trade_data)
@@ -397,7 +406,8 @@ def main():
                             'type': 'CLOSE',
                             'pnl': 0.0 - fee, # Exchange PnL + Fee deduction
                             'strategy': strategy_name,
-                            'fee': fee
+                            'fee': fee,
+                            'leverage': config.LEVERAGE
                         }
                         db.save_trade(trade_data)
                         notifier.send_trade_alert(trade_data)
@@ -451,7 +461,8 @@ def main():
                                 'type': 'OPEN',
                                 'pnl': -fee,
                                 'strategy': strategy_name,
-                                'fee': fee
+                                'fee': fee,
+                                'leverage': config.LEVERAGE
                             }
                             db.save_trade(trade_data)
                             notifier.send_trade_alert(trade_data)

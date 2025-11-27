@@ -48,6 +48,7 @@ const TradeHistory = ({ trades, onRefresh }) => {
                                 <th className="px-6 py-4">Side</th>
                                 <th className="px-6 py-4 text-right">Price</th>
                                 <th className="px-6 py-4 text-right">Amount</th>
+                                <th className="px-6 py-4 text-right">Size / Margin</th>
                                 <th className="px-6 py-4 text-right">PnL</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                             </tr>
@@ -55,13 +56,17 @@ const TradeHistory = ({ trades, onRefresh }) => {
                         <tbody className="divide-y divide-white/5">
                             {trades.length === 0 ? (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-12 text-center text-muted-foreground">
+                                    <td colSpan="8" className="px-6 py-12 text-center text-muted-foreground">
                                         No trades recorded yet.
                                     </td>
                                 </tr>
                             ) : (
                                 trades.slice().reverse().map((trade, i) => {
                                     const pnl = trade.pnl !== undefined ? trade.pnl : (trade.profit_loss || 0);
+                                    const value = trade.total_value || (trade.price * trade.amount);
+                                    const leverage = trade.leverage || 1;
+                                    const margin = value / leverage;
+
                                     return (
                                         <tr key={i} className="hover:bg-white/5 transition-colors">
                                             <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
@@ -86,6 +91,16 @@ const TradeHistory = ({ trades, onRefresh }) => {
                                             </td>
                                             <td className="px-6 py-4 text-right font-mono">
                                                 {trade.amount?.toFixed(4)}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono">
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-white">${value?.toFixed(2)}</span>
+                                                    {leverage > 1 && (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Margin: ${margin?.toFixed(2)} ({leverage}x)
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className={`px-6 py-4 text-right font-bold font-mono ${pnl >= 0 ? 'text-green-400' : 'text-red-400'
                                                 }`}>

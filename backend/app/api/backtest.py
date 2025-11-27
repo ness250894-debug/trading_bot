@@ -144,8 +144,12 @@ async def run_optimization(request: OptimizeRequest):
              raise HTTPException(status_code=404, detail="No data found for the specified parameters.")
              
         # Run Optimization
+        logger.info("Starting Hyperopt optimization...")
         optimizer = Hyperopt(request.symbol, request.timeframe, bt.df)
+        logger.info(f"Optimizer initialized. Param ranges: {request.param_ranges}")
+        
         results_df = optimizer.optimize(request.param_ranges, strategy_class)
+        logger.info(f"Optimization complete. Result type: {type(results_df)}")
         
         # Save Successful Runs to DB
         from ..core.database import DuckDBHandler

@@ -18,7 +18,8 @@ LEVERAGE = 10
 # Risk Management
 TAKE_PROFIT_PCT = 0.01 # 1%
 STOP_LOSS_PCT = 0.005 # 0.5%
-TRAILING_STOP_PCT = 0.002 # 0.2%
+TRAILING_STOP_PCT = 0.003 # 0.3% (Increased from 0.2%)
+TRAILING_STOP_ACTIVATION_PCT = 0.005 # 0.5% (Only activate after 0.5% profit)
 TAKER_FEE_PCT = 0.0006 # 0.06% Taker Fee (ByBit Standard)
 POSITION_SIZES = {1: 0.01, 2: 0.02, 3: 0.05} # Risk % per trade based on score
 
