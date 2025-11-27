@@ -74,11 +74,7 @@ async def get_status():
         
         balance_data = client.fetch_balance()
         
-        # print(f"DEBUG: config file: {config.__file__}")
-        # print(f"DEBUG: config dir: {dir(config)}")
-        # print(f"DEBUG: STRATEGY_PARAMS: {getattr(config, 'STRATEGY_PARAMS', 'NOT FOUND')}")
-        
-        # raise Exception(f"DEBUG: STRATEGY_PARAMS: {getattr(config, 'STRATEGY_PARAMS', 'NOT FOUND')} | File: {config.__file__}")
+
 
         # Get USDT balance (free + used)
         usdt_balance = balance_data.get('USDT', {})
@@ -96,7 +92,7 @@ async def get_status():
         active_trades = 1 if position.get('size', 0.0) > 0 else 0
         
         return {
-            "status": "DEBUG_ACTIVE" if running_event.is_set() else "DEBUG_PAUSED",
+            "status": "Active" if running_event.is_set() else "Paused",
             "is_running": running_event.is_set(),
             "balance": {
                 "total": total_balance,
