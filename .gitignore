@@ -32,3 +32,6 @@ Thumbs.db
 *.sqlite3
 *.duckdb
 *.duckdb.wal
+
+# Documentation
+docs/

@@ -283,8 +283,8 @@ class ExchangeClient:
             self.logger.error(f"Error creating order: {e}")
             return None
     
-    def get_market_price(self, symbol):
-        """Fetches current market price."""
+    def fetch_ticker(self, symbol):
+        """Fetches current ticker data (last, bid, ask)."""
         try:
             if self.demo:
                 # Workaround for ByBit Demo error 10032
@@ -297,14 +297,26 @@ class ExchangeClient:
                     result = response.get('result', {})
                     list_data = result.get('list', [])
                     if list_data:
-                        return float(list_data[0].get('lastPrice', 0))
+                        ticker = list_data[0]
+                        return {
+                            'last': float(ticker.get('lastPrice', 0)),
+                            'bid': float(ticker.get('bid1Price', 0)),
+                            'ask': float(ticker.get('ask1Price', 0)),
+                            'info': ticker
+                        }
                 return None
             else:
-                ticker = self.exchange.fetch_ticker(symbol)
-                return ticker['last']
+                return self.exchange.fetch_ticker(symbol)
         except Exception as e:
             self.logger.error(f"Error fetching ticker: {e}")
             return None
+
+    def get_market_price(self, symbol):
+        """Fetches current market price."""
+        ticker = self.fetch_ticker(symbol)
+        if ticker:
+            return ticker['last']
+        return None
 
     def fetch_position(self, symbol):
         """Fetches current position for a symbol."""
@@ -423,5 +435,29 @@ class ExchangeClient:
                 self.logger.info(f"Leverage already {leverage}x for {symbol} (caught exception)")
                 return True
             
-            self.logger.error(f"Error setting leverage: {e}")
+    def close_position(self, symbol):
+        """Closes the current position for the symbol."""
+        try:
+            position = self.fetch_position(symbol)
+            size = position.get('size', 0.0)
+            side = position.get('side', 'None')
+            
+            if size > 0 and side != 'None':
+                # Determine opposing side
+                close_side = 'Sell' if side == 'Buy' else 'Buy'
+                
+                self.logger.info(f"Closing {side} position of {size} {symbol}...")
+                
+                # Execute Market Order to close
+                return self.create_order(
+                    symbol=symbol,
+                    type='market',
+                    side=close_side,
+                    amount=size
+                )
+            else:
+                self.logger.info(f"No position to close for {symbol}")
+                return True
+        except Exception as e:
+            self.logger.error(f"Error closing position: {e}")
             return False
