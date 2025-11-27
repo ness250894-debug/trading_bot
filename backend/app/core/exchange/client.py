@@ -217,12 +217,31 @@ class ExchangeClient:
             self.logger.error(f"Error fetching balance: {e}")
             return None
 
-    def create_order(self, symbol, type, side, amount, price=None, take_profit=None, stop_loss=None, trailing_stop=None):
+    def create_order(self, symbol, order_type, side, amount, price=None, take_profit=None, stop_loss=None, trailing_stop=None, take_profit_pct=None, stop_loss_pct=None):
         """Creates an order with optional TP/SL/Trailing."""
         try:
             # Ensure amount is precise enough (ByBit usually needs specific precision)
             # For now, we rely on ccxt's handling or user input, but we could add precision handling here.
             
+            # Calculate TP/SL from percentages if provided
+            if (take_profit_pct or stop_loss_pct) and not (take_profit or stop_loss):
+                base_price = price
+                if not base_price:
+                    # For market orders, use current market price
+                    base_price = self.get_market_price(symbol)
+                
+                if base_price:
+                    if side.lower() == 'buy':
+                        if take_profit_pct:
+                            take_profit = base_price * (1 + take_profit_pct)
+                        if stop_loss_pct:
+                            stop_loss = base_price * (1 - stop_loss_pct)
+                    elif side.lower() == 'sell':
+                        if take_profit_pct:
+                            take_profit = base_price * (1 - take_profit_pct)
+                        if stop_loss_pct:
+                            stop_loss = base_price * (1 + stop_loss_pct)
+
             if self.demo:
                 # Workaround for ByBit Demo error 10032
                 # Use raw v5 endpoint
@@ -235,7 +254,7 @@ class ExchangeClient:
                     'category': 'linear',
                     'symbol': market_symbol,
                     'side': side.capitalize(),
-                    'orderType': type.capitalize(),
+                    'orderType': order_type.capitalize(),
                     'qty': formatted_amount,
                 }
                 if price:
@@ -265,9 +284,9 @@ class ExchangeClient:
                     params['trailingStop'] = str(trailing_stop)
 
                 if price:
-                    return self.exchange.create_order(symbol, type, side, amount, price, params)
+                    return self.exchange.create_order(symbol, order_type, side, amount, price, params)
                 else:
-                    return self.exchange.create_order(symbol, type, side, amount, None, params)
+                    return self.exchange.create_order(symbol, order_type, side, amount, None, params)
         except ccxt.InsufficientFunds as e:
             self.logger.error(f"Insufficient Funds: {e}")
             return None
@@ -451,7 +470,7 @@ class ExchangeClient:
                 # Execute Market Order to close
                 return self.create_order(
                     symbol=symbol,
-                    type='market',
+                    order_type='market',
                     side=close_side,
                     amount=size
                 )
