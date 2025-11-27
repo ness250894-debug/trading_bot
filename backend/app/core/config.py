@@ -6,6 +6,8 @@ load_dotenv()
 API_KEY = os.getenv('BYBIT_API_KEY')
 API_SECRET = os.getenv('BYBIT_API_SECRET')
 DEMO = os.getenv('BYBIT_DEMO', 'True').lower() == 'true'
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 # Trading Settings
 SYMBOL = 'BTC/USDT'
@@ -53,3 +55,26 @@ SCANNER_TOP_N = 20 # Scan top 20 coins by volume
 EDGE_ENABLED = True
 EDGE_WINDOW_TRADES = 10 # Calculate edge based on last 10 trades
 EDGE_MIN_EXPECTANCY = 0.0 # Minimum expectancy to trade (0.0 = breakeven)
+
+# Load Dynamic Config from JSON
+import json
+import logging
+
+config_path = os.path.join(os.path.dirname(__file__), 'config.json')
+if os.path.exists(config_path):
+    try:
+        with open(config_path, 'r') as f:
+            dynamic_config = json.load(f)
+            
+        # Override globals
+        if 'SYMBOL' in dynamic_config: SYMBOL = dynamic_config['SYMBOL']
+        if 'TIMEFRAME' in dynamic_config: TIMEFRAME = dynamic_config['TIMEFRAME']
+        if 'AMOUNT_USDT' in dynamic_config: AMOUNT_USDT = dynamic_config['AMOUNT_USDT']
+        if 'STRATEGY' in dynamic_config: STRATEGY = dynamic_config['STRATEGY']
+        if 'STRATEGY_PARAMS' in dynamic_config: STRATEGY_PARAMS = dynamic_config['STRATEGY_PARAMS']
+        if 'DRY_RUN' in dynamic_config: DRY_RUN = dynamic_config['DRY_RUN']
+        
+        # Log successful load (using print as logger might not be configured yet)
+        print(f"Loaded dynamic config from {config_path}")
+    except Exception as e:
+        print(f"Failed to load config.json: {e}")

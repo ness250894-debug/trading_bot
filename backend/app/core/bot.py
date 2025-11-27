@@ -85,6 +85,11 @@ def main():
     if edge.enabled:
         logger.info(f"Edge Positioning Enabled (Window: {edge.window}, Min Exp: {edge.min_expectancy})")
 
+    # Initialize Notifier
+    from .notifier import TelegramNotifier
+    notifier = TelegramNotifier()
+    notifier.send_message("🚀 *Trading Bot Started*")
+
     logger.info("Bot initialized. Waiting for start signal...")
 
     # Track position duration
@@ -99,6 +104,7 @@ def main():
                 # Wait for the event to be set
                 running_event.wait()
                 logger.info("▶️ Bot resumed trading.")
+                notifier.send_message("▶️ *Bot Resumed*")
 
             # --- Market Scanner Logic ---
             if scanner and (time.time() - last_scan_time > config.SCANNER_INTERVAL_MINUTES * 60):
@@ -108,6 +114,7 @@ def main():
                     new_symbol = scanner.get_best_pair()
                     if new_symbol and new_symbol != config.SYMBOL:
                         logger.info(f"🔄 Switching symbol from {config.SYMBOL} to {new_symbol}")
+                        notifier.send_message(f"🔄 Switching symbol to `{new_symbol}`")
                         config.SYMBOL = new_symbol
                         # Re-initialize trend filter if needed
                         if trend_filter:
@@ -151,7 +158,7 @@ def main():
                         
                         # Log Trade (Simplified)
                         fee = amount * current_price * config.TAKER_FEE_PCT
-                        db.save_trade({
+                        trade_data = {
                             'symbol': config.SYMBOL,
                             'side': open_order['side'],
                             'price': current_price,
@@ -160,7 +167,9 @@ def main():
                             'pnl': -fee,
                             'strategy': strategy_name,
                             'fee': fee
-                        })
+                        }
+                        db.save_trade(trade_data)
+                        notifier.send_trade_alert(trade_data)
                         
                         # Reset
                         open_order = None
@@ -168,6 +177,7 @@ def main():
                         
                     except Exception as e:
                         logger.error(f"Failed to place forced market order: {e}")
+                        notifier.send_error(f"Failed to place forced market order: {e}")
                 
                 # If not timed out, we skip the rest of the loop to wait for fill
                 # In a real bot, we'd check if it filled here.
@@ -295,7 +305,7 @@ def main():
                         fee = current_pos_size * current_price * config.TAKER_FEE_PCT
                         
                         # Log trade to database
-                        db.save_trade({
+                        trade_data = {
                             'symbol': config.SYMBOL,
                             'side': 'CLOSE_SHORT',
                             'price': current_price,
@@ -304,7 +314,9 @@ def main():
                             'pnl': 0.0 - fee,  # Exchange PnL + Fee deduction (simplified)
                             'strategy': strategy_name,
                             'fee': fee
-                        })
+                        }
+                        db.save_trade(trade_data)
+                        notifier.send_trade_alert(trade_data)
                     
                     # Open new LONG position
                     logger.info(f"Opening LONG position | Signal Score: {score}")
@@ -348,7 +360,7 @@ def main():
                             fee = trade_amount * current_price * config.TAKER_FEE_PCT
                             
                             # Log trade to database
-                            db.save_trade({
+                            trade_data = {
                                 'symbol': config.SYMBOL,
                                 'side': 'Buy',
                                 'price': current_price,
@@ -357,10 +369,13 @@ def main():
                                 'pnl': -fee,
                                 'strategy': strategy_name,
                                 'fee': fee
-                            })
+                            }
+                            db.save_trade(trade_data)
+                            notifier.send_trade_alert(trade_data)
 
                     except Exception as e:
                         logger.error(f"Failed to open LONG: {e}")
+                        notifier.send_error(f"Failed to open LONG: {e}")
                 
                 elif signal == 'SELL' and current_pos_side != 'Sell':
                     # Close long if exists
@@ -372,7 +387,7 @@ def main():
                         fee = current_pos_size * current_price * config.TAKER_FEE_PCT
                         
                         # Log trade to database
-                        db.save_trade({
+                        trade_data = {
                             'symbol': config.SYMBOL,
                             'side': 'CLOSE_LONG',
                             'price': current_price,
@@ -381,7 +396,9 @@ def main():
                             'pnl': 0.0 - fee, # Exchange PnL + Fee deduction
                             'strategy': strategy_name,
                             'fee': fee
-                        })
+                        }
+                        db.save_trade(trade_data)
+                        notifier.send_trade_alert(trade_data)
                     
                     # Open new SHORT position
                     logger.info(f"Opening SHORT position | Signal Score: {score}")
@@ -424,7 +441,7 @@ def main():
                             fee = trade_amount * current_price * config.TAKER_FEE_PCT
                             
                             # Log trade to database
-                            db.save_trade({
+                            trade_data = {
                                 'symbol': config.SYMBOL,
                                 'side': 'Sell',
                                 'price': current_price,
@@ -433,16 +450,20 @@ def main():
                                 'pnl': -fee,
                                 'strategy': strategy_name,
                                 'fee': fee
-                            })
+                            }
+                            db.save_trade(trade_data)
+                            notifier.send_trade_alert(trade_data)
 
                     except Exception as e:
                         logger.error(f"Failed to open SHORT: {e}")
+                        notifier.send_error(f"Failed to open SHORT: {e}")
                 
             # Sleep to prevent API spam (configurable delay)
             time.sleep(config.LOOP_DELAY_SECONDS)
                 
         except Exception as e:
             logger.error(f"An error occurred: {e}")
+            notifier.send_error(f"Bot Loop Error: {e}")
             # Add a small delay to avoid rapid error loops
             time.sleep(10)
 
