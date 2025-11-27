@@ -137,40 +137,22 @@ async def get_status():
 @router.post("/config")
 async def update_config(update: ConfigUpdate):
     try:
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'core', 'config.py')
+        import json
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'core', 'config.json')
         
-        with open(config_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        # Helper to replace variable assignment
-        def replace_var(name, value, content):
-            # Regex to find "NAME = value" or "NAME = 'value'"
-            # We assume simple formatting as in the file
-            if isinstance(value, str):
-                new_line = f"{name} = '{value}'"
-            else:
-                new_line = f"{name} = {value}"
-            
-            # This regex looks for start of line, name, equals, and then anything until end of line (or comment)
-            pattern = rf"^{name}\s*=\s*.*"
-            
-            if re.search(pattern, content, re.MULTILINE):
-                return re.sub(pattern, new_line, content, flags=re.MULTILINE)
-            else:
-                # If not found, append it (fallback)
-                return content + f"\n{new_line}"
-
-        # Apply updates
-        content = replace_var('TIMEFRAME', update.timeframe, content)
-        content = replace_var('AMOUNT_USDT', update.amount_usdt, content)
-        content = replace_var('STRATEGY', update.strategy, content)
-        content = replace_var('DRY_RUN', update.dry_run, content)
-        content = replace_var('STRATEGY_PARAMS', update.parameters, content)
-        # Symbol is usually hardcoded or we can update it too
-        content = replace_var('SYMBOL', update.symbol, content)
-
+        # Prepare new config data
+        new_config = {
+            "SYMBOL": update.symbol,
+            "TIMEFRAME": update.timeframe,
+            "AMOUNT_USDT": update.amount_usdt,
+            "STRATEGY": update.strategy,
+            "STRATEGY_PARAMS": update.parameters,
+            "DRY_RUN": update.dry_run
+        }
+        
+        # Write to JSON file
         with open(config_path, 'w', encoding='utf-8') as f:
-            f.write(content)
+            json.dump(new_config, f, indent=4)
             
         return {"status": "success", "message": "Config updated. Please restart the bot."}
         
