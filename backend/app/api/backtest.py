@@ -249,14 +249,16 @@ async def websocket_optimize(websocket: WebSocket):
                     results_list = results_df.to_dict(orient="records")
                     
                     for result in results_list:
+                        # Construct params for all results
+                        params = {k: v for k, v in result.items() if k not in ['return', 'strategy', 'number', 'state', 'datetime_start', 'datetime_complete', 'duration']}
+                        result['params'] = params
+                        # Default metrics
+                        result['win_rate'] = result.get('win_rate', 0)
+                        result['trades'] = result.get('trades', 0)
+                        result['final_balance'] = result.get('final_balance', 0)
+
                         if result.get('return', 0) > 0:
                             result['strategy'] = request.strategy
-                            params = {k: v for k, v in result.items() if k not in ['return', 'strategy', 'number', 'state', 'datetime_start', 'datetime_complete', 'duration']}
-                            result['params'] = params
-                            result['win_rate'] = 0
-                            result['trades'] = 0
-                            result['final_balance'] = 0
-                            
                             db.save_result(result)
                             saved_count += 1
                     
