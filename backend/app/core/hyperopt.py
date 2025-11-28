@@ -53,44 +53,32 @@ class Hyperopt:
             # Optuna minimizes by default if direction not set, but we set direction='maximize' below
             # We want to maximize Total Return
             
-            # Calculate Total Return %
+            # Calculate Metrics
             total_return = ((bt.balance - 1000) / 1000) * 100
+            trades_count = len(bt.trades)
+            wins = [t for t in bt.trades if t['pnl'] > 0]
+            win_rate = (len(wins) / trades_count) * 100 if trades_count > 0 else 0
+            
+            # Store metrics in trial for retrieval later
+            trial.set_user_attr("win_rate", win_rate)
+            trial.set_user_attr("trades", trades_count)
+            trial.set_user_attr("final_balance", bt.balance)
             
             # Optional: Penalize low trade count to avoid overfitting on 1 lucky trade
-            if len(bt.trades) < 5:
-                return -100 # Heavy penalty
+            # Reduced penalty to allow seeing results
+            if trades_count < 2:
+                return -100 
 
             return total_return
-
+        
         # Create Study
         study = optuna.create_study(direction='maximize')
         
         # Optional: Add progress callback
         if progress_callback:
-            # Optuna doesn't support async callbacks directly in optimize, 
-            # but we can wrap the objective or use a callback class.
-            # For simplicity, we'll just run it and maybe report progress if we iterate manually.
-            # But study.optimize is blocking. 
-            # To support progress updates, we can loop n_trials times.
             for i in range(n_trials):
                 study.optimize(objective, n_trials=1)
                 best_trial = study.best_trial
-                
-                # Report progress
-                import asyncio
-                if asyncio.iscoroutinefunction(progress_callback):
-                    # We can't await here easily if this is synchronous.
-                    # But the caller (websocket handler) is async.
-                    # We might need to make optimize async or run in thread.
-                    # For now, let's assume optimize is called in a thread or we just don't await.
-                    # Actually, since we are in a thread (job manager), we can't await async callback easily 
-                    # unless we pass an event loop or use run_coroutine_threadsafe.
-                    pass
-                    
-                # Let's just rely on the caller to handle async/thread stuff.
-                # If we want to support progress, we should probably make this a generator or accept a sync callback.
-                # The JobManager expects a sync function that calls an async callback? 
-                # No, JobManager runs in a thread, so it can call sync callbacks.
                 
                 if progress_callback:
                     progress_callback(i + 1, n_trials, {
@@ -106,17 +94,15 @@ class Hyperopt:
         logger.info(f"Best Params: {study.best_params}")
         
         # Store results for access
-        self.results = [] # We could populate this with all trials if needed
-        # For now, let's just return a dataframe of all trials
         trials_df = study.trials_dataframe()
-        # Rename columns to match expected output
-        # 'params_bb_length' -> 'bb_length', 'value' -> 'return'
         
         # Clean up column names
         rename_map = {'value': 'return'}
         for col in trials_df.columns:
             if col.startswith('params_'):
                 rename_map[col] = col.replace('params_', '')
+            elif col.startswith('user_attrs_'):
+                rename_map[col] = col.replace('user_attrs_', '')
         
         trials_df = trials_df.rename(columns=rename_map)
         

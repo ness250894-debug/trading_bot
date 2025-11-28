@@ -103,6 +103,7 @@ class OptimizeRequest(BaseModel):
     days: int = 5
     strategy: str
     param_ranges: Dict[str, List[Any]]
+    n_trials: Optional[int] = 50
     
     @validator('days')
     def days_must_be_positive(cls, v):
@@ -148,7 +149,7 @@ async def run_optimization(request: OptimizeRequest):
         optimizer = Hyperopt(request.symbol, request.timeframe, bt.df)
         logger.info(f"Optimizer initialized. Param ranges: {request.param_ranges}")
         
-        results_df = optimizer.optimize(request.param_ranges, strategy_class)
+        results_df = optimizer.optimize(request.param_ranges, strategy_class, n_trials=request.n_trials)
         logger.info(f"Optimization complete. Result type: {type(results_df)}")
         
         # Save Successful Runs to DB
@@ -239,7 +240,7 @@ async def websocket_optimize(websocket: WebSocket):
                 # Define the job function
                 def run_opt(progress_callback):
                     optimizer = Hyperopt(request.symbol, request.timeframe, bt.df)
-                    results_df = optimizer.optimize(request.param_ranges, strategy_class, progress_callback=progress_callback)
+                    results_df = optimizer.optimize(request.param_ranges, strategy_class, n_trials=request.n_trials, progress_callback=progress_callback)
                     
                     # Save Successful Runs to DB
                     from ..core.database import DuckDBHandler
@@ -250,9 +251,11 @@ async def websocket_optimize(websocket: WebSocket):
                     
                     for result in results_list:
                         # Construct params for all results
-                        params = {k: v for k, v in result.items() if k not in ['return', 'strategy', 'number', 'state', 'datetime_start', 'datetime_complete', 'duration']}
+                        params = {k: v for k, v in result.items() if k not in ['return', 'strategy', 'number', 'state', 'datetime_start', 'datetime_complete', 'duration', 'win_rate', 'trades', 'final_balance']}
                         result['params'] = params
-                        # Default metrics
+                        
+                        # Metrics are now in result from Hyperopt user_attrs
+                        # Ensure they exist (fallback to 0 if something went wrong)
                         result['win_rate'] = result.get('win_rate', 0)
                         result['trades'] = result.get('trades', 0)
                         result['final_balance'] = result.get('final_balance', 0)

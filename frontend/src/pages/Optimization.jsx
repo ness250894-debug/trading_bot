@@ -236,6 +236,8 @@ export default function Optimization() {
         };
     }, []);
 
+    const [nTrials, setNTrials] = useState(50);
+
     const runOptimization = () => {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             alert("WebSocket not connected. Please refresh.");
@@ -244,7 +246,7 @@ export default function Optimization() {
 
         setLoading(true);
         setIsOptimizing(true);
-        setProgress({ current: 0, total: 0 });
+        setProgress({ current: 0, total: nTrials });
         setResults([]);
 
         const param_ranges = {};
@@ -257,7 +259,8 @@ export default function Optimization() {
             timeframe: '1m',
             days: 3,
             strategy: strategy,
-            param_ranges: param_ranges
+            param_ranges: param_ranges,
+            n_trials: nTrials
         }));
     };
 
@@ -390,6 +393,18 @@ export default function Optimization() {
                 </div>
 
                 <div className="mt-6 flex items-center gap-4">
+                    <div className="w-48">
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Trials: {nTrials}</label>
+                        <input
+                            type="range"
+                            min="10"
+                            max="200"
+                            step="10"
+                            value={nTrials}
+                            onChange={(e) => setNTrials(Number(e.target.value))}
+                            className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all"
+                        />
+                    </div>
                     <button
                         onClick={runOptimization}
                         disabled={loading}
