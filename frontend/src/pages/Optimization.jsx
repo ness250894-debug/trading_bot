@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders } from 'lucide-react';
+import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
 // --- Helper Components ---
 
@@ -136,6 +136,7 @@ export default function Optimization() {
 
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [isOptimizing, setIsOptimizing] = useState(false);
+    const [sortConfig, setSortConfig] = useState({ key: 'return', direction: 'desc' });
 
     const strategies = Object.keys(strategyInfo);
 
@@ -173,6 +174,24 @@ export default function Optimization() {
             return { ...prev, [param]: newRange };
         });
     };
+
+    const handleSort = (key) => {
+        setSortConfig((current) => {
+            if (current.key === key) {
+                return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+            }
+            return { key, direction: 'desc' };
+        });
+    };
+
+    const sortedResults = [...results].sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
 
     useEffect(() => {
         localStorage.setItem('optimization_strategy', strategy);
@@ -466,14 +485,50 @@ export default function Optimization() {
                                 <tr>
                                     <th className="px-6 py-4">Rank</th>
                                     <th className="px-6 py-4">Parameters</th>
-                                    <th className="px-6 py-4 text-right">Return</th>
-                                    <th className="px-6 py-4 text-right">Win Rate</th>
-                                    <th className="px-6 py-4 text-right">Trades</th>
+                                    <th
+                                        className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group select-none"
+                                        onClick={() => handleSort('return')}
+                                    >
+                                        <div className="flex items-center justify-end gap-1">
+                                            Return
+                                            {sortConfig.key === 'return' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                            ) : (
+                                                <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-50" />
+                                            )}
+                                        </div>
+                                    </th>
+                                    <th
+                                        className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group select-none"
+                                        onClick={() => handleSort('win_rate')}
+                                    >
+                                        <div className="flex items-center justify-end gap-1">
+                                            Win Rate
+                                            {sortConfig.key === 'win_rate' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                            ) : (
+                                                <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-50" />
+                                            )}
+                                        </div>
+                                    </th>
+                                    <th
+                                        className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group select-none"
+                                        onClick={() => handleSort('trades')}
+                                    >
+                                        <div className="flex items-center justify-end gap-1">
+                                            Trades
+                                            {sortConfig.key === 'trades' ? (
+                                                sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                                            ) : (
+                                                <ArrowUpDown size={14} className="opacity-0 group-hover:opacity-50" />
+                                            )}
+                                        </div>
+                                    </th>
                                     <th className="px-6 py-4 text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {results.length === 0 ? (
+                                {sortedResults.length === 0 ? (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-24 text-center">
                                             <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -486,10 +541,10 @@ export default function Optimization() {
                                         </td>
                                     </tr>
                                 ) : (
-                                    results.map((res, i) => (
+                                    sortedResults.map((res, i) => (
                                         <tr key={i} className="hover:bg-white/5 transition-colors group">
                                             <td className="px-6 py-4 font-mono text-muted-foreground">
-                                                {i === 0 ? (
+                                                {i === 0 && sortConfig.key === 'return' && sortConfig.direction === 'desc' ? (
                                                     <span className="flex items-center gap-1 text-yellow-400 font-bold">
                                                         <CheckCircle size={14} /> #1
                                                     </span>
