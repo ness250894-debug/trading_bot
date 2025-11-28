@@ -321,6 +321,10 @@ export default function Optimization() {
         const param_ranges = {};
 
         for (const [key, range] of Object.entries(ranges)) {
+            // Explicitly skip legacy keys
+            if (['bb_length', 'short_window', 'long_window', 'rsi_length', 'rsi_buy', 'rsi_sell', 'buy_threshold', 'sell_threshold'].includes(key)) {
+                continue;
+            }
             if (validKeys.includes(key)) {
                 param_ranges[key] = [range.start, range.end, range.step];
             }
@@ -394,6 +398,19 @@ export default function Optimization() {
                         Configuration
                     </h3>
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => {
+                                if (window.confirm("This will reset all optimization settings to defaults. Continue?")) {
+                                    localStorage.removeItem('optimization_strategy');
+                                    localStorage.removeItem('optimization_results');
+                                    localStorage.removeItem('optimization_ranges');
+                                    window.location.reload();
+                                }
+                            }}
+                            className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors border border-red-500/20"
+                        >
+                            Reset Settings
+                        </button>
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-foreground">Strategy:</label>
                             <select
