@@ -17,7 +17,10 @@ class VectorizedBacktester:
         self.symbol = symbol
         self.timeframe = timeframe
         self.days = days
-        self.client = ExchangeClient(config.API_KEY, config.API_SECRET, demo=True)
+        self.days = days
+        self.client = None
+        if data is None:
+            self.client = ExchangeClient(config.API_KEY, config.API_SECRET, demo=getattr(config, 'DEMO', True))
         
         if isinstance(strategy, str):
             self.strategy_name = strategy
