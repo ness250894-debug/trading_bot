@@ -30,7 +30,8 @@ class DuckDBHandler:
                     return_pct DOUBLE,
                     win_rate_pct DOUBLE,
                     trades INTEGER,
-                    final_balance DOUBLE
+                    final_balance DOUBLE,
+                    user_id INTEGER
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_backtest_id START 1;
                 CREATE TABLE IF NOT EXISTS users (
@@ -56,21 +57,38 @@ class DuckDBHandler:
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_user_strategy_id START 1;
             """)
+            
+            # Run migrations for existing tables
+            try:
+                # Add user_id column to trades table if it doesn't exist
+                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS user_id INTEGER")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id)")
+                logger.info("Trades table migration completed (user_id column)")
+                
+                # Add user_id column to backtest_results table if it doesn't exist
+                self.conn.execute("ALTER TABLE backtest_results ADD COLUMN IF NOT EXISTS user_id INTEGER")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_backtest_user_id ON backtest_results(user_id)")
+                logger.info("Backtest results table migration completed (user_id column)")
+            except Exception as migration_error:
+                # Table might not exist yet, which is fine
+                logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")
+            
             logger.info("Tables checked/created.")
         except Exception as e:
             logger.error(f"Error creating tables: {e}")
 
-    def save_result(self, result):
+    def save_result(self, result, user_id=None):
         """
         Saves a backtest result to the database.
         result: dict containing strategy, params, return, win_rate, trades, final_balance
+        user_id: ID of the user who ran this backtest
         """
         try:
             timestamp = datetime.now()
             query = """
                 INSERT INTO backtest_results 
-                (id, timestamp, strategy, parameters, return_pct, win_rate_pct, trades, final_balance)
-                VALUES (nextval('seq_backtest_id'), ?, ?, ?, ?, ?, ?, ?)
+                (id, timestamp, strategy, parameters, return_pct, win_rate_pct, trades, final_balance, user_id)
+                VALUES (nextval('seq_backtest_id'), ?, ?, ?, ?, ?, ?, ?, ?)
             """
             self.conn.execute(query, [
                 timestamp,
@@ -79,16 +97,23 @@ class DuckDBHandler:
                 result['return'],
                 result['win_rate'],
                 result['trades'],
-                result['final_balance']
+                result['final_balance'],
+                user_id
             ])
-            logger.info("Result saved to DB.")
+            logger.info(f"Backtest result saved for user {user_id}")
         except Exception as e:
             logger.error(f"Error saving result: {e}")
 
-    def get_leaderboard(self):
-        """Returns the leaderboard sorted by return."""
+    def get_leaderboard(self, user_id=None):
+        """Returns the leaderboard sorted by return, optionally filtered by user."""
         try:
-            df = self.conn.execute("SELECT * FROM backtest_results ORDER BY return_pct DESC").fetchdf()
+            if user_id is not None:
+                df = self.conn.execute(
+                    "SELECT * FROM backtest_results WHERE user_id = ? ORDER BY return_pct DESC",
+                    [user_id]
+                ).fetchdf()
+            else:
+                df = self.conn.execute("SELECT * FROM backtest_results ORDER BY return_pct DESC").fetchdf()
             return df
         except Exception as e:
             logger.error(f"Error fetching leaderboard: {e}")

@@ -266,7 +266,7 @@ async def websocket_optimize(websocket: WebSocket):
 
                         if result.get('return', 0) > 0:
                             result['strategy'] = request.strategy
-                            db.save_result(result)
+                            db.save_result(result, user_id=current_user['id'])
                             saved_count += 1
                     
                     if saved_count > 0:
