@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Strategies from './pages/Strategies';
 import Optimization from './pages/Optimization';
 import Backtest from './pages/Backtest';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import { ToastProvider } from './components/Toast';
 import { ModalProvider } from './components/Modal';
 
@@ -54,21 +56,57 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+const ProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <ErrorBoundary>
       <Router>
         <ToastProvider>
           <ModalProvider>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/strategies" element={<Strategies />} />
-                <Route path="/optimization" element={<Optimization />} />
-                <Route path="/backtest" element={<Backtest />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Layout>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+
+              {/* Protected Routes */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/strategies" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Strategies />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/optimization" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Optimization />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/backtest" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Backtest />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </ModalProvider>
         </ToastProvider>
       </Router>

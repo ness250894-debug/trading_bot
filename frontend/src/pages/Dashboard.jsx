@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Play, Square, Activity, DollarSign, TrendingUp, Terminal, Clock, AlertCircle } from 'lucide-react';
 import TradeHistory from '../components/TradeHistory';
@@ -39,8 +39,8 @@ export default function Dashboard() {
         const fetchData = async () => {
             try {
                 const [statusRes, tradesRes] = await Promise.all([
-                    axios.get('/api/status'),
-                    axios.get('/api/trades')
+                    api.get('/status'),
+                    api.get('/trades')
                 ]);
                 setStatus(statusRes.data);
                 setIsRunning(statusRes.data.is_running);
@@ -62,12 +62,12 @@ export default function Dashboard() {
     const handleStartStop = async () => {
         try {
             if (isRunning) {
-                await axios.post('/api/stop');
+                await api.post('/stop');
             } else {
-                await axios.post('/api/start');
+                await api.post('/start');
             }
             // Refresh status immediately
-            const res = await axios.get('/api/status');
+            const res = await api.get('/status');
             setStatus(res.data);
             setIsRunning(res.data.is_running);
         } catch (err) {
@@ -127,10 +127,10 @@ export default function Dashboard() {
 
     const refreshTrades = async () => {
         try {
-            const tradesRes = await axios.get('/api/trades');
+            const tradesRes = await api.get('/trades');
             setTrades(tradesRes.data);
             // Also refresh status to update total PnL
-            const statusRes = await axios.get('/api/status');
+            const statusRes = await api.get('/status');
             setStatus(statusRes.data);
         } catch (err) {
             console.error('Failed to refresh trades:', err);
@@ -224,7 +224,7 @@ export default function Dashboard() {
                                 {status?.config?.dry_run ? '⚠️ Dry Run Mode' : '🚀 Live Trading'}
                             </span>
                             <span className="text-[10px] opacity-70">
-                                {status?.config?.parameters ? Object.entries(status.config.parameters).map(([k,v]) => `${k}: ${v}`).join(', ') : ''}
+                                {status?.config?.parameters ? Object.entries(status.config.parameters).map(([k, v]) => `${k}: ${v}`).join(', ') : ''}
                             </span>
                         </span>
                     }

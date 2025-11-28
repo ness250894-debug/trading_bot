@@ -33,6 +33,13 @@ class DuckDBHandler:
                     final_balance DOUBLE
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_backtest_id START 1;
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY,
+                    email VARCHAR UNIQUE,
+                    hashed_password VARCHAR,
+                    created_at TIMESTAMP
+                );
+                CREATE SEQUENCE IF NOT EXISTS seq_user_id START 1;
             """)
             logger.info("Tables checked/created.")
         except Exception as e:
@@ -191,3 +198,45 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error calculating total PnL: {e}")
             return 0.0
+
+    def get_user_by_email(self, email):
+        """Returns a user by email."""
+        try:
+            result = self.conn.execute("SELECT * FROM users WHERE email = ?", [email]).fetchone()
+            if result:
+                return {
+                    "id": result[0],
+                    "email": result[1],
+                    "hashed_password": result[2],
+                    "created_at": result[3]
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching user: {e}")
+            return None
+
+    def create_user(self, email, hashed_password):
+        """Creates a new user."""
+        try:
+            timestamp = datetime.now()
+            query = """
+                INSERT INTO users (id, email, hashed_password, created_at)
+                VALUES (nextval('seq_user_id'), ?, ?, ?)
+            """
+            self.conn.execute(query, [email, hashed_password, timestamp])
+            logger.info(f"User created: {email}")
+            return True
+        except Exception as e:
+            logger.error(f"Error creating user: {e}")
+            return False
+
+    def get_user_strategy(self, user_id):
+        """Get user's strategy configuration (stub for now)."""
+        # TODO: Implement per-user strategy storage
+        return None
+
+    def save_user_strategy(self, user_id, strategy_config):
+        """Save user's strategy configuration (stub for now)."""
+        # TODO: Implement per-user strategy storage
+        logger.info(f"Skipping strategy save for user {user_id} (not yet implemented)")
+        return True

@@ -45,6 +45,7 @@ app.include_router(bot.router, prefix="/api")
 app.include_router(trades.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(api_keys.router, prefix="/api")
+app.include_router(health.router, prefix="/api")
 
 # Serve Static Files (Frontend)
 import os

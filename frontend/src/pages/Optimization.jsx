@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useModal } from '../components/Modal';

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Play, Loader2 } from 'lucide-react';
 import { useToast } from '../components/Toast';
@@ -31,7 +31,7 @@ export default function Backtest() {
     const runBacktest = async () => {
         setLoading(true);
         try {
-            const response = await axios.post('/api/backtest', {
+            const response = await api.post('/backtest', {
                 symbol: 'BTC/USDT',
                 timeframe: '1m',
                 days: 5,

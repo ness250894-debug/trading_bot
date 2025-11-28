@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity } from 'lucide-react';
 import { useModal } from '../components/Modal';
 
@@ -83,7 +83,7 @@ export default function Strategies() {
     const fetchConfig = async () => {
         setLoading(true);
         try {
-            const response = await axios.get('/api/status');
+            const response = await api.get('/status');
             setConfig(response.data.config);
             setMessage(null);
 
@@ -158,14 +158,14 @@ export default function Strategies() {
                 setSaving(true);
                 setMessage(null);
                 try {
-                    await axios.post('/api/config', config);
+                    await api.post('/config', config);
                     setMessage({ type: 'success', text: 'Configuration saved. Restarting bot...' });
-                    await axios.post('/api/restart');
+                    await api.post('/restart');
                     setRestarting(true);
                     let retries = 0;
                     const interval = setInterval(async () => {
                         try {
-                            await axios.get('/api/status');
+                            await api.get('/status');
                             clearInterval(interval);
                             setRestarting(false);
                             setSaving(false);

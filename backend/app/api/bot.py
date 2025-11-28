@@ -161,8 +161,8 @@ async def get_status(current_user: dict = Depends(auth.get_current_user)):
             logger.warning(f"Could not fetch balance: {e}")
             balance_info = {"total": 0.0, "free": 0.0, "used": 0.0}
         
-        # Get PnL from database
-        total_pnl = db.get_total_pnl(user_id=user_id)
+        # Get PnL from database (global for now until multi-tenant is fully implemented)
+        total_pnl = db.get_total_pnl()
         
         return {
             "status": "Active" if is_running else "Stopped",

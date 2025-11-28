@@ -1,6 +1,6 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SidebarItem = ({ to, icon: Icon, label }) => {
@@ -25,6 +25,12 @@ const SidebarItem = ({ to, icon: Icon, label }) => {
 export default function Layout({ children }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        navigate('/login');
+    };
 
     return (
         <div className="min-h-screen flex bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
@@ -64,7 +70,7 @@ export default function Layout({ children }) {
 
                 <div className="absolute bottom-0 left-0 right-0 p-6">
                     <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-white/5">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 mb-3">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 flex items-center justify-center text-xs font-bold text-white">
                                 OP
                             </div>
@@ -76,6 +82,13 @@ export default function Layout({ children }) {
                                 </p>
                             </div>
                         </div>
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-xs font-medium text-muted-foreground hover:text-red-400 transition-colors"
+                        >
+                            <LogOut size={14} />
+                            Sign Out
+                        </button>
                     </div>
                 </div>
             </aside>
