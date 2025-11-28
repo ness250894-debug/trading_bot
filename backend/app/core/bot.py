@@ -144,9 +144,20 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 amount = amount_usdt / current_price
                 side = 'buy' if signal == 'long' else 'sell'
                 
+                
                 try:
                     client.create_order(symbol=symbol, type='market', side=side, amount=amount)
-                    db.save_trade(user_id=user_id, symbol=symbol, side=side, price=current_price, amount=amount, pnl=0.0, trade_type='entry')
+                    # Log trade to database
+                    trade_data = {
+                        'symbol': symbol,
+                        'side': side,
+                        'price': current_price,
+                        'amount': amount,
+                        'type': 'OPEN',
+                        'pnl': 0.0,
+                        'strategy': strategy_name
+                    }
+                    db.save_trade(trade_data, user_id=user_id)
                     logger.info(f"✓ User {user_id}: {signal} entry at {current_price}")
                 except Exception as e:
                     logger.error(f"User {user_id} order failed: {e}")
@@ -324,7 +335,7 @@ def main():
                             'fee': fee,
                             'leverage': config.LEVERAGE
                         }
-                        db.save_trade(trade_data)
+                        db.save_trade(trade_data, user_id=user_id)
                         notifier.send_trade_alert(trade_data)
                         
                         # Reset
@@ -480,7 +491,7 @@ def main():
                             'fee': fee,
                             'leverage': config.LEVERAGE
                         }
-                        db.save_trade(trade_data)
+                        db.save_trade(trade_data, user_id=user_id)
                         notifier.send_trade_alert(trade_data)
                     
                     # Open new LONG position
@@ -536,7 +547,7 @@ def main():
                                 'fee': fee,
                                 'leverage': config.LEVERAGE
                             }
-                            db.save_trade(trade_data)
+                            db.save_trade(trade_data, user_id=user_id)
                             notifier.send_trade_alert(trade_data)
 
                     except Exception as e:
@@ -564,7 +575,7 @@ def main():
                             'fee': fee,
                             'leverage': config.LEVERAGE
                         }
-                        db.save_trade(trade_data)
+                        db.save_trade(trade_data, user_id=user_id)
                         notifier.send_trade_alert(trade_data)
                     
                     # Open new SHORT position
@@ -619,7 +630,7 @@ def main():
                                 'fee': fee,
                                 'leverage': config.LEVERAGE
                             }
-                            db.save_trade(trade_data)
+                            db.save_trade(trade_data, user_id=user_id)
                             notifier.send_trade_alert(trade_data)
 
                     except Exception as e:

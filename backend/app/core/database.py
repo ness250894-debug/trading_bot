@@ -40,6 +40,21 @@ class DuckDBHandler:
                     created_at TIMESTAMP
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_user_id START 1;
+                CREATE TABLE IF NOT EXISTS user_strategies (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    symbol VARCHAR,
+                    timeframe VARCHAR,
+                    amount_usdt DOUBLE,
+                    strategy VARCHAR,
+                    strategy_params VARCHAR,
+                    dry_run BOOLEAN,
+                    take_profit_pct DOUBLE,
+                    stop_loss_pct DOUBLE,
+                    updated_at TIMESTAMP,
+                    UNIQUE(user_id)
+                );
+                CREATE SEQUENCE IF NOT EXISTS seq_user_strategy_id START 1;
             """)
             logger.info("Tables checked/created.")
         except Exception as e:
@@ -87,10 +102,11 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error clearing leaderboard: {e}")
 
-    def save_trade(self, trade_data):
+    def save_trade(self, trade_data, user_id=None):
         """
         Saves a trade to the database.
         trade_data: dict containing symbol, side, price, amount, type, pnl, strategy
+        user_id: ID of the user who owns this trade
         """
         try:
             timestamp = datetime.now()
@@ -120,11 +136,19 @@ class DuckDBHandler:
                 self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS leverage DOUBLE")
             except:
                 pass
+            try:
+                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS user_id INTEGER")
+            except:
+                pass
+            try:
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id)")
+            except:
+                pass
             
             query = """
                 INSERT INTO trades 
-                (id, timestamp, symbol, side, price, amount, total_value, type, pnl, strategy, leverage)
-                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, timestamp, symbol, side, price, amount, total_value, type, pnl, strategy, leverage, user_id)
+                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             
             # Calculate total_value if not provided
@@ -140,21 +164,29 @@ class DuckDBHandler:
                 trade_data['type'], # 'OPEN' or 'CLOSE'
                 trade_data.get('pnl'), # None for OPEN
                 trade_data.get('strategy', 'Unknown'),
-                trade_data.get('leverage', 1.0)
+                trade_data.get('leverage', 1.0),
+                user_id
             ])
-            logger.info(f"Trade saved: {trade_data['side']} {trade_data['symbol']} ({trade_data['type']})")
+            logger.info(f"Trade saved: {trade_data['side']} {trade_data['symbol']} ({trade_data['type']}) for user {user_id}")
         except Exception as e:
             logger.error(f"Error saving trade: {e}")
 
-    def get_trades(self, limit=50):
-        """Returns recent trades."""
+    def get_trades(self, limit=50, user_id=None):
+        """Returns recent trades, optionally filtered by user_id."""
         try:
             # Check if table exists first
             tables = self.conn.execute("SHOW TABLES").fetchall()
             if ('trades',) not in tables:
                 return pd.DataFrame()
 
-            df = self.conn.execute(f"SELECT * FROM trades ORDER BY timestamp DESC LIMIT {limit}").fetchdf()
+            if user_id is not None:
+                df = self.conn.execute(
+                    f"SELECT * FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT {limit}",
+                    [user_id]
+                ).fetchdf()
+            else:
+                df = self.conn.execute(f"SELECT * FROM trades ORDER BY timestamp DESC LIMIT {limit}").fetchdf()
+            
             # Convert timestamp to string for JSON serialization
             if not df.empty:
                 df['timestamp'] = df['timestamp'].astype(str)
@@ -163,11 +195,15 @@ class DuckDBHandler:
             logger.error(f"Error fetching trades: {e}")
             return pd.DataFrame()
 
-    def clear_trades(self):
-        """Deletes all trades from the database."""
+    def clear_trades(self, user_id=None):
+        """Deletes trades from the database, optionally filtered by user_id."""
         try:
-            self.conn.execute("DELETE FROM trades")
-            logger.info("All trades cleared from database.")
+            if user_id is not None:
+                self.conn.execute("DELETE FROM trades WHERE user_id = ?", [user_id])
+                logger.info(f"Cleared trades for user {user_id}")
+            else:
+                self.conn.execute("DELETE FROM trades")
+                logger.info("All trades cleared from database.")
             return True
         except Exception as e:
             logger.error(f"Error clearing trades: {e}")
@@ -184,8 +220,8 @@ class DuckDBHandler:
             logger.error(f"Error fetching recent trades: {e}")
             return []
 
-    def get_total_pnl(self):
-        """Returns the sum of PnL for all trades."""
+    def get_total_pnl(self, user_id=None):
+        """Returns the sum of PnL, optionally filtered by user_id."""
         try:
             # Check if table exists first
             tables = self.conn.execute("SHOW TABLES").fetchall()
@@ -193,7 +229,13 @@ class DuckDBHandler:
                 return 0.0
             
             # Sum pnl where it is not null
-            result = self.conn.execute("SELECT SUM(pnl) FROM trades WHERE pnl IS NOT NULL").fetchone()
+            if user_id is not None:
+                result = self.conn.execute(
+                    "SELECT SUM(pnl) FROM trades WHERE pnl IS NOT NULL AND user_id = ?",
+                    [user_id]
+                ).fetchone()
+            else:
+                result = self.conn.execute("SELECT SUM(pnl) FROM trades WHERE pnl IS NOT NULL").fetchone()
             return result[0] if result and result[0] is not None else 0.0
         except Exception as e:
             logger.error(f"Error calculating total PnL: {e}")
@@ -231,12 +273,88 @@ class DuckDBHandler:
             return False
 
     def get_user_strategy(self, user_id):
-        """Get user's strategy configuration (stub for now)."""
-        # TODO: Implement per-user strategy storage
-        return None
+        """Get user's strategy configuration."""
+        try:
+            result = self.conn.execute(
+                "SELECT * FROM user_strategies WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if not result:
+                return None
+            
+            import json
+            return {
+                "SYMBOL": result[2],
+                "TIMEFRAME": result[3],
+                "AMOUNT_USDT": result[4],
+                "STRATEGY": result[5],
+                "STRATEGY_PARAMS": json.loads(result[6]) if result[6] else {},
+                "DRY_RUN": bool(result[7]),
+                "TAKE_PROFIT_PCT": result[8],
+                "STOP_LOSS_PCT": result[9]
+            }
+        except Exception as e:
+            logger.error(f"Error fetching user strategy: {e}")
+            return None
 
     def save_user_strategy(self, user_id, strategy_config):
-        """Save user's strategy configuration (stub for now)."""
-        # TODO: Implement per-user strategy storage
-        logger.info(f"Skipping strategy save for user {user_id} (not yet implemented)")
-        return True
+        """Save user's strategy configuration."""
+        try:
+            import json
+            from datetime import datetime
+            
+            # Check if strategy exists for this user
+            existing = self.conn.execute(
+                "SELECT id FROM user_strategies WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if existing:
+                # Update existing
+                query = """
+                    UPDATE user_strategies 
+                    SET symbol = ?, timeframe = ?, amount_usdt = ?, strategy = ?, 
+                        strategy_params = ?, dry_run = ?, take_profit_pct = ?, 
+                        stop_loss_pct = ?, updated_at = ?
+                    WHERE user_id = ?
+                """
+                self.conn.execute(query, [
+                    strategy_config.get("SYMBOL"),
+                    strategy_config.get("TIMEFRAME"),
+                    strategy_config.get("AMOUNT_USDT"),
+                    strategy_config.get("STRATEGY"),
+                    json.dumps(strategy_config.get("STRATEGY_PARAMS", {})),
+                    strategy_config.get("DRY_RUN", True),
+                    strategy_config.get("TAKE_PROFIT_PCT"),
+                    strategy_config.get("STOP_LOSS_PCT"),
+                    datetime.now(),
+                    user_id
+                ])
+            else:
+                # Insert new
+                query = """
+                    INSERT INTO user_strategies 
+                    (id, user_id, symbol, timeframe, amount_usdt, strategy, strategy_params, 
+                     dry_run, take_profit_pct, stop_loss_pct, updated_at)
+                    VALUES (nextval('seq_user_strategy_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
+                self.conn.execute(query, [
+                    user_id,
+                    strategy_config.get("SYMBOL"),
+                    strategy_config.get("TIMEFRAME"),
+                    strategy_config.get("AMOUNT_USDT"),
+                    strategy_config.get("STRATEGY"),
+                    json.dumps(strategy_config.get("STRATEGY_PARAMS", {})),
+                    strategy_config.get("DRY_RUN", True),
+                    strategy_config.get("TAKE_PROFIT_PCT"),
+                    strategy_config.get("STOP_LOSS_PCT"),
+                    datetime.now()
+                ])
+            
+            logger.info(f"Saved strategy for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving user strategy: {e}")
+            return False
+
