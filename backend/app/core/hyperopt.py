@@ -120,8 +120,17 @@ class Hyperopt:
         
         trials_df = trials_df.rename(columns=rename_map)
         
-        # Add win_rate (not tracked by Optuna directly unless we return multiple objectives)
-        # For now, we'll just return what we have. 
-        # To get win_rate, we'd need to store it in user_attrs during objective.
+        # Ensure JSON serializable types
+        if 'duration' in trials_df.columns:
+            trials_df['duration'] = trials_df['duration'].dt.total_seconds()
+            
+        if 'datetime_start' in trials_df.columns:
+            trials_df['datetime_start'] = trials_df['datetime_start'].astype(str)
+            
+        if 'datetime_complete' in trials_df.columns:
+            trials_df['datetime_complete'] = trials_df['datetime_complete'].astype(str)
+            
+        # Fill NaNs
+        trials_df = trials_df.fillna(0)
         
         return trials_df

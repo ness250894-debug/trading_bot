@@ -212,8 +212,8 @@ export default function Optimization() {
                 setLoading(false);
                 setIsOptimizing(false);
             } else if (data.error) {
-                 alert(data.error);
-                 setLoading(false);
+                alert(data.error);
+                setLoading(false);
             }
         };
 
@@ -241,14 +241,7 @@ export default function Optimization() {
 
         const param_ranges = {};
         for (const [key, range] of Object.entries(ranges)) {
-            const values = [];
-            let current = range.start;
-            const step = Math.max(range.step, 0.1);
-            while (current <= range.end) {
-                values.push(Number(current.toFixed(2)));
-                current += step;
-            }
-            param_ranges[key] = values;
+            param_ranges[key] = [range.start, range.end, range.step];
         }
 
         ws.send(JSON.stringify({

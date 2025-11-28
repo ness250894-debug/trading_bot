@@ -43,7 +43,10 @@ class ExchangeClient:
         try:
             self.exchange.load_markets()
         except Exception as e:
-             self.logger.error(f"Failed to load markets: {e}")
+             if self.demo and "10032" in str(e):
+                 self.logger.warning(f"ByBit Demo: load_markets not supported (using manual precisions).")
+             else:
+                 self.logger.error(f"Failed to load markets: {e}")
 
     def _load_demo_precisions(self):
         """Manually load precisions for Demo if load_markets fails."""
