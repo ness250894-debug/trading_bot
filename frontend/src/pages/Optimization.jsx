@@ -212,6 +212,31 @@ export default function Optimization() {
 
     const [ws, setWs] = useState(null);
 
+    // Self-healing: Validate ranges against strategy
+    useEffect(() => {
+        const expectedKeys = {
+            'SMA Crossover': ['fast_period', 'slow_period'],
+            'Mean Reversion': ['bb_period', 'bb_std', 'rsi_period', 'rsi_oversold', 'rsi_overbought'],
+            'RSI': ['period', 'oversold', 'overbought'],
+            'MACD': ['fast_period', 'slow_period', 'signal_period']
+        };
+
+        const currentKeys = Object.keys(ranges);
+        const expected = expectedKeys[strategy];
+
+        if (!expected) return;
+
+        const hasAllKeys = expected.every(key => currentKeys.includes(key));
+        const hasExtraKeys = currentKeys.some(key => !expected.includes(key));
+
+        if (!hasAllKeys || hasExtraKeys) {
+            console.log(`Parameter mismatch for ${strategy}. Resetting to defaults.`);
+            if (presets[strategy] && presets[strategy].length > 0) {
+                setRanges(presets[strategy][0].ranges);
+            }
+        }
+    }, [strategy, ranges]);
+
     // Persistent WebSocket Connection
     useEffect(() => {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
