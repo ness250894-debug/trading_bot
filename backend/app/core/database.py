@@ -383,3 +383,9 @@ class DuckDBHandler:
             logger.error(f"Error saving user strategy: {e}")
             return False
 
+    def get_api_key(self, user_id, exchange):
+        """Get user's API keys for an exchange (stub for now)."""
+        # TODO: Implement per-user API key storage
+        logger.debug(f"get_api_key called for user {user_id}, exchange {exchange} - not yet implemented")
+        return None  # Return None to trigger fallback to global config
+
