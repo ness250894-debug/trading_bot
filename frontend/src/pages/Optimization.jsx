@@ -299,6 +299,13 @@ export default function Optimization() {
 
     const [nTrials, setNTrials] = useState(50);
 
+    const STRATEGY_PARAM_KEYS = {
+        'SMA Crossover': ['fast_period', 'slow_period'],
+        'Mean Reversion': ['bb_period', 'bb_std', 'rsi_period', 'rsi_oversold', 'rsi_overbought'],
+        'RSI': ['period', 'oversold', 'overbought'],
+        'MACD': ['fast_period', 'slow_period', 'signal_period']
+    };
+
     const runOptimization = () => {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             alert("WebSocket not connected. Please refresh.");
@@ -310,10 +317,16 @@ export default function Optimization() {
         setProgress({ current: 0, total: nTrials });
         setResults([]);
 
+        const validKeys = STRATEGY_PARAM_KEYS[strategy] || [];
         const param_ranges = {};
+
         for (const [key, range] of Object.entries(ranges)) {
-            param_ranges[key] = [range.start, range.end, range.step];
+            if (validKeys.includes(key)) {
+                param_ranges[key] = [range.start, range.end, range.step];
+            }
         }
+
+        console.log("Sending optimization params:", param_ranges);
 
         ws.send(JSON.stringify({
             symbol: 'BTC/USDT',
