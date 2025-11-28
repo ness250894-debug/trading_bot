@@ -35,6 +35,8 @@ class ConfigUpdate(BaseModel):
     amount_usdt: float
     strategy: str
     dry_run: bool
+    take_profit_pct: float
+    stop_loss_pct: float
     parameters: Optional[Dict[str, Any]] = {}
     
     @validator('amount_usdt')
@@ -107,6 +109,8 @@ async def get_status():
                 "amount_usdt": config.AMOUNT_USDT,
                 "strategy": getattr(config, 'STRATEGY', 'mean_reversion'),
                 "dry_run": getattr(config, 'DRY_RUN', True),
+                "take_profit_pct": getattr(config, 'TAKE_PROFIT_PCT', 0.01),
+                "stop_loss_pct": getattr(config, 'STOP_LOSS_PCT', 0.005),
                 "parameters": getattr(config, 'STRATEGY_PARAMS', {})
             }
         }
@@ -129,6 +133,8 @@ async def get_status():
                 "amount_usdt": config.AMOUNT_USDT,
                 "strategy": getattr(config, 'STRATEGY', 'mean_reversion'),
                 "dry_run": getattr(config, 'DRY_RUN', True),
+                "take_profit_pct": getattr(config, 'TAKE_PROFIT_PCT', 0.01),
+                "stop_loss_pct": getattr(config, 'STOP_LOSS_PCT', 0.005),
                 "parameters": getattr(config, 'STRATEGY_PARAMS', {})
             },
             "error": str(e)
@@ -147,7 +153,9 @@ async def update_config(update: ConfigUpdate):
             "AMOUNT_USDT": update.amount_usdt,
             "STRATEGY": update.strategy,
             "STRATEGY_PARAMS": update.parameters,
-            "DRY_RUN": update.dry_run
+            "DRY_RUN": update.dry_run,
+            "TAKE_PROFIT_PCT": update.take_profit_pct,
+            "STOP_LOSS_PCT": update.stop_loss_pct
         }
         
         # Write to JSON file

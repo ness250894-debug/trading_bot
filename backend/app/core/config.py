@@ -74,6 +74,8 @@ if os.path.exists(config_path):
         if 'STRATEGY' in dynamic_config: STRATEGY = dynamic_config['STRATEGY']
         if 'STRATEGY_PARAMS' in dynamic_config: STRATEGY_PARAMS = dynamic_config['STRATEGY_PARAMS']
         if 'DRY_RUN' in dynamic_config: DRY_RUN = dynamic_config['DRY_RUN']
+        if 'TAKE_PROFIT_PCT' in dynamic_config: TAKE_PROFIT_PCT = dynamic_config['TAKE_PROFIT_PCT']
+        if 'STOP_LOSS_PCT' in dynamic_config: STOP_LOSS_PCT = dynamic_config['STOP_LOSS_PCT']
         
         # Log successful load (using print as logger might not be configured yet)
         print(f"Loaded dynamic config from {config_path}")

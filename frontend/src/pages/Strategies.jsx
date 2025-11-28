@@ -62,6 +62,14 @@ const STRATEGY_PRESETS = {
     ]
 };
 
+const RISK_PRESETS = [
+    { name: 'Scalp', tp: 1.0, sl: 0.5 },
+    { name: 'Day', tp: 2.0, sl: 1.0 },
+    { name: 'Swing', tp: 5.0, sl: 2.0 },
+    { name: 'Conservative', tp: 0.5, sl: 0.5 },
+    { name: 'Aggressive', tp: 3.0, sl: 1.5 }
+];
+
 export default function Strategies() {
     const [config, setConfig] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -113,6 +121,14 @@ export default function Strategies() {
         setConfig(prev => ({
             ...prev,
             parameters: { ...presetParams }
+        }));
+    };
+
+    const applyRiskPreset = (preset) => {
+        setConfig(prev => ({
+            ...prev,
+            take_profit_pct: preset.tp / 100,
+            stop_loss_pct: preset.sl / 100
         }));
     };
 
@@ -254,6 +270,56 @@ export default function Strategies() {
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+
+                    {/* Risk Management Section */}
+                    <div className="space-y-4 p-6 bg-white/5 rounded-xl border border-white/5">
+                        <div className="flex justify-between items-center mb-4">
+                            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Risk Management</label>
+                            <div className="flex gap-2">
+                                {RISK_PRESETS.map(preset => (
+                                    <button
+                                        key={preset.name}
+                                        onClick={() => applyRiskPreset(preset)}
+                                        className="px-3 py-1 text-xs rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                    >
+                                        {preset.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-xs text-muted-foreground">Take Profit (%)</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min="0.1"
+                                        max="100"
+                                        step="0.1"
+                                        value={config.take_profit_pct ? (config.take_profit_pct * 100).toFixed(2) : ''}
+                                        onChange={(e) => handleChange('take_profit_pct', parseFloat(e.target.value) / 100)}
+                                        className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono focus:border-primary/50 outline-none transition-all"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs text-muted-foreground">Stop Loss (%)</label>
+                                <div className="relative">
+                                    <input
+                                        type="number"
+                                        min="0.1"
+                                        max="50"
+                                        step="0.1"
+                                        value={config.stop_loss_pct ? (config.stop_loss_pct * 100).toFixed(2) : ''}
+                                        onChange={(e) => handleChange('stop_loss_pct', parseFloat(e.target.value) / 100)}
+                                        className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm font-mono focus:border-primary/50 outline-none transition-all"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
