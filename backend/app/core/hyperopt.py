@@ -15,6 +15,7 @@ class Hyperopt:
         self.symbol = symbol
         self.timeframe = timeframe
         self.data = data
+        self.cache = {}
 
     def optimize(self, param_ranges, strategy_class, n_trials=50, progress_callback=None):
         logger.info(f"Starting Hyperopt with {n_trials} trials...")
@@ -36,6 +37,17 @@ class Hyperopt:
                          params[param_name] = trial.suggest_int(param_name, low, high, step=step)
                     else:
                          params[param_name] = trial.suggest_float(param_name, low, high, step=step)
+
+            # Check Cache
+            # Create a hashable key from the sorted parameter items
+            param_key = frozenset(params.items())
+            if param_key in self.cache:
+                cached_result = self.cache[param_key]
+                # Set user attributes from cache so they appear in the results
+                trial.set_user_attr("win_rate", cached_result["win_rate"])
+                trial.set_user_attr("trades", cached_result["trades"])
+                trial.set_user_attr("final_balance", cached_result["final_balance"])
+                return cached_result["return"]
 
             # 2. Instantiate Strategy
             try:
@@ -63,6 +75,14 @@ class Hyperopt:
             trial.set_user_attr("win_rate", win_rate)
             trial.set_user_attr("trades", trades_count)
             trial.set_user_attr("final_balance", bt.balance)
+            
+            # Cache the result
+            self.cache[param_key] = {
+                "return": total_return,
+                "win_rate": win_rate,
+                "trades": trades_count,
+                "final_balance": bt.balance
+            }
             
             # Optional: Penalize low trade count to avoid overfitting on 1 lucky trade
             # Reduced penalty to allow seeing results

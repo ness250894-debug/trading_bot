@@ -229,7 +229,24 @@ export default function Optimization() {
                 setLoading(true);
                 setProgress({ current: data.current, total: data.total });
             } else if (data.type === 'complete') {
-                setResults(data.results);
+                // Deduplicate results based on parameters
+                const uniqueResults = [];
+                const seenParams = new Set();
+
+                for (const result of data.results) {
+                    // Create a stable string representation of params for comparison
+                    const paramKey = JSON.stringify(Object.keys(result.params).sort().reduce((obj, key) => {
+                        obj[key] = result.params[key];
+                        return obj;
+                    }, {}));
+
+                    if (!seenParams.has(paramKey)) {
+                        seenParams.add(paramKey);
+                        uniqueResults.push(result);
+                    }
+                }
+
+                setResults(uniqueResults);
                 setLoading(false);
                 setIsOptimizing(false);
                 // Don't close socket, keep it open for next run
