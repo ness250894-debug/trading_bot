@@ -4,9 +4,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Play, Loader2 } from 'lucide-react';
 
 const STRATEGIES = [
-    { name: 'Mean Reversion', params: { bb_length: 20, bb_std: 2.0, rsi_length: 14, rsi_buy: 30, rsi_sell: 70 } },
-    { name: 'SMA Crossover', params: { short_window: 10, long_window: 30 } },
-    { name: 'MACD', params: { fast: 12, slow: 26, signal: 9 } },
+    { name: 'Mean Reversion', params: { bb_period: 20, bb_std: 2.0, rsi_period: 14, rsi_oversold: 30, rsi_overbought: 70 } },
+    { name: 'SMA Crossover', params: { fast_period: 10, slow_period: 30 } },
+    { name: 'MACD', params: { fast_period: 12, slow_period: 26, signal_period: 9 } },
     { name: 'RSI', params: { period: 14, overbought: 70, oversold: 30 } },
 ];
 
