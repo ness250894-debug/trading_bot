@@ -2,25 +2,180 @@ import time
 import logging
 import sys
 import threading
+from logging.handlers import RotatingFileHandler
 from .exchange.client import ExchangeClient
 from .strategies.sma_crossover import SMACrossover
 from . import config
 
-# Global event to control bot execution
-running_event = threading.Event()
-
-# Configure logging
+# Configure logging with rotation
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("logs/trading_bot.log"),
+        RotatingFileHandler(
+            "logs/trading_bot.log",
+            maxBytes=10*1024*1024,  # 10MB
+            backupCount=5  # Keep 5 old files
+        ),
         logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger("TradingBot")
 
+def run_bot_instance(user_id: int, strategy_config: dict, running_event: threading.Event):
+    """
+    Run a bot instance for a specific user.
+    
+    Args:
+        user_id: The user ID this bot belongs to
+        strategy_config: Dictionary containing strategy configuration
+        running_event: Thread event to control pause/resume
+    """
+    logger.info(f"Starting bot instance for user {user_id} with strategy: {strategy_config.get('STRATEGY', 'unknown')}")
+    
+    # Extract config values with defaults
+    symbol = strategy_config.get('SYMBOL', 'BTC/USDT')
+    timeframe = strategy_config.get('TIMEFRAME', '1m')
+    amount_usdt = strategy_config.get('AMOUNT_USDT', 10.0)
+    strategy_name = strategy_config.get('STRATEGY', 'mean_reversion')
+    strategy_params = strategy_config.get('STRATEGY_PARAMS', {})
+    dry_run = strategy_config.get('DRY_RUN', True)
+    
+    # Load API keys for this user from database
+    from .database import DuckDBHandler
+    from .encryption import EncryptionHelper
+    
+    db = DuckDBHandler()
+    encryption = EncryptionHelper()
+    
+    # Try to get user's API keys
+    api_key_data = db.get_api_key(user_id, 'bybit')
+    
+    if api_key_data:
+        # Decrypt user's API keys
+        api_key = encryption.decrypt(api_key_data['api_key_encrypted'])
+        api_secret = encryption.decrypt(api_key_data['api_secret_encrypted'])
+        logger.info(f"✓ Loaded encrypted API keys for user {user_id}")
+    else:
+        # Fallback to global config (for backward compatibility)
+        api_key = config.API_KEY
+        api_secret = config.API_SECRET
+        logger.warning(f"⚠️ No encrypted API keys found for user {user_id}, using global config")
+    
+    if not api_key or not api_secret:
+        logger.error(f"❌ No API keys available for user {user_id}")
+        raise ValueError(f"Missing API credentials for user {user_id}")
+    
+    # Initialize Exchange Client
+    if dry_run:
+        from .exchange.paper import PaperExchange
+        logger.info(f"⚠️ DRY RUN MODE for user {user_id}")
+        client = PaperExchange(api_key, api_secret)
+    else:
+        client = ExchangeClient(api_key, api_secret, demo=config.DEMO)
+    
+    # Test connectivity
+    try:
+        balance = client.fetch_balance()
+        logger.info(f"✓ User {user_id} connected to exchange")
+    except Exception as e:
+        logger.error(f"❌ User {user_id} failed to connect: {e}")
+        raise ConnectionError(f"Cannot connect to exchange: {e}")
+    
+    # Set Leverage
+    client.set_leverage(symbol, config.LEVERAGE)
+    
+    # Initialize Strategy
+    logger.info(f"Initializing strategy '{strategy_name}' for user {user_id}")
+    
+    if strategy_name == 'mean_reversion':
+        from .strategies.mean_reversion import MeanReversion
+        strategy = MeanReversion(**strategy_params)
+    elif strategy_name == 'sma_crossover':
+        strategy = SMACrossover(**strategy_params)
+    elif strategy_name == 'combined':
+        from .strategies.combined import CombinedStrategy
+        strategy = CombinedStrategy(**strategy_params)
+    elif strategy_name == 'macd':
+        from .strategies.macd import MACDStrategy
+        strategy = MACDStrategy(**strategy_params)
+    elif strategy_name == 'rsi':
+        from .strategies.rsi import RSIStrategy
+        strategy = RSIStrategy(**strategy_params)
+    else:
+        logger.warning(f"Unknown strategy '{strategy_name}' for user {user_id}. Using Mean Reversion.")
+        from .strategies.mean_reversion import MeanReversion
+        strategy = MeanReversion(**strategy_params)
+
+    # Initialize Notifier
+    from .notifier import TelegramNotifier
+    notifier = TelegramNotifier()
+    notifier.send_message(f"🚀 *Bot Started for User {user_id}*\nStrategy: {strategy_name}")
+
+    logger.info(f"✓ User {user_id} bot initialized. Entering trading loop...")
+
+    # Main trading loop - simplified version
+    while True:
+        try:
+            if not running_event.is_set():
+                running_event.wait()
+                logger.info(f"▶️ User {user_id} bot resumed")
+
+            # Fetch market data
+            try:
+                df = client.fetch_ohlcv(symbol, timeframe, limit=100)
+            except Exception as e:
+                logger.error(f"User {user_id} OHLCV fetch failed: {e}")
+                time.sleep(config.LOOP_DELAY_SECONDS)
+                continue
+
+            # Get current position
+            position = client.fetch_position(symbol)
+            position_size = position.get('size', 0.0)
+
+            # Generate signal
+            signal = strategy.generate_signal(df)
+
+            # Simple trading logic (enter/exit based on signal)
+            if position_size == 0 and signal in ['long', 'short']:
+                # Open position
+                ticker = client.fetch_ticker(symbol)
+                current_price = ticker['last']
+                amount = amount_usdt / current_price
+                side = 'buy' if signal == 'long' else 'sell'
+                
+                try:
+                    client.create_order(symbol=symbol, type='market', side=side, amount=amount)
+                    db.save_trade(user_id=user_id, symbol=symbol, side=side, price=current_price, amount=amount, pnl=0.0, trade_type='entry')
+                    logger.info(f"✓ User {user_id}: {signal} entry at {current_price}")
+                except Exception as e:
+                    logger.error(f"User {user_id} order failed: {e}")
+
+            elif position_size > 0:
+                # Check exit (simplified - just on opposite signal)
+                position_side = position.get('side')
+                if (position_side == 'long' and signal == 'short') or (position_side == 'short' and signal == 'long'):
+                    ticker = client.fetch_ticker(symbol)
+                    side = 'sell' if position_side == 'long' else 'buy'
+                    try:
+                        client.create_order(symbol=symbol, type='market', side=side, amount=position_size)
+                        logger.info(f"✓ User {user_id}: Closed position")
+                    except Exception as e:
+                        logger.error(f"User {user_id} close failed: {e}")
+
+            time.sleep(config.LOOP_DELAY_SECONDS)
+
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            logger.error(f"User {user_id} bot error: {e}")
+            time.sleep(10)
+    
+    logger.info(f"Bot instance for user {user_id} terminated")
+
+
 def main():
+    """Original main function - kept for backward compatibility."""
     logger.info("Starting Trading Bot...")
     
     # Initialize Exchange Client

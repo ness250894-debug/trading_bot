@@ -281,11 +281,11 @@ export default function Optimization() {
                 // Don't close socket, keep it open for next run
             } else if (data.type === 'error') {
                 console.error(data.error);
-                alert('Optimization error: ' + data.error);
+                toast.error('Optimization error: ' + data.error);
                 setLoading(false);
                 setIsOptimizing(false);
             } else if (data.error) {
-                alert(data.error);
+                toast.error(data.error);
                 setLoading(false);
             }
         };

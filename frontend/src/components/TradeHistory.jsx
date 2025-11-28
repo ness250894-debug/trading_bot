@@ -1,18 +1,31 @@
 import React from 'react';
 import axios from 'axios';
 import { Clock, TrendingUp, TrendingDown, DollarSign, Activity, Trash2 } from 'lucide-react';
+import { useToast } from './Toast';
+import { useModal } from './Modal';
 
 const TradeHistory = ({ trades, onRefresh }) => {
-    const handleClearHistory = async () => {
-        if (!confirm("Are you sure you want to clear all trade history? This cannot be undone.")) return;
+    const toast = useToast();
+    const modal = useModal();
 
-        try {
-            await axios.delete('/api/trades');
-            if (onRefresh) onRefresh();
-        } catch (err) {
-            console.error("Failed to clear history:", err);
-            alert("Failed to clear history");
-        }
+    const handleClearHistory = async () => {
+        modal.confirm({
+            title: 'Clear Trade History',
+            message: 'Are you sure you want to clear all trade history? This cannot be undone.',
+            confirmText: 'Clear',
+            cancelText: 'Cancel',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    await axios.delete('/api/trades');
+                    toast.success('Trade history cleared successfully');
+                    if (onRefresh) onRefresh();
+                } catch (err) {
+                    console.error("Failed to clear history:", err);
+                    toast.error("Failed to clear history");
+                }
+            }
+        });
     };
 
     return (

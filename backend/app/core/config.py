@@ -1,10 +1,21 @@
 import os
 from dotenv import load_dotenv
+import logging
 
 load_dotenv()
 
+# Setup logger for config validation
+logger = logging.getLogger("Config")
+
+# API Keys - validate they exist
 API_KEY = os.getenv('BYBIT_API_KEY')
 API_SECRET = os.getenv('BYBIT_API_SECRET')
+
+# Validate API keys are set (will be checked on bot startup)
+if not API_KEY or not API_SECRET:
+    logger.warning("⚠️ BYBIT_API_KEY or BYBIT_API_SECRET not set in environment!")
+    logger.warning("⚠️ Bot will not be able to connect to exchange.")
+
 DEMO = os.getenv('BYBIT_DEMO', 'True').lower() == 'true'
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')

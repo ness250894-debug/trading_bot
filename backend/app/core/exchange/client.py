@@ -3,7 +3,16 @@ import pandas as pd
 import logging
 
 class ExchangeClient:
-    def __init__(self, api_key, api_secret, demo=True):
+    def __init__(self, api_key, api_secret, demo=True, timeout=10000):
+        """
+        Initialize exchange client with timeout support.
+        
+        Args:
+            api_key: API key
+            api_secret: API secret  
+            demo: Use demo/testnet
+            timeout: Request timeout in milliseconds (default 10s)
+        """
         self.logger = logging.getLogger(__name__)
         self.demo = demo
         
@@ -11,6 +20,7 @@ class ExchangeClient:
             'apiKey': api_key,
             'secret': api_secret,
             'enableRateLimit': True,
+            'timeout': timeout,  # Add timeout
             'options': {
                 'defaultType': 'swap',
                 'adjustForTimeDifference': False,

@@ -11,6 +11,10 @@ from ..core.strategies.sma_crossover import SMACrossover
 from ..core.strategies.macd import MACDStrategy
 from ..core.strategies.rsi import RSIStrategy
 
+from ..core.strategies.rsi import RSIStrategy
+from ..core import auth
+from fastapi import Depends
+
 router = APIRouter()
 logger = logging.getLogger("API.Backtest")
 
@@ -36,7 +40,7 @@ class BacktestRequest(BaseModel):
         return v
 
 @router.post("/backtest")
-async def run_backtest(request: BacktestRequest):
+async def run_backtest(request: BacktestRequest, current_user: dict = Depends(auth.get_current_user)):
     try:
         # Initialize Strategy
         strategy_class = None
@@ -95,7 +99,7 @@ async def run_backtest(request: BacktestRequest):
         
     except Exception as e:
         logger.error(f"Backtest error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 class OptimizeRequest(BaseModel):
     symbol: str = "BTC/USDT"
@@ -120,7 +124,7 @@ class OptimizeRequest(BaseModel):
         return v
 
 @router.post("/optimize")
-async def run_optimization(request: OptimizeRequest):
+async def run_optimization(request: OptimizeRequest, current_user: dict = Depends(auth.get_current_user)):
     try:
         # Initialize Strategy Class
         strategy_class = None
@@ -178,7 +182,7 @@ async def run_optimization(request: OptimizeRequest):
                 result['trades'] = 0
                 result['final_balance'] = 0
                 
-                db.save_result(result)
+                db.save_result(result, user_id=current_user['id'])
                 saved_count += 1
         
         if saved_count > 0:
@@ -190,7 +194,7 @@ async def run_optimization(request: OptimizeRequest):
         
     except Exception as e:
         logger.error(f"Optimization error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.websocket("/ws/optimize")
 async def websocket_optimize(websocket: WebSocket):

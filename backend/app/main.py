@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 import asyncio
 import threading
-from .api import backtest, bot
 from .core import bot as trading_bot
 from .core.logging_utils import manager, AsyncWebSocketLogHandler
+from .api import backtest, bot, trades, auth, api_keys, health
 
 # Configure logging
 # We need to get the root logger
@@ -14,11 +14,16 @@ logger = logging.getLogger("API")
 
 app = FastAPI(title="Trading Bot API", version="1.0.0")
 
+# CORS configuration - restrict in production
+import os
+allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+if allowed_origins == ["*"]:
+    logger.warning("⚠️ CORS is set to allow all origins. This is insecure for production!")
 
 # CORS (Allow Frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,10 +39,12 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-from .api import backtest, bot, trades
+# API Routers
 app.include_router(backtest.router, prefix="/api")
 app.include_router(bot.router, prefix="/api")
 app.include_router(trades.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
+app.include_router(api_keys.router, prefix="/api")
 
 # Serve Static Files (Frontend)
 import os
@@ -92,11 +99,10 @@ async def startup_event():
     root_logger = logging.getLogger()
     root_logger.addHandler(ws_handler)
     
-    # 2. Start Trading Bot in Background Thread
-    # We run it in a thread because it has a blocking while True loop
-    bot_thread = threading.Thread(target=trading_bot.main, daemon=True)
-    bot_thread.start()
-    logger.info("Trading Bot Thread Started")
+    # 2. Bot no longer starts automatically
+    # Users must explicitly start their bot via /api/start endpoint
+    logger.info("✓ Server ready. Bots can be started via API endpoints.")
+    logger.info("ℹ️ Bot auto-start is disabled. Use /api/start to begin trading.")
 
 if __name__ == "__main__":
     import uvicorn
