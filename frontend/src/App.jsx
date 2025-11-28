@@ -5,6 +5,8 @@ import Dashboard from './pages/Dashboard';
 import Strategies from './pages/Strategies';
 import Optimization from './pages/Optimization';
 import Backtest from './pages/Backtest';
+import { ToastProvider } from './components/Toast';
+import { ModalProvider } from './components/Modal';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -56,15 +58,19 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/strategies" element={<Strategies />} />
-            <Route path="/optimization" element={<Optimization />} />
-            <Route path="/backtest" element={<Backtest />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Layout>
+        <ToastProvider>
+          <ModalProvider>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/strategies" element={<Strategies />} />
+                <Route path="/optimization" element={<Optimization />} />
+                <Route path="/backtest" element={<Backtest />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Layout>
+          </ModalProvider>
+        </ToastProvider>
       </Router>
     </ErrorBoundary>
   );

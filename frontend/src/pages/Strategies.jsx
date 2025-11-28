@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity } from 'lucide-react';
+import { useModal } from '../components/Modal';
 
 const STRATEGY_OPTIONS = [
     { value: 'mean_reversion', label: 'Mean Reversion', desc: 'Buy low, sell high using Bollinger Bands & RSI.', icon: Activity },
@@ -71,6 +72,7 @@ const RISK_PRESETS = [
 ];
 
 export default function Strategies() {
+    const modal = useModal();
     const [config, setConfig] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -146,37 +148,45 @@ export default function Strategies() {
     };
 
     const handleSave = async () => {
-        if (!confirm("Saving will restart the bot to apply changes. Continue?")) return;
-        setSaving(true);
-        setMessage(null);
-        try {
-            await axios.post('/api/config', config);
-            setMessage({ type: 'success', text: 'Configuration saved. Restarting bot...' });
-            await axios.post('/api/restart');
-            setRestarting(true);
-            let retries = 0;
-            const interval = setInterval(async () => {
+        modal.confirm({
+            title: 'Restart Bot',
+            message: 'Saving will restart the bot to apply changes. Continue?',
+            confirmText: 'Save & Restart',
+            cancelText: 'Cancel',
+            type: 'warning',
+            onConfirm: async () => {
+                setSaving(true);
+                setMessage(null);
                 try {
-                    await axios.get('/api/status');
-                    clearInterval(interval);
-                    setRestarting(false);
+                    await axios.post('/api/config', config);
+                    setMessage({ type: 'success', text: 'Configuration saved. Restarting bot...' });
+                    await axios.post('/api/restart');
+                    setRestarting(true);
+                    let retries = 0;
+                    const interval = setInterval(async () => {
+                        try {
+                            await axios.get('/api/status');
+                            clearInterval(interval);
+                            setRestarting(false);
+                            setSaving(false);
+                            setMessage({ type: 'success', text: 'Bot restarted successfully!' });
+                            fetchConfig();
+                        } catch (e) {
+                            retries++;
+                            if (retries > 20) {
+                                clearInterval(interval);
+                                setRestarting(false);
+                                setSaving(false);
+                                setMessage({ type: 'error', text: 'Restart timed out.' });
+                            }
+                        }
+                    }, 1000);
+                } catch (err) {
+                    setMessage({ type: 'error', text: 'Failed to save configuration.' });
                     setSaving(false);
-                    setMessage({ type: 'success', text: 'Bot restarted successfully!' });
-                    fetchConfig();
-                } catch (e) {
-                    retries++;
-                    if (retries > 20) {
-                        clearInterval(interval);
-                        setRestarting(false);
-                        setSaving(false);
-                        setMessage({ type: 'error', text: 'Restart timed out.' });
-                    }
                 }
-            }, 1000);
-        } catch (err) {
-            setMessage({ type: 'error', text: 'Failed to save configuration.' });
-            setSaving(false);
-        }
+            }
+        });
     };
 
     if (loading) return (

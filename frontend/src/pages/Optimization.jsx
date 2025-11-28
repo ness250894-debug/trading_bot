@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { useToast } from '../components/Toast';
+import { useModal } from '../components/Modal';
 
 // --- Helper Components ---
 
@@ -107,6 +109,8 @@ const presets = {
 };
 
 export default function Optimization() {
+    const toast = useToast();
+    const modal = useModal();
     const [strategy, setStrategy] = useState(() => localStorage.getItem('optimization_strategy') || 'SMA Crossover');
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(() => {
@@ -308,7 +312,7 @@ export default function Optimization() {
 
     const runOptimization = () => {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-            alert("WebSocket not connected. Please refresh.");
+            toast.error("WebSocket not connected. Please refresh the page.");
             return;
         }
 
@@ -400,12 +404,20 @@ export default function Optimization() {
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => {
-                                if (window.confirm("This will reset all optimization settings to defaults. Continue?")) {
-                                    localStorage.removeItem('optimization_strategy');
-                                    localStorage.removeItem('optimization_results');
-                                    localStorage.removeItem('optimization_ranges');
-                                    window.location.reload();
-                                }
+                                modal.confirm({
+                                    title: 'Reset Settings',
+                                    message: 'This will reset all optimization settings to defaults. Continue?',
+                                    confirmText: 'Reset',
+                                    cancelText: 'Cancel',
+                                    type: 'danger',
+                                    onConfirm: () => {
+                                        localStorage.removeItem('optimization_strategy');
+                                        localStorage.removeItem('optimization_results');
+                                        localStorage.removeItem('optimization_ranges');
+                                        toast.success('Settings reset successfully!');
+                                        setTimeout(() => window.location.reload(), 500);
+                                    }
+                                });
                             }}
                             className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors border border-red-500/20"
                         >
