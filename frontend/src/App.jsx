@@ -7,6 +7,7 @@ import Optimization from './pages/Optimization';
 import Backtest from './pages/Backtest';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import Settings from './pages/Settings';
 import { ToastProvider } from './components/Toast';
 import { ModalProvider } from './components/Modal';
 
@@ -101,6 +102,13 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Backtest />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Settings />
                   </Layout>
                 </ProtectedRoute>
               } />

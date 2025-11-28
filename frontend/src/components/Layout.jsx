@@ -66,6 +66,7 @@ export default function Layout({ children }) {
                     <SidebarItem to="/strategies" icon={Settings} label="Strategies" />
                     <SidebarItem to="/optimization" icon={TrendingUp} label="Optimization" />
                     <SidebarItem to="/backtest" icon={History} label="Backtest" />
+                    <SidebarItem to="/settings" icon={Settings} label="Settings" />
                 </nav>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6">

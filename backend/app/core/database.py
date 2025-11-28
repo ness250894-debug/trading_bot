@@ -56,6 +56,28 @@ class DuckDBHandler:
                     UNIQUE(user_id)
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_user_strategy_id START 1;
+                CREATE TABLE IF NOT EXISTS api_keys (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    exchange VARCHAR NOT NULL,
+                    api_key_encrypted VARCHAR NOT NULL,
+                    api_secret_encrypted VARCHAR NOT NULL,
+                    created_at TIMESTAMP,
+                    updated_at TIMESTAMP,
+                    UNIQUE(user_id, exchange)
+                );
+                CREATE SEQUENCE IF NOT EXISTS seq_api_key_id START 1;
+                CREATE TABLE IF NOT EXISTS audit_log (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER,
+                    action VARCHAR,
+                    resource_type VARCHAR,
+                    resource_id VARCHAR,
+                    details VARCHAR,
+                    ip_address VARCHAR,
+                    created_at TIMESTAMP
+                );
+                CREATE SEQUENCE IF NOT EXISTS seq_audit_id START 1;
             """)
             
             # Run migrations for existing tables
@@ -384,8 +406,104 @@ class DuckDBHandler:
             return False
 
     def get_api_key(self, user_id, exchange):
-        """Get user's API keys for an exchange (stub for now)."""
-        # TODO: Implement per-user API key storage
-        logger.debug(f"get_api_key called for user {user_id}, exchange {exchange} - not yet implemented")
-        return None  # Return None to trigger fallback to global config
+        """Get user's encrypted API keys for an exchange."""
+        try:
+            result = self.conn.execute(
+                "SELECT api_key_encrypted, api_secret_encrypted FROM api_keys WHERE user_id = ? AND exchange = ?",
+                [user_id, exchange]
+            ).fetchone()
+            
+            if not result:
+                return None
+            
+            return {
+                'api_key_encrypted': result[0],
+                'api_secret_encrypted': result[1]
+            }
+        except Exception as e:
+            logger.error(f"Error fetching API key: {e}")
+            return None
+
+    def save_api_key(self, user_id, exchange, api_key_encrypted, api_secret_encrypted):
+        """Save or update user's encrypted API keys for an exchange."""
+        try:
+            from datetime import datetime
+            
+            # Check if exists
+            existing = self.conn.execute(
+                "SELECT id FROM api_keys WHERE user_id = ? AND exchange = ?",
+                [user_id, exchange]
+            ).fetchone()
+            
+            if existing:
+                # Update
+                query = """
+                    UPDATE api_keys 
+                    SET api_key_encrypted = ?, api_secret_encrypted = ?, updated_at = ?
+                    WHERE user_id = ? AND exchange = ?
+                """
+                self.conn.execute(query, [
+                    api_key_encrypted,
+                    api_secret_encrypted,
+                    datetime.now(),
+                    user_id,
+                    exchange
+                ])
+            else:
+                # Insert
+                query = """
+                    INSERT INTO api_keys 
+                    (id, user_id, exchange, api_key_encrypted, api_secret_encrypted, created_at, updated_at)
+                    VALUES (nextval('seq_api_key_id'), ?, ?, ?, ?, ?, ?)
+                """
+                self.conn.execute(query, [
+                    user_id,
+                    exchange,
+                    api_key_encrypted,
+                    api_secret_encrypted,
+                    datetime.now(),
+                    datetime.now()
+                ])
+            
+            logger.info(f"Saved API keys for user {user_id}, exchange {exchange}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving API keys: {e}")
+            return False
+
+    def delete_api_key(self, user_id, exchange):
+        """Delete user's API keys for an exchange."""
+        try:
+            self.conn.execute(
+                "DELETE FROM api_keys WHERE user_id = ? AND exchange = ?",
+                [user_id, exchange]
+            )
+            logger.info(f"Deleted API keys for user {user_id}, exchange {exchange}")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting API keys: {e}")
+            return False
+
+    def log_audit(self, user_id, action, resource_type, resource_id, details, ip_address=None):
+        """Log an audit event."""
+        try:
+            from datetime import datetime
+            query = """
+                INSERT INTO audit_log 
+                (id, user_id, action, resource_type, resource_id, details, ip_address, created_at)
+                VALUES (nextval('seq_audit_id'), ?, ?, ?, ?, ?, ?, ?)
+            """
+            self.conn.execute(query, [
+                user_id,
+                action,
+                resource_type,
+                resource_id,
+                details,
+                ip_address,
+                datetime.now()
+            ])
+            return True
+        except Exception as e:
+            logger.error(f"Error logging audit event: {e}")
+            return False
 
