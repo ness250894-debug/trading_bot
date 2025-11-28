@@ -88,24 +88,41 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     # Initialize Strategy
     logger.info(f"Initializing strategy '{strategy_name}' for user {user_id}")
     
+    # Define valid parameters for each strategy
+    strategy_param_map = {
+        'mean_reversion': ['bb_period', 'bb_std', 'rsi_period', 'rsi_oversold', 'rsi_overbought'],
+        'sma_crossover': ['fast_period', 'slow_period'],
+        'macd': ['fast', 'slow', 'signal', 'fast_period', 'slow_period', 'signal_period'],
+        'rsi': ['period', 'overbought', 'oversold', 'buy_threshold', 'sell_threshold'],
+        'combined': []  # Combined accepts any kwargs
+    }
+    
+    # Filter parameters to only include valid ones for the selected strategy
+    valid_params = strategy_param_map.get(strategy_name, [])
+    if valid_params:  # If not combined strategy
+        filtered_params = {k: v for k, v in strategy_params.items() if k in valid_params}
+        logger.info(f"Filtered params for {strategy_name}: {filtered_params}")
+    else:
+        filtered_params = strategy_params  # Combined strategy accepts all
+    
     if strategy_name == 'mean_reversion':
         from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion(**strategy_params)
+        strategy = MeanReversion(**filtered_params)
     elif strategy_name == 'sma_crossover':
-        strategy = SMACrossover(**strategy_params)
+        strategy = SMACrossover(**filtered_params)
     elif strategy_name == 'combined':
         from .strategies.combined import CombinedStrategy
-        strategy = CombinedStrategy(**strategy_params)
+        strategy = CombinedStrategy(**filtered_params)
     elif strategy_name == 'macd':
         from .strategies.macd import MACDStrategy
-        strategy = MACDStrategy(**strategy_params)
+        strategy = MACDStrategy(**filtered_params)
     elif strategy_name == 'rsi':
         from .strategies.rsi import RSIStrategy
-        strategy = RSIStrategy(**strategy_params)
+        strategy = RSIStrategy(**filtered_params)
     else:
         logger.warning(f"Unknown strategy '{strategy_name}' for user {user_id}. Using Mean Reversion.")
         from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion(**strategy_params)
+        strategy = MeanReversion(**filtered_params)
 
     # Initialize Notifier
     from .notifier import TelegramNotifier
