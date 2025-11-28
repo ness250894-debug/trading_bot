@@ -59,50 +59,46 @@ const strategyInfo = {
 };
 
 const parameterInfo = {
-    short_window: "The period for the faster moving average. A smaller number makes it more sensitive to recent price changes.",
-    long_window: "The period for the slower moving average. A larger number smooths out noise but reacts slower to trends.",
-    bb_length: "The number of periods used for the Bollinger Bands moving average.",
+    fast_period: "The period for the faster moving average. A smaller number makes it more sensitive to recent price changes.",
+    slow_period: "The period for the slower moving average. A larger number smooths out noise but reacts slower to trends.",
+    bb_period: "The number of periods used for the Bollinger Bands moving average.",
     bb_std: "Standard Deviations for the bands. Higher values make the bands wider, requiring more extreme price moves to trigger signals.",
-    rsi_length: "The lookback period for RSI calculation. Standard is 14.",
-    rsi_buy: "The RSI level considered 'oversold'. Prices below this trigger a buy signal.",
-    rsi_sell: "The RSI level considered 'overbought'. Prices above this trigger a sell signal.",
+    rsi_period: "The lookback period for RSI calculation. Standard is 14.",
+    rsi_oversold: "The RSI level considered 'oversold'. Prices below this trigger a buy signal.",
+    rsi_overbought: "The RSI level considered 'overbought'. Prices above this trigger a sell signal.",
     period: "The lookback period for the indicator.",
-    buy_threshold: "The RSI level considered 'oversold'. Prices below this trigger a buy signal.",
-    sell_threshold: "The RSI level considered 'overbought'. Prices above this trigger a sell signal.",
-    fast_period: "The short-term EMA period for MACD.",
-    slow_period: "The long-term EMA period for MACD.",
+    oversold: "The RSI level considered 'oversold'. Prices below this trigger a buy signal.",
+    overbought: "The RSI level considered 'overbought'. Prices above this trigger a sell signal.",
     signal_period: "The EMA period for the signal line."
 };
 
 const paramLimits = {
-    short_window: { min: 2, max: 50, step: 1 },
-    long_window: { min: 10, max: 200, step: 5 },
-    bb_length: { min: 5, max: 50, step: 1 },
-    bb_std: { min: 0.5, max: 4.0, step: 0.1 },
-    rsi_length: { min: 2, max: 30, step: 1 },
-    rsi_buy: { min: 5, max: 45, step: 1 },
-    rsi_sell: { min: 55, max: 95, step: 1 },
-    period: { min: 2, max: 50, step: 1 },
-    buy_threshold: { min: 5, max: 45, step: 1 },
-    sell_threshold: { min: 55, max: 95, step: 1 },
     fast_period: { min: 2, max: 50, step: 1 },
-    slow_period: { min: 10, max: 100, step: 1 },
+    slow_period: { min: 10, max: 200, step: 5 },
+    bb_period: { min: 5, max: 50, step: 1 },
+    bb_std: { min: 0.5, max: 4.0, step: 0.1 },
+    rsi_period: { min: 2, max: 30, step: 1 },
+    rsi_oversold: { min: 5, max: 45, step: 1 },
+    rsi_overbought: { min: 55, max: 95, step: 1 },
+    period: { min: 2, max: 50, step: 1 },
+    oversold: { min: 5, max: 45, step: 1 },
+    overbought: { min: 55, max: 95, step: 1 },
     signal_period: { min: 2, max: 30, step: 1 }
 };
 
 const presets = {
     'SMA Crossover': [
-        { name: 'Conservative', ranges: { short_window: { start: 10, end: 20, step: 2 }, long_window: { start: 50, end: 100, step: 10 } } },
-        { name: 'Aggressive', ranges: { short_window: { start: 3, end: 10, step: 1 }, long_window: { start: 15, end: 40, step: 5 } } },
-        { name: 'Wide Search', ranges: { short_window: { start: 2, end: 30, step: 2 }, long_window: { start: 20, end: 150, step: 10 } } }
+        { name: 'Conservative', ranges: { fast_period: { start: 10, end: 20, step: 2 }, slow_period: { start: 50, end: 100, step: 10 } } },
+        { name: 'Aggressive', ranges: { fast_period: { start: 3, end: 10, step: 1 }, slow_period: { start: 15, end: 40, step: 5 } } },
+        { name: 'Wide Search', ranges: { fast_period: { start: 2, end: 30, step: 2 }, slow_period: { start: 20, end: 150, step: 10 } } }
     ],
     'Mean Reversion': [
-        { name: 'Standard', ranges: { bb_length: { start: 20, end: 20, step: 1 }, bb_std: { start: 2.0, end: 2.0, step: 0.1 }, rsi_length: { start: 14, end: 14, step: 1 }, rsi_buy: { start: 30, end: 30, step: 1 }, rsi_sell: { start: 70, end: 70, step: 1 } } },
-        { name: 'Volatile Market', ranges: { bb_length: { start: 10, end: 30, step: 5 }, bb_std: { start: 2.0, end: 3.0, step: 0.2 }, rsi_length: { start: 10, end: 20, step: 2 }, rsi_buy: { start: 20, end: 40, step: 5 }, rsi_sell: { start: 60, end: 80, step: 5 } } }
+        { name: 'Standard', ranges: { bb_period: { start: 20, end: 20, step: 1 }, bb_std: { start: 2.0, end: 2.0, step: 0.1 }, rsi_period: { start: 14, end: 14, step: 1 }, rsi_oversold: { start: 30, end: 30, step: 1 }, rsi_overbought: { start: 70, end: 70, step: 1 } } },
+        { name: 'Volatile Market', ranges: { bb_period: { start: 10, end: 30, step: 5 }, bb_std: { start: 2.0, end: 3.0, step: 0.2 }, rsi_period: { start: 10, end: 20, step: 2 }, rsi_oversold: { start: 20, end: 40, step: 5 }, rsi_overbought: { start: 60, end: 80, step: 5 } } }
     ],
     'RSI': [
-        { name: 'Scalping', ranges: { period: { start: 5, end: 10, step: 1 }, buy_threshold: { start: 20, end: 30, step: 2 }, sell_threshold: { start: 70, end: 80, step: 2 } } },
-        { name: 'Swing', ranges: { period: { start: 14, end: 28, step: 2 }, buy_threshold: { start: 30, end: 40, step: 2 }, sell_threshold: { start: 60, end: 70, step: 2 } } }
+        { name: 'Scalping', ranges: { period: { start: 5, end: 10, step: 1 }, oversold: { start: 20, end: 30, step: 2 }, overbought: { start: 70, end: 80, step: 2 } } },
+        { name: 'Swing', ranges: { period: { start: 14, end: 28, step: 2 }, oversold: { start: 30, end: 40, step: 2 }, overbought: { start: 60, end: 70, step: 2 } } }
     ],
     'MACD': [
         { name: 'Standard', ranges: { fast_period: { start: 12, end: 12, step: 1 }, slow_period: { start: 26, end: 26, step: 1 }, signal_period: { start: 9, end: 9, step: 1 } } },
@@ -120,9 +116,21 @@ export default function Optimization() {
 
     const [ranges, setRanges] = useState(() => {
         const saved = localStorage.getItem('optimization_ranges');
-        return saved ? JSON.parse(saved) : {
-            short_window: { start: 5, end: 20, step: 5 },
-            long_window: { start: 30, end: 60, step: 10 }
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // Check for legacy keys and discard if found
+            if (parsed.short_window || parsed.rsi_length || parsed.bb_length) {
+                console.log("Legacy optimization ranges detected, resetting to defaults.");
+                return {
+                    fast_period: { start: 5, end: 20, step: 5 },
+                    slow_period: { start: 30, end: 60, step: 10 }
+                };
+            }
+            return parsed;
+        }
+        return {
+            fast_period: { start: 5, end: 20, step: 5 },
+            slow_period: { start: 30, end: 60, step: 10 }
         };
     });
 
