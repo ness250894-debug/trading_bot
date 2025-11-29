@@ -5,9 +5,13 @@ import {
     CheckCircle, Users, DollarSign, Activity, Star,
     Rocket, Target, Clock, Award
 } from 'lucide-react';
+import LoginModal from '../components/LoginModal';
+import SignupModal from '../components/SignupModal';
 
 export default function Landing() {
     const navigate = useNavigate();
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showSignupModal, setShowSignupModal] = useState(false);
     const [stats, setStats] = useState({
         totalTrades: 12847,
         successRate: 73.4,
@@ -118,18 +122,18 @@ export default function Landing() {
                             >
                                 Pricing
                             </Link>
-                            <Link
-                                to="/login"
+                            <button
+                                onClick={() => setShowLoginModal(true)}
                                 className="text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 Sign In
-                            </Link>
-                            <Link
-                                to="/signup"
+                            </button>
+                            <button
+                                onClick={() => setShowSignupModal(true)}
                                 className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-primary/25"
                             >
                                 Get Started
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -157,13 +161,13 @@ export default function Landing() {
                             Manage risk automatically. Join thousands of traders maximizing their profits.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-top-16 duration-1000 delay-300">
-                            <Link
-                                to="/signup"
+                            <button
+                                onClick={() => setShowSignupModal(true)}
                                 className="group bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-105 flex items-center justify-center gap-2"
                             >
                                 Start Trading Now
                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </Link>
+                            </button>
                             <Link
                                 to="/pricing"
                                 className="bg-white/5 hover:bg-white/10 text-foreground px-8 py-4 rounded-xl font-bold text-lg transition-all border border-white/10 hover:border-white/20 flex items-center justify-center gap-2"
@@ -371,19 +375,19 @@ export default function Landing() {
                                 Start your free trial today - no credit card required.
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <Link
-                                    to="/signup"
+                                <button
+                                    onClick={() => setShowSignupModal(true)}
                                     className="group bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-105 flex items-center justify-center gap-2"
                                 >
                                     Get Started Free
                                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </Link>
-                                <Link
-                                    to="/login"
+                                </button>
+                                <button
+                                    onClick={() => setShowLoginModal(true)}
                                     className="bg-white/5 hover:bg-white/10 text-foreground px-8 py-4 rounded-xl font-bold text-lg transition-all border border-white/10 hover:border-white/20"
                                 >
                                     Sign In
-                                </Link>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -409,6 +413,24 @@ export default function Landing() {
                     </div>
                 </div>
             </footer>
+
+            {/* Modals */}
+            <LoginModal
+                isOpen={showLoginModal}
+                onClose={() => setShowLoginModal(false)}
+                onSwitchToSignup={() => {
+                    setShowLoginModal(false);
+                    setShowSignupModal(true);
+                }}
+            />
+            <SignupModal
+                isOpen={showSignupModal}
+                onClose={() => setShowSignupModal(false)}
+                onSwitchToLogin={() => {
+                    setShowSignupModal(false);
+                    setShowLoginModal(true);
+                }}
+            />
         </div>
     );
 }
