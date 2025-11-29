@@ -90,3 +90,32 @@ async def setup_initial_admin(email: str, password: str):
         "status": "success",
         "message": f"Admin user {email} created successfully"
     }
+
+@router.delete("/admin/clear-users")
+async def clear_all_users(current_user: dict = Depends(auth.get_current_admin_user)):
+    """
+    Clear all users and related data (Admin only).
+    WARNING: This is destructive and cannot be undone.
+    """
+    try:
+        # Delete all related data
+        db.conn.execute("DELETE FROM subscriptions")
+        db.conn.execute("DELETE FROM user_strategies")
+        db.conn.execute("DELETE FROM api_keys")
+        db.conn.execute("DELETE FROM trades")
+        db.conn.execute("DELETE FROM backtest_results")
+        db.conn.execute("DELETE FROM payments")
+        db.conn.execute("DELETE FROM visual_strategies")
+        db.conn.execute("DELETE FROM public_strategies")
+        db.conn.execute("DELETE FROM strategy_clones")
+        db.conn.execute("DELETE FROM audit_log")
+        
+        # Delete all users
+        db.conn.execute("DELETE FROM users")
+        
+        return {
+            "status": "success",
+            "message": "All users and related data deleted successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear users: {str(e)}")
