@@ -18,7 +18,7 @@ const AdminDashboard = () => {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:8000/api/admin/users', {
+            const response = await fetch('/api/admin/users', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -45,7 +45,7 @@ const AdminDashboard = () => {
     const handleUpdateSubscription = async (userId, planId, status) => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:8000/api/admin/users/${userId}/subscription`, {
+            const response = await fetch(`/api/admin/users/${userId}/subscription`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ const AdminDashboard = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:8000/api/admin/users/${userId}`, {
+            const response = await fetch(`/api/admin/users/${userId}`, {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -92,7 +92,7 @@ const AdminDashboard = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:8000/api/admin/users/${userId}/make_admin`, {
+            const response = await fetch(`/api/admin/users/${userId}/make_admin`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -200,8 +200,8 @@ const AdminDashboard = () => {
                                                 </select>
                                             ) : (
                                                 <span className={`px-2 py-1 text-xs font-medium rounded-full border ${(user.plan_id || 'free').includes('pro')
-                                                        ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                                        : 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+                                                    ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                                    : 'bg-gray-500/10 text-gray-500 border-gray-500/20'
                                                     }`}>
                                                     {(user.plan_id || 'Free').replace('_', ' ').toUpperCase()}
                                                 </span>
@@ -220,8 +220,8 @@ const AdminDashboard = () => {
                                                 </select>
                                             ) : (
                                                 <span className={`px-2 py-1 text-xs font-medium rounded-full border ${user.status === 'active'
-                                                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                                        : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                                    : 'bg-red-500/10 text-red-500 border-red-500/20'
                                                     }`}>
                                                     {(user.status || 'Active').toUpperCase()}
                                                 </span>
