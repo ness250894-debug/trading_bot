@@ -5,6 +5,7 @@ import os
 sys.path.append(os.path.dirname(__file__))
 
 from app.core.database import DuckDBHandler
+from app.core.auth import get_password_hash
 
 def make_admin():
     print("=== Make User Admin ===")
@@ -18,8 +19,24 @@ def make_admin():
     user = db.get_user_by_email(email)
     
     if not user:
-        print(f"User with email '{email}' not found.")
-        return
+        print(f"User '{email}' not found.")
+        create = input("Do you want to create this user? (y/n): ").lower()
+        if create == 'y':
+            password = input("Enter password for new user: ").strip()
+            if not password:
+                print("Password cannot be empty.")
+                return
+            
+            hashed_pw = get_password_hash(password)
+            success = db.create_user(email, hashed_pw)
+            if success:
+                print(f"User '{email}' created.")
+                user = db.get_user_by_email(email)
+            else:
+                print("Failed to create user.")
+                return
+        else:
+            return
         
     if user.get('is_admin'):
         print(f"User '{email}' is already an admin.")
