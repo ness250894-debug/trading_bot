@@ -23,7 +23,7 @@ class SentimentAnalyzer:
         
         if self.gemini_key:
             genai.configure(api_key=self.gemini_key)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
             self.enabled = True
             logger.info("Gemini AI Sentiment Analyzer initialized")
         else:
