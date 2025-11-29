@@ -42,3 +42,12 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         data={"sub": user['email']}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.get("/me")
+async def get_current_user_info(current_user: dict = Depends(auth.get_current_user)):
+    """Get current user information including admin status."""
+    return {
+        "id": current_user["id"],
+        "email": current_user["email"],
+        "is_admin": current_user.get("is_admin", False)
+    }
