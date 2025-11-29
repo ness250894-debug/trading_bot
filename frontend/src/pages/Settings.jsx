@@ -11,6 +11,8 @@ export default function Settings() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('');
+    const [exchanges, setExchanges] = useState([]);
+    const [exchangesLoading, setExchangesLoading] = useState(true);
 
     // Telegram settings state
     const [telegramChatId, setTelegramChatId] = useState('');
@@ -19,7 +21,28 @@ export default function Settings() {
     const [telegramMessage, setTelegramMessage] = useState('');
     const [telegramMessageType, setTelegramMessageType] = useState('');
 
+    const fetchExchanges = async () => {
+        setExchangesLoading(true);
+        try {
+            const response = await api.get('/exchanges');
+            setExchanges(response.data.exchanges || []);
+        } catch (error) {
+            console.error('Failed to load exchanges:', error);
+            // Default exchanges if API fails
+            setExchanges([
+                { name: 'bybit', display_name: 'ByBit', supports_demo: true },
+                { name: 'binance', display_name: 'Binance', supports_demo: true },
+                { name: 'kraken', display_name: 'Kraken', supports_demo: true },
+                { name: 'okx', display_name: 'OKX', supports_demo: true },
+                { name: 'coinbase', display_name: 'Coinbase', supports_demo: false }
+            ]);
+        } finally {
+            setExchangesLoading(false);
+        }
+    };
+
     useEffect(() => {
+        fetchExchanges();
         checkApiKeyStatus();
         checkTelegramStatus();
     }, [exchange]);
@@ -145,26 +168,58 @@ export default function Settings() {
                 </p>
 
                 <div className={styles.form}>
-                    <div className={styles.formGroup}>
-                        <label htmlFor="exchange">Exchange</label>
-                        <select
-                            id="exchange"
-                            value={exchange}
-                            onChange={(e) => setExchange(e.target.value)}
-                            className={styles.select}
-                        >
-                            <option value="bybit">ByBit</option>
-                            <option value="binance">Binance</option>
-                            <option value="okx">OKX</option>
-                            <option value="kraken">Kraken</option>
-                            <option value="coinbase">Coinbase</option>
-                        </select>
+                    {/* Modern Exchange Selector */}
+                    <div className={styles.formGroup} style={{ marginBottom: '2rem' }}>
+                        <label style={{ marginBottom: '1rem', display: 'block', fontSize: '14px', fontWeight: '600', color: '#9ca3af' }}>SELECT EXCHANGE</label>
+
+                        {exchangesLoading ? (
+                            <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>Loading exchanges...</div>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                                {exchanges.map((ex) => {
+                                    const isActive = exchange === ex.name;
+                                    return (
+                                        <div
+                                            key={ex.name}
+                                            onClick={() => setExchange(ex.name)}
+                                            style={{
+                                                cursor: 'pointer',
+                                                padding: '16px',
+                                                borderRadius: '12px',
+                                                border: isActive ? '2px solid #8b5cf6' : '2px solid rgba(255, 255, 255, 0.1)',
+                                                backgroundColor: isActive ? 'rgba(139, 92, 246, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                                                transition: 'all 0.3s',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: isActive ? '#fff' : '#9ca3af' }}>
+                                                    {ex.display_name}
+                                                </h4>
+                                                {isActive && (
+                                                    <div style={{
+                                                        width: '8px',
+                                                        height: '8px',
+                                                        borderRadius: '50%',
+                                                        backgroundColor: '#8b5cf6',
+                                                        boxShadow: '0 0 10px rgba(139, 92, 246, 0.6)'
+                                                    }} />
+                                                )}
+                                            </div>
+                                            {ex.supports_demo && (
+                                                <div style={{ fontSize: '10px', color: '#8b5cf6', fontWeight: '500' }}>• Testnet</div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {hasKey && (
                         <div className={styles.status}>
                             <span className={styles.statusIndicator}>✓</span>
-                            API keys configured for {exchange}
+                            API keys configured for {exchanges.find(e => e.name === exchange)?.display_name || exchange}
                         </div>
                     )}
 

@@ -40,39 +40,53 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     strategy_name = strategy_config.get('STRATEGY', 'mean_reversion')
     strategy_params = strategy_config.get('STRATEGY_PARAMS', {})
     dry_run = strategy_config.get('DRY_RUN', True)
+    exchange = strategy_config.get('EXCHANGE', 'bybit')
+    
+    logger.info(f"Loading exchange: {exchange} for user {user_id}")
     
     # Load API keys for this user from database
     from .database import DuckDBHandler
     from .encryption import EncryptionHelper
+    from .client_manager import client_manager
     
     db = DuckDBHandler()
     encryption = EncryptionHelper()
     
-    # Try to get user's API keys
-    api_key_data = db.get_api_key(user_id, 'bybit')
+    # Try to get user's API keys for the selected exchange
+    api_key_data = db.get_api_key(user_id, exchange)
     
     if api_key_data:
         # Decrypt user's API keys
         api_key = encryption.decrypt(api_key_data['api_key_encrypted'])
         api_secret = encryption.decrypt(api_key_data['api_secret_encrypted'])
-        logger.info(f"✓ Loaded encrypted API keys for user {user_id}")
+        logger.info(f"✓ Loaded encrypted API keys for user {user_id} ({exchange})")
     else:
-        # Fallback to global config (for backward compatibility)
-        api_key = config.API_KEY
-        api_secret = config.API_SECRET
-        logger.warning(f"⚠️ No encrypted API keys found for user {user_id}, using global config")
+        # Fallback to global config (for backward compatibility - only for bybit)
+        if exchange == 'bybit':
+            api_key = config.API_KEY
+            api_secret = config.API_SECRET
+            logger.warning(f"⚠️ No encrypted API keys found for user {user_id}, using global config")
+        else:
+            logger.error(f"❌ No API keys found for user {user_id} on exchange {exchange}")
+            raise ValueError(f"Missing API credentials for user {user_id} on {exchange}")
     
     if not api_key or not api_secret:
         logger.error(f"❌ No API keys available for user {user_id}")
         raise ValueError(f"Missing API credentials for user {user_id}")
     
-    # Initialize Exchange Client
-    if dry_run:
-        from .exchange.paper import PaperExchange
-        logger.info(f"⚠️ DRY RUN MODE for user {user_id}")
-        client = PaperExchange(api_key, api_secret)
-    else:
-        client = ExchangeClient(api_key, api_secret, demo=config.DEMO)
+    # Initialize Exchange Client via ClientManager
+    try:
+        client = client_manager.get_client(
+            user_id=user_id,
+            api_key=api_key,
+            api_secret=api_secret,
+            dry_run=dry_run,
+            exchange=exchange
+        )
+        logger.info(f"✓ User {user_id} initialized {exchange} client")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize {exchange} client for user {user_id}: {e}")
+        raise
     
     # Test connectivity
     try:

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity } from 'lucide-react';
+import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity, Globe } from 'lucide-react';
 import { useModal } from '../components/Modal';
 
 const STRATEGY_OPTIONS = [
@@ -79,6 +79,22 @@ export default function Strategies() {
     const [restarting, setRestarting] = useState(false);
     const [message, setMessage] = useState(null);
     const [suggestion, setSuggestion] = useState(null);
+    const [exchanges, setExchanges] = useState([]);
+    const [exchangesLoading, setExchangesLoading] = useState(true);
+
+    const fetchExchanges = async () => {
+        setExchangesLoading(true);
+        try {
+            const response = await api.get('/exchanges');
+            setExchanges(response.data.exchanges || []);
+        } catch (err) {
+            console.error('Failed to load exchanges:', err);
+            // Default to bybit if API fails
+            setExchanges([{ name: 'bybit', display_name: 'Bybit' }]);
+        } finally {
+            setExchangesLoading(false);
+        }
+    };
 
     const fetchConfig = async () => {
         setLoading(true);
@@ -99,6 +115,7 @@ export default function Strategies() {
     };
 
     useEffect(() => {
+        fetchExchanges();
         fetchConfig();
     }, []);
 
@@ -259,6 +276,59 @@ export default function Strategies() {
                 </div>
 
                 <div className="p-8 space-y-8">
+                    {/* Exchange Selection */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                            <Globe size={18} className="text-primary" />
+                            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Trading Exchange</label>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                            {exchangesLoading ? (
+                                <div className="col-span-full text-center text-muted-foreground py-4">
+                                    Loading exchanges...
+                                </div>
+                            ) : (
+                                exchanges.map((exchange) => {
+                                    const isActive = (config.exchange || 'bybit') === exchange.name;
+                                    return (
+                                        <div
+                                            key={exchange.name}
+                                            onClick={() => handleChange('exchange', exchange.name)}
+                                            className={`
+                                                cursor-pointer p-4 rounded-xl border transition-all duration-300
+                                                ${isActive
+                                                    ? 'bg-primary/10 border-primary/50 shadow-lg shadow-primary/10'
+                                                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                                                }
+                                            `}
+                                        >
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h4 className={`font-bold text-sm ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                                    {exchange.display_name}
+                                                </h4>
+                                                {isActive && <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" />}
+                                            </div>
+                                            <div className="flex gap-1 flex-wrap">
+                                                {exchange.supports_futures && (
+                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">Futures</span>
+                                                )}
+                                                {exchange.supports_spot && (
+                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Spot</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Selected: <span className="font-medium text-foreground">{exchanges.find(e => e.name === (config.exchange || 'bybit'))?.display_name || 'ByBit'}</span>
+                            {exchanges.find(e => e.name === (config.exchange || 'bybit'))?.supports_demo && (
+                                <span className="ml-2 text-primary">• Testnet Available</span>
+                            )}
+                        </p>
+                    </div>
+
                     {/* Strategy Selection Cards */}
                     <div className="space-y-4">
                         <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Strategy</label>

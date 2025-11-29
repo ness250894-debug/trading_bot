@@ -1,11 +1,12 @@
 import ccxt
 import pandas as pd
 import logging
+from .base_client import BaseExchangeClient
 
-class ExchangeClient:
+class ByBitClient(BaseExchangeClient):
     def __init__(self, api_key, api_secret, demo=True, timeout=10000):
         """
-        Initialize exchange client with timeout support.
+        Initialize ByBit exchange client with timeout support.
         
         Args:
             api_key: API key
@@ -13,8 +14,10 @@ class ExchangeClient:
             demo: Use demo/testnet
             timeout: Request timeout in milliseconds (default 10s)
         """
+        # Call parent constructor
+        super().__init__(api_key, api_secret, demo, timeout)
+        
         self.logger = logging.getLogger(__name__)
-        self.demo = demo
         
         self.exchange = ccxt.bybit({
             'apiKey': api_key,

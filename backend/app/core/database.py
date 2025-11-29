@@ -54,6 +54,7 @@ class DuckDBHandler:
                     dry_run BOOLEAN,
                     take_profit_pct DOUBLE,
                     stop_loss_pct DOUBLE,
+                    exchange VARCHAR DEFAULT 'bybit',
                     updated_at TIMESTAMP,
                     UNIQUE(user_id)
                 );
@@ -122,6 +123,11 @@ class DuckDBHandler:
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_bot_token VARCHAR")
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR")
                 logger.info("Users table migration completed (Telegram columns)")
+                
+                # Add exchange column to user_strategies table if it doesn't exist
+                self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS exchange VARCHAR DEFAULT 'bybit'")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_user_strategies_exchange ON user_strategies(exchange)")
+                logger.info("User strategies table migration completed (exchange column)")
             except Exception as migration_error:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")
@@ -370,7 +376,8 @@ class DuckDBHandler:
                 "STRATEGY_PARAMS": json.loads(result[6]) if result[6] else {},
                 "DRY_RUN": bool(result[7]),
                 "TAKE_PROFIT_PCT": result[8],
-                "STOP_LOSS_PCT": result[9]
+                "STOP_LOSS_PCT": result[9],
+                "EXCHANGE": result[10] if len(result) > 10 and result[10] else 'bybit'
             }
         except Exception as e:
             logger.error(f"Error fetching user strategy: {e}")
@@ -388,13 +395,15 @@ class DuckDBHandler:
                 [user_id]
             ).fetchone()
             
+            exchange = strategy_config.get("EXCHANGE", 'bybit')
+            
             if existing:
                 # Update existing
                 query = """
                     UPDATE user_strategies 
                     SET symbol = ?, timeframe = ?, amount_usdt = ?, strategy = ?, 
                         strategy_params = ?, dry_run = ?, take_profit_pct = ?, 
-                        stop_loss_pct = ?, updated_at = ?
+                        stop_loss_pct = ?, exchange = ?, updated_at = ?
                     WHERE user_id = ?
                 """
                 self.conn.execute(query, [
@@ -406,6 +415,7 @@ class DuckDBHandler:
                     strategy_config.get("DRY_RUN", True),
                     strategy_config.get("TAKE_PROFIT_PCT"),
                     strategy_config.get("STOP_LOSS_PCT"),
+                    exchange,
                     datetime.now(),
                     user_id
                 ])
@@ -414,8 +424,8 @@ class DuckDBHandler:
                 query = """
                     INSERT INTO user_strategies 
                     (id, user_id, symbol, timeframe, amount_usdt, strategy, strategy_params, 
-                     dry_run, take_profit_pct, stop_loss_pct, updated_at)
-                    VALUES (nextval('seq_user_strategy_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     dry_run, take_profit_pct, stop_loss_pct, exchange, updated_at)
+                    VALUES (nextval('seq_user_strategy_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 self.conn.execute(query, [
                     user_id,
@@ -427,10 +437,11 @@ class DuckDBHandler:
                     strategy_config.get("DRY_RUN", True),
                     strategy_config.get("TAKE_PROFIT_PCT"),
                     strategy_config.get("STOP_LOSS_PCT"),
+                    exchange,
                     datetime.now()
                 ])
             
-            logger.info(f"Saved strategy for user {user_id}")
+            logger.info(f"Saved strategy for user {user_id} with exchange {exchange}")
             return True
         except Exception as e:
             logger.error(f"Error saving user strategy: {e}")

@@ -1,20 +1,45 @@
 import logging
-from .client import ExchangeClient
+from .base_client import BaseExchangeClient
+from .exchange_factory import ExchangeFactory
 from .. import config
 
 logger = logging.getLogger("PaperExchange")
 
-class PaperExchange(ExchangeClient):
-    def __init__(self, api_key, api_secret, initial_balance=1000.0):
-        # Initialize real client for data fetching
+class PaperExchange(BaseExchangeClient):
+    def __init__(self, api_key, api_secret, initial_balance=1000.0, exchange_type='bybit'):
+        """
+        Initialize paper trading exchange.
+        
+        Args:
+            api_key: API key (used for data fetching)
+            api_secret: API secret (used for data fetching)
+            initial_balance: Starting virtual balance
+            exchange_type: Which exchange to use for data fetching ('bybit', 'binance', etc.)
+        """
+        # Initialize base class
         super().__init__(api_key, api_secret, demo=True)
+        
+        # Create real client for data fetching (using factory)
+        self.data_client = ExchangeFactory.create_exchange(
+            exchange_type, api_key, api_secret, demo=True
+        )
         
         # Virtual State
         self.paper_balance = initial_balance
         self.paper_positions = {} # {symbol: {'size': 0.0, 'entry_price': 0.0, 'side': 'None'}}
         self.orders = []
         
-        logger.info(f"Paper Exchange initialized with ${self.paper_balance:.2f}")
+        logger.info(f"Paper Exchange initialized with ${self.paper_balance:.2f} using {exchange_type}")
+
+    # Override abstract methods to use virtual state
+    
+    def fetch_ohlcv(self, symbol, timeframe, limit=100, since=None):
+        """Delegate to real exchange for market data."""
+        return self.data_client.fetch_ohlcv(symbol, timeframe, limit, since)
+    
+    def fetch_ticker(self, symbol):
+        """Delegate to real exchange for ticker data."""
+        return self.data_client.fetch_ticker(symbol)
 
     def fetch_balance(self):
         """Returns virtual balance in the expected format."""
@@ -31,7 +56,7 @@ class PaperExchange(ExchangeClient):
         pos = self.paper_positions.get(symbol, {'size': 0.0, 'side': 'None', 'entry_price': 0.0})
         return pos
 
-    def create_order(self, symbol, type, side, amount, price=None, take_profit=None, stop_loss=None, trailing_stop=None):
+    def create_order(self, symbol, order_type, side, amount, price=None, take_profit=None, stop_loss=None, trailing_stop=None, take_profit_pct=None, stop_loss_pct=None):
         """Executes a virtual order."""
         try:
             current_price = price if price else self.get_market_price(symbol)
@@ -108,7 +133,36 @@ class PaperExchange(ExchangeClient):
             logger.error(f"Error creating paper order: {e}")
             return None
 
+    def set_leverage(self, symbol, leverage):
+        """Virtual leverage setting (just logs for now)."""
+        logger.info(f"PAPER: Set leverage {leverage}x for {symbol}")
+        return True
+
     def set_trailing_stop(self, symbol, trailing_stop_dist):
         """Virtual trailing stop (just logs for now)."""
         logger.info(f"PAPER: Set trailing stop {trailing_stop_dist} for {symbol}")
         return True
+    
+    def close_position(self, symbol):
+        """Close virtual position."""
+        pos = self.fetch_position(symbol)
+        size = pos.get('size', 0.0)
+        side = pos.get('side', 'None')
+        
+        if size > 0 and side != 'None':
+            # Determine opposing side
+            close_side = 'sell' if side == 'Buy' else 'buy'
+            
+            logger.info(f"PAPER: Closing {side} position of {size} {symbol}...")
+            
+            # Execute virtual close order
+            return self.create_order(
+                symbol=symbol,
+                order_type='market',
+                side=close_side,
+                amount=size
+            )
+        else:
+            logger.info(f"PAPER: No position to close for {symbol}")
+            return True
+
