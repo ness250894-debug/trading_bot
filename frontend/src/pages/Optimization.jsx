@@ -347,9 +347,20 @@ export default function Optimization() {
         }));
     };
 
+    // Map display names to backend strategy names
+    const STRATEGY_NAME_MAP = {
+        'SMA Crossover': 'sma_crossover',
+        'Mean Reversion': 'mean_reversion',
+        'RSI': 'rsi',
+        'MACD': 'macd'
+    };
+
     const applyToStrategy = (params) => {
+        // Convert display name to backend format
+        const backendStrategyName = STRATEGY_NAME_MAP[strategy] || strategy.toLowerCase().replace(/\s+/g, '_');
+
         const suggestion = {
-            strategy: strategy,
+            strategy: backendStrategyName,
             params: params
         };
         localStorage.setItem('suggested_strategy_params', JSON.stringify(suggestion));
