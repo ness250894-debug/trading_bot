@@ -40,11 +40,15 @@ const AdminDashboard = () => {
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
+            console.log('Fetching users with token:', token ? 'exists' : 'missing');
+
             const response = await fetch('/api/admin/users', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
+
+            console.log('Admin users response status:', response.status);
 
             if (response.status === 403) {
                 toast.error("Access Denied: Admin privileges required");
@@ -55,9 +59,11 @@ const AdminDashboard = () => {
             if (!response.ok) throw new Error('Failed to fetch users');
 
             const data = await response.json();
+            console.log('Fetched users data:', data);
+            console.log('Number of users:', data.length);
             setUsers(data);
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error fetching users:', error);
             toast.error('Failed to load users');
         } finally {
             setLoading(false);

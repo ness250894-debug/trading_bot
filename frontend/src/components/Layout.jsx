@@ -85,25 +85,6 @@ export default function Layout({ children }) {
                     </button>
                 </div>
 
-                <nav className="px-4 space-y-2 mt-4 flex-1 overflow-y-auto">
-                    <SidebarItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                    <SidebarItem to="/strategies" icon={Settings} label="Strategies" />
-                    <SidebarItem to="/strategy-builder" icon={Zap} label="Visual Builder" />
-                    <SidebarItem to="/marketplace" icon={TrendingUp} label="Social Trading" />
-                    <SidebarItem to="/optimization" icon={TrendingUp} label="Optimization" />
-                    <SidebarItem to="/backtest" icon={History} label="Backtest" />
-                    <SidebarItem to="/pricing" icon={DollarSign} label="Pricing" />
-                    <SidebarItem to="/settings" icon={Settings} label="Settings" />
-
-                    {isAdmin && (
-                        <>
-                            <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4 mb-2">Admin</p>
-                            <SidebarItem to="/admin" icon={Shield} label="Admin Panel" />
-                        </>
-                    )}
-                </nav>
-
-
             </aside>
 
             {/* Main Content */}
