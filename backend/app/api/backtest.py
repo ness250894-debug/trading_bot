@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, WebSocket
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, validator
 from typing import Dict, Any, List, Optional
 import pandas as pd
@@ -290,6 +290,8 @@ async def websocket_optimize(websocket: WebSocket):
                 # JobManager runs it in a thread, so it's fine.
                 await job_manager.start_job(run_opt)
 
+    except WebSocketDisconnect:
+        logger.info("WebSocket disconnected by client")
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
     finally:

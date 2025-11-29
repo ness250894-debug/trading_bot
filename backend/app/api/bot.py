@@ -53,6 +53,8 @@ async def get_balance(current_user: dict = Depends(auth.get_current_user)):
         logger.error(f"Error getting balance: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch balance")
 
+from datetime import datetime
+
 @router.post("/start")
 async def start_bot(current_user: dict = Depends(auth.get_current_user)):
     """Start user's bot instance."""
@@ -74,6 +76,25 @@ async def start_bot(current_user: dict = Depends(auth.get_current_user)):
                 "TAKE_PROFIT_PCT": config.TAKE_PROFIT_PCT,
                 "STOP_LOSS_PCT": config.STOP_LOSS_PCT,
             }
+            
+        # Enforce Billing for Live Trading
+        is_dry_run = strategy_config.get("DRY_RUN", True)
+        if not is_dry_run:
+            subscription = db.get_subscription(user_id)
+            is_valid_pro = False
+            
+            if subscription and subscription['status'] == 'active':
+                # Check expiration
+                if subscription['expires_at'] and subscription['expires_at'] > datetime.now():
+                    # Check plan type (assuming all paid plans start with 'pro')
+                    if subscription['plan_id'].startswith('pro'):
+                        is_valid_pro = True
+            
+            if not is_valid_pro:
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Live trading requires an active Pro subscription. Please upgrade your plan."
+                )
         
         # Start bot instance
         success = bot_manager.start_bot(user_id, strategy_config)
