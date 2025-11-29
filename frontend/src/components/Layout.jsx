@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, LogOut, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, LogOut, DollarSign, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SidebarItem = ({ to, icon: Icon, label }) => {
@@ -24,8 +24,32 @@ const SidebarItem = ({ to, icon: Icon, label }) => {
 
 export default function Layout({ children }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+    const [isAdmin, setIsAdmin] = React.useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+
+    React.useEffect(() => {
+        const checkAdminStatus = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+
+                const response = await fetch('http://localhost:8000/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const user = await response.json();
+                    setIsAdmin(user.is_admin);
+                }
+            } catch (error) {
+                console.error('Failed to check admin status:', error);
+            }
+        };
+        checkAdminStatus();
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -70,6 +94,13 @@ export default function Layout({ children }) {
                     <SidebarItem to="/backtest" icon={History} label="Backtest" />
                     <SidebarItem to="/pricing" icon={DollarSign} label="Pricing" />
                     <SidebarItem to="/settings" icon={Settings} label="Settings" />
+
+                    {isAdmin && (
+                        <>
+                            <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-4 mb-2">Admin</p>
+                            <SidebarItem to="/admin" icon={Shield} label="Admin Panel" />
+                        </>
+                    )}
                 </nav>
 
                 <div className="absolute bottom-0 left-0 right-0 p-6">

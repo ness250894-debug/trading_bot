@@ -50,6 +50,10 @@ app.include_router(billing.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(exchanges.router, prefix="/api")
 
+# Admin Router
+from .api import admin
+app.include_router(admin.router, prefix="/api")
+
 # Visual Strategy Builder
 from .api import visual_strategies
 app.include_router(visual_strategies.router, prefix="/api")

@@ -40,6 +40,7 @@ class DuckDBHandler:
                     hashed_password VARCHAR,
                     telegram_bot_token VARCHAR,
                     telegram_chat_id VARCHAR,
+                    is_admin BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_user_id START 1;
@@ -123,6 +124,10 @@ class DuckDBHandler:
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_bot_token VARCHAR")
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR")
                 logger.info("Users table migration completed (Telegram columns)")
+
+                # Add is_admin column to users table if it doesn't exist
+                self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE")
+                logger.info("Users table migration completed (is_admin column)")
                 
                 # Add exchange column to user_strategies table if it doesn't exist
                 self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS exchange VARCHAR DEFAULT 'bybit'")
@@ -396,7 +401,8 @@ class DuckDBHandler:
                     "id": result[0],
                     "email": result[1],
                     "hashed_password": result[2],
-                    "created_at": result[3]
+                    "is_admin": bool(result[5]) if len(result) > 5 else False,
+                    "created_at": result[6] if len(result) > 6 else result[3]
                 }
             return None
         except Exception as e:
@@ -615,7 +621,7 @@ class DuckDBHandler:
         """Retrieve a user by their ID including Telegram settings."""
         try:
             result = self.conn.execute(
-                "SELECT id, email, telegram_bot_token, telegram_chat_id FROM users WHERE id = ?",
+                "SELECT id, email, telegram_bot_token, telegram_chat_id, is_admin FROM users WHERE id = ?",
                 [user_id]
             ).fetchone()
             
@@ -626,7 +632,8 @@ class DuckDBHandler:
                 'id': result[0],
                 'email': result[1],
                 'telegram_bot_token': result[2],
-                'telegram_chat_id': result[3]
+                'telegram_chat_id': result[3],
+                'is_admin': bool(result[4]) if len(result) > 4 else False
             }
         except Exception as e:
             logger.error(f"Error fetching user by ID: {e}")
@@ -772,4 +779,75 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error fetching payment: {e}")
             return None
+
+    def get_all_users(self):
+        """Get all users for admin dashboard."""
+        try:
+            # Join with subscriptions to get plan info
+            query = """
+                SELECT u.id, u.email, u.created_at, u.is_admin, 
+                       s.plan_id, s.status, s.expires_at
+                FROM users u
+                LEFT JOIN subscriptions s ON u.id = s.user_id
+                ORDER BY u.id DESC
+            """
+            df = self.conn.execute(query).fetchdf()
+            
+            # Convert timestamps to string
+            if not df.empty:
+                df['created_at'] = df['created_at'].astype(str)
+                df['expires_at'] = df['expires_at'].astype(str)
+                # Handle NaNs
+                df = df.fillna('')
+                
+            return df.to_dict('records')
+        except Exception as e:
+            logger.error(f"Error fetching all users: {e}")
+            return []
+
+    def update_user_subscription(self, user_id, plan_id, status):
+        """Admin update of user subscription."""
+        try:
+            from datetime import datetime, timedelta
+            
+            # Set expiration based on plan (default 30 days if not specified)
+            duration = 365 if 'yearly' in plan_id else 30
+            expires_at = datetime.now() + timedelta(days=duration)
+            
+            return self.create_subscription(user_id, plan_id, status, expires_at)
+        except Exception as e:
+            logger.error(f"Error updating user subscription: {e}")
+            return False
+
+    def delete_user(self, user_id):
+        """Delete a user and all their data."""
+        try:
+            # Delete related data first
+            self.conn.execute("DELETE FROM subscriptions WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM user_strategies WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM api_keys WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM trades WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM backtest_results WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM payments WHERE user_id = ?", [user_id])
+            
+            # Delete user
+            self.conn.execute("DELETE FROM users WHERE id = ?", [user_id])
+            logger.info(f"Deleted user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting user: {e}")
+            return False
+
+    def set_admin_status(self, user_id, is_admin):
+        """Set admin status for a user."""
+        try:
+            self.conn.execute(
+                "UPDATE users SET is_admin = ? WHERE id = ?",
+                [is_admin, user_id]
+            )
+            logger.info(f"Set admin status to {is_admin} for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error setting admin status: {e}")
+            return False
 

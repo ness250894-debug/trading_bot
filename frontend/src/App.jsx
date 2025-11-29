@@ -11,6 +11,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Settings from './pages/Settings';
 import Pricing from './pages/Pricing';
+import AdminDashboard from './pages/AdminDashboard';
 import { ToastProvider } from './components/Toast';
 import { ModalProvider } from './components/Modal';
 
@@ -133,6 +134,13 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Pricing />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/admin" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AdminDashboard />
                   </Layout>
                 </ProtectedRoute>
               } />
