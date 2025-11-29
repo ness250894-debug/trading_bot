@@ -52,3 +52,41 @@ async def make_admin(
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update admin status")
     return {"status": "success"}
+
+@router.post("/admin/setup")
+async def setup_initial_admin(email: str, password: str):
+    """
+    Create the first admin user. 
+    Only works if no admin users exist yet.
+    """
+    # Check if any admin exists
+    all_users = db.get_all_users()
+    has_admin = any(user.get('is_admin') for user in all_users)
+    
+    if has_admin:
+        raise HTTPException(
+            status_code=403, 
+            detail="Admin already exists. Use the admin panel to manage users."
+        )
+    
+    # Check if user exists
+    user = db.get_user_by_email(email)
+    
+    if not user:
+        # Create user
+        from ..core.auth import get_password_hash
+        hashed_password = get_password_hash(password)
+        success = db.create_user(email, hashed_password)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to create user")
+        user = db.get_user_by_email(email)
+    
+    # Make admin
+    success = db.set_admin_status(user['id'], True)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to set admin status")
+    
+    return {
+        "status": "success",
+        "message": f"Admin user {email} created successfully"
+    }
