@@ -8,6 +8,7 @@ import Backtest from './pages/Backtest';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Settings from './pages/Settings';
+import Pricing from './pages/Pricing';
 import { ToastProvider } from './components/Toast';
 import { ModalProvider } from './components/Modal';
 
@@ -109,6 +110,13 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Settings />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/pricing" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Pricing />
                   </Layout>
                 </ProtectedRoute>
               } />

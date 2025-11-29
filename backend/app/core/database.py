@@ -80,6 +80,30 @@ class DuckDBHandler:
                     created_at TIMESTAMP
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_audit_id START 1;
+                CREATE TABLE IF NOT EXISTS subscriptions (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    plan_id VARCHAR NOT NULL,
+                    status VARCHAR NOT NULL,
+                    starts_at TIMESTAMP,
+                    expires_at TIMESTAMP,
+                    auto_renew BOOLEAN DEFAULT FALSE,
+                    updated_at TIMESTAMP,
+                    UNIQUE(user_id)
+                );
+                CREATE SEQUENCE IF NOT EXISTS seq_subscription_id START 1;
+                CREATE TABLE IF NOT EXISTS payments (
+                    id INTEGER PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    charge_code VARCHAR NOT NULL,
+                    amount DOUBLE,
+                    currency VARCHAR,
+                    status VARCHAR,
+                    plan_id VARCHAR,
+                    created_at TIMESTAMP,
+                    confirmed_at TIMESTAMP
+                );
+                CREATE SEQUENCE IF NOT EXISTS seq_payment_id START 1;
             """)
             
             # Run migrations for existing tables
@@ -547,4 +571,132 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error updating Telegram settings: {e}")
             return False
+
+    def create_subscription(self, user_id, plan_id, status, expires_at):
+        """Create or update a user subscription."""
+        try:
+            from datetime import datetime
+            
+            # Check if subscription exists
+            existing = self.conn.execute(
+                "SELECT id FROM subscriptions WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if existing:
+                # Update existing
+                query = """
+                    UPDATE subscriptions 
+                    SET plan_id = ?, status = ?, expires_at = ?, updated_at = ?
+                    WHERE user_id = ?
+                """
+                self.conn.execute(query, [
+                    plan_id,
+                    status,
+                    expires_at,
+                    datetime.now(),
+                    user_id
+                ])
+            else:
+                # Insert new
+                query = """
+                    INSERT INTO subscriptions 
+                    (id, user_id, plan_id, status, starts_at, expires_at, updated_at)
+                    VALUES (nextval('seq_subscription_id'), ?, ?, ?, ?, ?, ?)
+                """
+                self.conn.execute(query, [
+                    user_id,
+                    plan_id,
+                    status,
+                    datetime.now(),
+                    expires_at,
+                    datetime.now()
+                ])
+            
+            logger.info(f"Subscription updated for user {user_id}: {plan_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error creating subscription: {e}")
+            return False
+
+    def get_subscription(self, user_id):
+        """Get user's active subscription."""
+        try:
+            result = self.conn.execute(
+                "SELECT plan_id, status, expires_at FROM subscriptions WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if not result:
+                return None
+            
+            return {
+                'plan_id': result[0],
+                'status': result[1],
+                'expires_at': result[2]
+            }
+        except Exception as e:
+            logger.error(f"Error fetching subscription: {e}")
+            return None
+
+    def create_payment(self, user_id, charge_code, amount, currency, plan_id):
+        """Log a new payment attempt."""
+        try:
+            from datetime import datetime
+            query = """
+                INSERT INTO payments 
+                (id, user_id, charge_code, amount, currency, status, plan_id, created_at)
+                VALUES (nextval('seq_payment_id'), ?, ?, ?, ?, 'created', ?, ?)
+            """
+            self.conn.execute(query, [
+                user_id,
+                charge_code,
+                amount,
+                currency,
+                plan_id,
+                datetime.now()
+            ])
+            return True
+        except Exception as e:
+            logger.error(f"Error creating payment: {e}")
+            return False
+
+    def update_payment_status(self, charge_code, status):
+        """Update payment status."""
+        try:
+            from datetime import datetime
+            query = """
+                UPDATE payments 
+                SET status = ?, confirmed_at = ?
+                WHERE charge_code = ?
+            """
+            self.conn.execute(query, [
+                status,
+                datetime.now() if status == 'confirmed' else None,
+                charge_code
+            ])
+            return True
+        except Exception as e:
+            logger.error(f"Error updating payment: {e}")
+            return False
+
+    def get_payment_by_charge_code(self, charge_code):
+        """Get payment details by charge code."""
+        try:
+            result = self.conn.execute(
+                "SELECT user_id, plan_id, status FROM payments WHERE charge_code = ?",
+                [charge_code]
+            ).fetchone()
+            
+            if not result:
+                return None
+                
+            return {
+                'user_id': result[0],
+                'plan_id': result[1],
+                'status': result[2]
+            }
+        except Exception as e:
+            logger.error(f"Error fetching payment: {e}")
+            return None
 

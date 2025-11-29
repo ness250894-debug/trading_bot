@@ -20,6 +20,10 @@ DEMO = os.getenv('BYBIT_DEMO', 'True').lower() == 'true'
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
+# Coinbase Commerce (for Billing)
+COINBASE_COMMERCE_API_KEY = os.getenv('COINBASE_COMMERCE_API_KEY')
+COINBASE_COMMERCE_WEBHOOK_SECRET = os.getenv('COINBASE_COMMERCE_WEBHOOK_SECRET')
+
 # Trading Settings
 SYMBOL = 'BTC/USDT'
 TIMEFRAME = '1m'

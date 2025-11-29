@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, LogOut } from 'lucide-react';
+import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, LogOut, DollarSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SidebarItem = ({ to, icon: Icon, label }) => {
@@ -66,6 +66,7 @@ export default function Layout({ children }) {
                     <SidebarItem to="/strategies" icon={Settings} label="Strategies" />
                     <SidebarItem to="/optimization" icon={TrendingUp} label="Optimization" />
                     <SidebarItem to="/backtest" icon={History} label="Backtest" />
+                    <SidebarItem to="/pricing" icon={DollarSign} label="Pricing" />
                     <SidebarItem to="/settings" icon={Settings} label="Settings" />
                 </nav>
 

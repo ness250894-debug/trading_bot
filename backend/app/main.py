@@ -5,7 +5,7 @@ import asyncio
 import threading
 from .core import bot as trading_bot
 from .core.logging_utils import manager, AsyncWebSocketLogHandler
-from .api import backtest, bot, trades, auth, api_keys, health, user
+from .api import backtest, bot, trades, auth, api_keys, health, user, billing
 
 # Configure logging
 # We need to get the root logger
@@ -46,6 +46,7 @@ app.include_router(trades.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(api_keys.router, prefix="/api")
 app.include_router(user.router, prefix="/api")
+app.include_router(billing.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 
 # Serve Static Files (Frontend)
