@@ -1,8 +1,8 @@
 import sys
 import os
 
-# Add backend to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'backend'))
+# Add current directory to path so we can import app
+sys.path.append(os.path.dirname(__file__))
 
 from app.core.database import DuckDBHandler
 
