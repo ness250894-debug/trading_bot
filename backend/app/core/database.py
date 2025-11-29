@@ -38,6 +38,7 @@ class DuckDBHandler:
                     id INTEGER PRIMARY KEY,
                     email VARCHAR UNIQUE,
                     hashed_password VARCHAR,
+                    nickname VARCHAR,
                     telegram_bot_token VARCHAR,
                     telegram_chat_id VARCHAR,
                     is_admin BOOLEAN DEFAULT FALSE,
@@ -128,6 +129,10 @@ class DuckDBHandler:
                 # Add is_admin column to users table if it doesn't exist
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE")
                 logger.info("Users table migration completed (is_admin column)")
+                
+                # Add nickname column to users table if it doesn't exist
+                self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR")
+                logger.info("Users table migration completed (nickname column)")
                 
                 # Add exchange column to user_strategies table if it doesn't exist
                 self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS exchange VARCHAR DEFAULT 'bybit'")
@@ -401,24 +406,25 @@ class DuckDBHandler:
                     "id": result[0],
                     "email": result[1],
                     "hashed_password": result[2],
-                    "is_admin": bool(result[5]) if len(result) > 5 else False,
-                    "created_at": result[6] if len(result) > 6 else result[3]
+                    "nickname": result[3] if len(result) > 3 else None,
+                    "is_admin": bool(result[6]) if len(result) > 6 else False,
+                    "created_at": result[7] if len(result) > 7 else result[3] if len(result) <= 6 else None
                 }
             return None
         except Exception as e:
             logger.error(f"Error fetching user: {e}")
             return None
 
-    def create_user(self, email, hashed_password):
+    def create_user(self, email, hashed_password, nickname=None):
         """Creates a new user."""
         try:
             timestamp = datetime.now()
             query = """
-                INSERT INTO users (id, email, hashed_password, created_at)
-                VALUES (nextval('seq_user_id'), ?, ?, ?)
+                INSERT INTO users (id, email, hashed_password, nickname, created_at)
+                VALUES (nextval('seq_user_id'), ?, ?, ?, ?)
             """
-            self.conn.execute(query, [email, hashed_password, timestamp])
-            logger.info(f"User created: {email}")
+            self.conn.execute(query, [email, hashed_password, nickname, timestamp])
+            logger.info(f"User created: {email} with nickname: {nickname}")
             return True
         except Exception as e:
             logger.error(f"Error creating user: {e}")
@@ -621,7 +627,7 @@ class DuckDBHandler:
         """Retrieve a user by their ID including Telegram settings."""
         try:
             result = self.conn.execute(
-                "SELECT id, email, telegram_bot_token, telegram_chat_id, is_admin FROM users WHERE id = ?",
+                "SELECT id, email, nickname, telegram_bot_token, telegram_chat_id, is_admin FROM users WHERE id = ?",
                 [user_id]
             ).fetchone()
             
@@ -631,9 +637,10 @@ class DuckDBHandler:
             return {
                 'id': result[0],
                 'email': result[1],
-                'telegram_bot_token': result[2],
-                'telegram_chat_id': result[3],
-                'is_admin': bool(result[4]) if len(result) > 4 else False
+                'nickname': result[2],
+                'telegram_bot_token': result[3],
+                'telegram_chat_id': result[4],
+                'is_admin': bool(result[5]) if len(result) > 5 else False
             }
         except Exception as e:
             logger.error(f"Error fetching user by ID: {e}")
@@ -650,6 +657,19 @@ class DuckDBHandler:
             return True
         except Exception as e:
             logger.error(f"Error updating Telegram settings: {e}")
+            return False
+    
+    def update_user_nickname(self, user_id, nickname):
+        """Update user's nickname."""
+        try:
+            self.conn.execute(
+                "UPDATE users SET nickname = ? WHERE id = ?",
+                [nickname, user_id]
+            )
+            logger.info(f"Updated nickname for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating nickname: {e}")
             return False
 
     def create_subscription(self, user_id, plan_id, status, expires_at):
@@ -785,7 +805,7 @@ class DuckDBHandler:
         try:
             # Join with subscriptions to get plan info
             query = """
-                SELECT u.id, u.email, u.created_at, u.is_admin, 
+                SELECT u.id, u.email, u.nickname, u.created_at, u.is_admin, 
                        s.plan_id, s.status, s.expires_at
                 FROM users u
                 LEFT JOIN subscriptions s ON u.id = s.user_id

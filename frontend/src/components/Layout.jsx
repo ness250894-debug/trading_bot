@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, LogOut, DollarSign, Shield } from 'lucide-react';
+import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, DollarSign, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import UserDropdown from './UserDropdown';
 
 const SidebarItem = ({ to, icon: Icon, label }) => {
     return (
@@ -25,11 +26,12 @@ const SidebarItem = ({ to, icon: Icon, label }) => {
 export default function Layout({ children }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const [isAdmin, setIsAdmin] = React.useState(false);
+    const [currentUser, setCurrentUser] = React.useState(null);
     const location = useLocation();
     const navigate = useNavigate();
 
     React.useEffect(() => {
-        const checkAdminStatus = async () => {
+        const fetchCurrentUser = async () => {
             try {
                 const token = localStorage.getItem('token');
                 if (!token) return;
@@ -42,19 +44,17 @@ export default function Layout({ children }) {
 
                 if (response.ok) {
                     const user = await response.json();
+                    setCurrentUser(user);
                     setIsAdmin(user.is_admin);
                 }
             } catch (error) {
-                console.error('Failed to check admin status:', error);
+                console.error('Failed to fetch user data:', error);
             }
         };
-        checkAdminStatus();
+        fetchCurrentUser();
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/');
-    };
+
 
     return (
         <div className="h-screen flex bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
@@ -104,29 +104,7 @@ export default function Layout({ children }) {
                     )}
                 </nav>
 
-                <div className="p-6">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-white/5">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 flex items-center justify-center text-xs font-bold text-white">
-                                OP
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-foreground">Operator</p>
-                                <p className="text-xs text-green-400 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                                    System Online
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-xs font-medium text-muted-foreground hover:text-red-400 transition-colors"
-                        >
-                            <LogOut size={14} />
-                            Sign Out
-                        </button>
-                    </div>
-                </div>
+
             </aside>
 
             {/* Main Content */}
@@ -147,6 +125,7 @@ export default function Layout({ children }) {
                             <Bell size={20} />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background" />
                         </button>
+                        {currentUser && <UserDropdown user={currentUser} />}
                     </div>
                 </header>
 

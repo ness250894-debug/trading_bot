@@ -11,6 +11,7 @@ db = DuckDBHandler()
 class UserCreate(BaseModel):
     email: str
     password: str
+    nickname: str = None
 
 @router.post("/signup", response_model=auth.Token)
 async def signup(user: UserCreate):
@@ -19,7 +20,7 @@ async def signup(user: UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     hashed_password = auth.get_password_hash(user.password)
-    if db.create_user(user.email, hashed_password):
+    if db.create_user(user.email, hashed_password, user.nickname):
         access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = auth.create_access_token(
             data={"sub": user.email}, expires_delta=access_token_expires
@@ -49,5 +50,17 @@ async def get_current_user_info(current_user: dict = Depends(auth.get_current_us
     return {
         "id": current_user["id"],
         "email": current_user["email"],
+        "nickname": current_user.get("nickname"),
         "is_admin": current_user.get("is_admin", False)
     }
+
+class ProfileUpdate(BaseModel):
+    nickname: str
+
+@router.put("/update-profile")
+async def update_profile(profile: ProfileUpdate, current_user: dict = Depends(auth.get_current_user)):
+    """Update user profile (nickname)."""
+    if db.update_user_nickname(current_user["id"], profile.nickname):
+        return {"status": "success", "message": "Profile updated successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to update profile")

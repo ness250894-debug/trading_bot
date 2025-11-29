@@ -10,11 +10,32 @@ const AdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [editingUser, setEditingUser] = useState(null);
+    const [currentUserId, setCurrentUserId] = useState(null);
+    const [editingNickname, setEditingNickname] = useState(null);
+    const [nicknameValue, setNicknameValue] = useState('');
 
-    // Fetch users on mount
+    // Fetch users on mount and get current user ID
     useEffect(() => {
         fetchUsers();
+        fetchCurrentUser();
     }, []);
+
+    const fetchCurrentUser = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/auth/me', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (response.ok) {
+                const user = await response.json();
+                setCurrentUserId(user.id);
+            }
+        } catch (error) {
+            console.error('Error fetching current user:', error);
+        }
+    };
 
     const fetchUsers = async () => {
         try {
@@ -110,9 +131,33 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleUpdateNickname = async (userId, nickname) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/auth/update-profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ nickname })
+            });
+
+            if (!response.ok) throw new Error('Failed to update nickname');
+
+            toast.success('Nickname updated');
+            setEditingNickname(null);
+            fetchUsers();
+        } catch (error) {
+            console.error('Error:', error);
+            toast.error('Update failed');
+        }
+    };
+
     const filteredUsers = users.filter(user =>
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.id.toString().includes(searchTerm)
+        user.id.toString().includes(searchTerm) ||
+        (user.nickname && user.nickname.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     if (loading) {
@@ -154,6 +199,7 @@ const AdminDashboard = () => {
                             <thead>
                                 <tr className="bg-muted/50 border-b border-border">
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">User</th>
+                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Nickname</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Joined</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Role</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Plan</th>
@@ -167,13 +213,56 @@ const AdminDashboard = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                                    {user.email[0].toUpperCase()}
+                                                    {(user.nickname || user.email)[0].toUpperCase()}
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-foreground">{user.email}</div>
                                                     <div className="text-xs text-muted-foreground">ID: {user.id}</div>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            {user.id === currentUserId && editingNickname === user.id ? (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={nicknameValue}
+                                                        onChange={(e) => setNicknameValue(e.target.value)}
+                                                        className="bg-background border border-border rounded px-2 py-1 text-sm w-32"
+                                                        placeholder="Nickname"
+                                                    />
+                                                    <button
+                                                        onClick={() => handleUpdateNickname(user.id, nicknameValue)}
+                                                        className="p-1 text-green-500 hover:bg-green-500/10 rounded"
+                                                    >
+                                                        <Check className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditingNickname(null)}
+                                                        className="p-1 text-red-500 hover:bg-red-500/10 rounded"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-foreground">
+                                                        {user.nickname || <span className="text-muted-foreground italic">Not set</span>}
+                                                    </span>
+                                                    {user.id === currentUserId && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingNickname(user.id);
+                                                                setNicknameValue(user.nickname || '');
+                                                            }}
+                                                            className="p-1 text-blue-500 hover:bg-blue-500/10 rounded"
+                                                            title="Edit Nickname"
+                                                        >
+                                                            <Edit className="w-3 h-3" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                                             {new Date(user.created_at).toLocaleDateString()}
