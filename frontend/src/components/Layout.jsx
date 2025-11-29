@@ -67,6 +67,7 @@ export default function Layout({ children }) {
             {/* Sidebar */}
             <aside className={`
                 fixed inset-y-0 left-0 z-50 w-64 bg-card/50 backdrop-blur-xl border-r border-white/10 transform transition-transform duration-300 ease-in-out
+                flex flex-col
                 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
                 md:relative md:translate-x-0
             `}>
@@ -84,7 +85,7 @@ export default function Layout({ children }) {
                     </button>
                 </div>
 
-                <nav className="px-4 space-y-2 mt-4 pb-40">
+                <nav className="px-4 space-y-2 mt-4 flex-1 overflow-y-auto">
                     <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Main</p>
                     <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" />
                     <SidebarItem to="/strategies" icon={Settings} label="Strategies" />
@@ -103,7 +104,7 @@ export default function Layout({ children }) {
                     )}
                 </nav>
 
-                <div className="absolute bottom-0 left-0 right-0 p-6">
+                <div className="p-6">
                     <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-white/5">
                         <div className="flex items-center gap-3 mb-3">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-400 to-emerald-600 flex items-center justify-center text-xs font-bold text-white">
