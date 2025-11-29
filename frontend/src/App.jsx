@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Strategies from './pages/Strategies';
 import StrategyBuilder from './pages/StrategyBuilder';
@@ -77,11 +78,12 @@ function App() {
           <ModalProvider>
             <Routes>
               {/* Public Routes */}
+              <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
 
               {/* Protected Routes */}
-              <Route path="/" element={
+              <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Layout>
                     <Dashboard />

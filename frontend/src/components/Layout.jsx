@@ -87,7 +87,7 @@ export default function Layout({ children }) {
 
                 <nav className="px-4 space-y-2 mt-4 flex-1 overflow-y-auto">
                     <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Main</p>
-                    <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" />
+                    <SidebarItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <SidebarItem to="/strategies" icon={Settings} label="Strategies" />
                     <SidebarItem to="/strategy-builder" icon={Zap} label="Visual Builder" />
                     <SidebarItem to="/marketplace" icon={TrendingUp} label="Social Trading" />
