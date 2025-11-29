@@ -21,6 +21,10 @@ export default function Settings() {
     const [telegramMessage, setTelegramMessage] = useState('');
     const [telegramMessageType, setTelegramMessageType] = useState('');
 
+    // User info state
+    const [userInfo, setUserInfo] = useState(null);
+    const [userInfoLoading, setUserInfoLoading] = useState(true);
+
     const fetchExchanges = async () => {
         setExchangesLoading(true);
         try {
@@ -41,8 +45,21 @@ export default function Settings() {
         }
     };
 
+    const fetchUserInfo = async () => {
+        setUserInfoLoading(true);
+        try {
+            const response = await api.get('/auth/me');
+            setUserInfo(response.data);
+        } catch (error) {
+            console.error('Failed to load user info:', error);
+        } finally {
+            setUserInfoLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchExchanges();
+        fetchUserInfo();
         checkApiKeyStatus();
         checkTelegramStatus();
     }, [exchange]);
@@ -159,6 +176,61 @@ export default function Settings() {
     return (
         <div className={styles.container}>
             <h1 className={styles.title}>Settings</h1>
+
+            {/* Account Information Section */}
+            <div className={styles.section}>
+                <h2>👤 Account Information</h2>
+                <p className={styles.description}>
+                    Your account details and user ID.
+                </p>
+
+                {userInfoLoading ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>Loading account info...</div>
+                ) : userInfo ? (
+                    <div className={styles.form}>
+                        <div style={{ display: 'grid', gap: '1rem' }}>
+                            <div style={{
+                                padding: '1.5rem',
+                                background: 'rgba(139, 92, 246, 0.05)',
+                                border: '2px solid rgba(139, 92, 246, 0.2)',
+                                borderRadius: '12px'
+                            }}>
+                                <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '0.5rem', fontWeight: '600' }}>
+                                    USER ID
+                                </div>
+                                <div style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '24px',
+                                    fontWeight: '700',
+                                    color: '#8b5cf6',
+                                    userSelect: 'all'
+                                }}>
+                                    {userInfo.id}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '0.5rem' }}>
+                                    Copy this ID for support requests
+                                </div>
+                            </div>
+
+                            <div style={{
+                                padding: '1rem',
+                                background: 'rgba(255, 255, 255, 0.02)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '12px'
+                            }}>
+                                <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '0.5rem', fontWeight: '600' }}>
+                                    EMAIL
+                                </div>
+                                <div style={{ fontSize: '16px', color: '#fff' }}>
+                                    {userInfo.email}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>Failed to load account info</div>
+                )}
+            </div>
 
             {/* API Keys Section */}
             <div className={styles.section}>
