@@ -10,3 +10,6 @@ passlib[argon2]
 python-jose[cryptography]
 python-multipart
 cryptography
+google-generativeai
+schedule
+requests
