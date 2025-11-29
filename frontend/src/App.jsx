@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Strategies from './pages/Strategies';
 import StrategyBuilder from './pages/StrategyBuilder';
+import Marketplace from './pages/Marketplace';
 import Optimization from './pages/Optimization';
 import Backtest from './pages/Backtest';
 import Login from './pages/Login';
@@ -97,6 +98,13 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <StrategyBuilder />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/marketplace" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Marketplace />
                   </Layout>
                 </ProtectedRoute>
               } />

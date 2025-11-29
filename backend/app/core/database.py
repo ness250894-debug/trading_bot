@@ -147,6 +147,49 @@ class DuckDBHandler:
                 self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_visual_strategy_id START 1")
                 logger.info("Visual strategies table created successfully")
                 
+                # Create public_strategies table for social trading/marketplace
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS public_strategies (
+                        id INTEGER PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        strategy_id INTEGER NOT NULL,
+                        name VARCHAR NOT NULL,
+                        description TEXT,
+                        strategy_config TEXT NOT NULL,
+                        performance_stats TEXT,
+                        total_trades INTEGER DEFAULT 0,
+                        win_rate DOUBLE DEFAULT 0,
+                        total_pnl DOUBLE DEFAULT 0,
+                        clones_count INTEGER DEFAULT 0,
+                        rating DOUBLE DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_active BOOLEAN DEFAULT 1,
+                        FOREIGN KEY (user_id) REFERENCES users(id),
+                        UNIQUE(user_id, strategy_id)
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_public_strategies_rating ON public_strategies(rating DESC)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_public_strategies_pnl ON public_strategies(total_pnl DESC)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_public_strategy_id START 1")
+                
+                # Create strategy_clones tracking table
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS strategy_clones (
+                        id INTEGER PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        public_strategy_id INTEGER NOT NULL,
+                        cloned_strategy_id INTEGER NOT NULL,
+                        cloned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id),
+                        FOREIGN KEY (public_strategy_id) REFERENCES public_strategies(id)
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_strategy_clones_user ON strategy_clones(user_id)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_clone_id START 1")
+                
+                logger.info("Social trading tables created successfully")
+                
             except Exception as migration_error:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")

@@ -20,6 +20,9 @@ DEMO = os.getenv('BYBIT_DEMO', 'True').lower() == 'true'
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
+# AI/Sentiment Analysis
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')  # Google Gemini for sentiment analysis
+
 # Coinbase Commerce (for Billing)
 COINBASE_COMMERCE_API_KEY = os.getenv('COINBASE_COMMERCE_API_KEY')
 COINBASE_COMMERCE_WEBHOOK_SECRET = os.getenv('COINBASE_COMMERCE_WEBHOOK_SECRET')

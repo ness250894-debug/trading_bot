@@ -54,6 +54,14 @@ app.include_router(exchanges.router, prefix="/api")
 from .api import visual_strategies
 app.include_router(visual_strategies.router, prefix="/api")
 
+# AI-Powered Insights
+from .api import sentiment
+app.include_router(sentiment.router, prefix="/api")
+
+# Social Trading / Marketplace
+from .api import marketplace
+app.include_router(marketplace.router, prefix="/api")
+
 # Serve Static Files (Frontend)
 import os
 from fastapi.staticfiles import StaticFiles
