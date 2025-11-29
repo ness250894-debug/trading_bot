@@ -6,7 +6,7 @@ import os
 from ..core import config, auth
 from ..core.bot_manager import bot_manager
 from ..core.database import DuckDBHandler
-from ..core.exchange.client import ExchangeClient
+from ..core.exchange import ExchangeClient
 from ..core.exchange.paper import PaperExchange
 
 router = APIRouter()

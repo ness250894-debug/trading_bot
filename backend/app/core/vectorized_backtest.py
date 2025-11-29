@@ -1,6 +1,6 @@
 import pandas as pd
 import logging
-from .exchange.client import ExchangeClient
+from .exchange import ExchangeClient
 from . import config
 from .strategies.mean_reversion import MeanReversion
 from .strategies.sma_crossover import SMACrossover

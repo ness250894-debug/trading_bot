@@ -3,7 +3,8 @@ import logging
 import sys
 import threading
 from logging.handlers import RotatingFileHandler
-from .exchange.client import ExchangeClient
+
+from .exchange import ExchangeClient
 from .strategies.sma_crossover import SMACrossover
 from . import config
 

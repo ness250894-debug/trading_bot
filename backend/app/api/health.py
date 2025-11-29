@@ -39,7 +39,7 @@ async def detailed_health_check() -> Dict:
     # Check exchange connectivity (using global config)
     try:
         from ..core import config
-        from ..core.exchange.client import ExchangeClient
+        from ..core.exchange import ExchangeClient
         from ..core.exchange.paper import PaperExchange
         
         if getattr(config, 'DRY_RUN', True):
