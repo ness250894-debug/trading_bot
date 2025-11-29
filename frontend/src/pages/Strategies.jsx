@@ -103,10 +103,21 @@ export default function Strategies() {
     }, []);
 
     const handleChange = (key, value) => {
-        setConfig(prev => ({
-            ...prev,
-            [key]: value
-        }));
+        setConfig(prev => {
+            const newConfig = { ...prev, [key]: value };
+
+            // If strategy changes, reset parameters to defaults for the new strategy
+            if (key === 'strategy') {
+                const defaultParams = {};
+                const strategyParams = STRATEGY_PARAMS[value] || {};
+                Object.entries(strategyParams).forEach(([pKey, pDef]) => {
+                    defaultParams[pKey] = pDef.default;
+                });
+                newConfig.parameters = defaultParams;
+            }
+
+            return newConfig;
+        });
     };
 
     const handleParamChange = (param, value) => {

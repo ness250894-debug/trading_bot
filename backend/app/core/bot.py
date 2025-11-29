@@ -126,7 +126,6 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
 
     # Initialize Notifier
     from .notifier import TelegramNotifier
-    from . import config
     
     # Get user's Telegram settings (Chat ID only)
     user_settings = db.get_user_by_id(user_id)
