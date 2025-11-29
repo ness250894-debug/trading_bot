@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import SentimentWidget from '../components/SentimentWidget';
+
+
 import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Play, Square, Activity, DollarSign, TrendingUp, Terminal, Clock, AlertCircle } from 'lucide-react';
@@ -236,6 +238,11 @@ export default function Dashboard() {
                     trend="up"
                     subtext={`${trades.length} total trades`}
                 />
+            </div>
+
+            {/* AI Insights Section */}
+            <div className="mb-8">
+                <SentimentWidget />
             </div>
 
             {/* Main Content Grid */}

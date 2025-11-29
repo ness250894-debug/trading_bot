@@ -64,6 +64,8 @@ export default function Layout({ children }) {
                     <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Main</p>
                     <SidebarItem to="/" icon={LayoutDashboard} label="Dashboard" />
                     <SidebarItem to="/strategies" icon={Settings} label="Strategies" />
+                    <SidebarItem to="/strategy-builder" icon={Zap} label="Visual Builder" />
+                    <SidebarItem to="/marketplace" icon={TrendingUp} label="Social Trading" />
                     <SidebarItem to="/optimization" icon={TrendingUp} label="Optimization" />
                     <SidebarItem to="/backtest" icon={History} label="Backtest" />
                     <SidebarItem to="/pricing" icon={DollarSign} label="Pricing" />
