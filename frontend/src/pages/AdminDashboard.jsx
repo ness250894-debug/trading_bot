@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Shield, Trash2, Edit, Check, X, Search } from 'lucide-react';
+import Disclaimer from '../components/Disclaimer';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -121,7 +122,6 @@ const AdminDashboard = () => {
             </div>
         );
     }
-
     return (
         <div className="min-h-screen bg-background p-8">
             <div className="max-w-7xl mx-auto">
@@ -145,6 +145,8 @@ const AdminDashboard = () => {
                         />
                     </div>
                 </div>
+
+                <Disclaimer compact />
 
                 <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
@@ -283,8 +285,8 @@ const AdminDashboard = () => {
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Plus, Trash2, Save, Eye, CheckCircle, AlertTriangle } from 'lucide-react';
+import Disclaimer from '../components/Disclaimer';
 
 export default function StrategyBuilder() {
     const [indicators, setIndicators] = useState([]);
@@ -29,6 +30,7 @@ export default function StrategyBuilder() {
             setIndicators(indicatorsRes.data.indicators || {});
             setOperators(conditionsRes.data.operators || {});
         } catch (err) {
+            console.error('Error loading metadata:', err);
             setMessage({ type: 'error', text: 'Failed to load metadata' });
         } finally {
             setLoading(false);
@@ -198,10 +200,12 @@ export default function StrategyBuilder() {
                 <p className="text-muted-foreground mt-1">Create custom trading strategies without coding</p>
             </div>
 
+            <Disclaimer compact />
+
             {message && (
                 <div className={`p-4 rounded-xl flex items-center gap-3 border ${message.type === 'success'
-                        ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                        : 'bg-red-500/10 border-red-500/20 text-red-400'
+                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                    : 'bg-red-500/10 border-red-500/20 text-red-400'
                     }`}>
                     {message.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
                     {message.text}

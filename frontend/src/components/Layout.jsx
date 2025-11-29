@@ -57,7 +57,7 @@ export default function Layout({ children }) {
     };
 
     return (
-        <div className="min-h-screen flex bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
+        <div className="h-screen flex bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
             {/* Background Ambient Glow */}
             <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/20 rounded-full blur-[120px]" />

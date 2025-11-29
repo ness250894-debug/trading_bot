@@ -3,6 +3,7 @@ import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Play, Loader2 } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import Disclaimer from '../components/Disclaimer';
 
 const STRATEGIES = [
     { name: 'Mean Reversion', params: { bb_period: 20, bb_std: 2.0, rsi_period: 14, rsi_oversold: 30, rsi_overbought: 70 } },
@@ -52,6 +53,8 @@ export default function Backtest() {
             <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-bold">Backtest Lab</h2>
             </div>
+
+            <Disclaimer compact />
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                 {/* Configuration Panel */}

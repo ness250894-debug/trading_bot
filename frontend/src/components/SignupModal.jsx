@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { Lock, Mail, AlertCircle, X, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
+export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSuccess }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -23,8 +23,13 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin }) {
             });
 
             localStorage.setItem('token', response.data.access_token);
+            localStorage.setItem('token', response.data.access_token);
             onClose();
-            navigate('/dashboard');
+            if (onSuccess) {
+                onSuccess();
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err) {
             setError(err.response?.data?.detail || 'Signup failed');
         } finally {

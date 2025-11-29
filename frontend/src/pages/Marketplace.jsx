@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { Trophy, TrendingUp, Copy, Star, Users, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trophy, TrendingUp, Copy, Star, Users, ArrowUp } from 'lucide-react';
+import Disclaimer from '../components/Disclaimer';
 
 export default function Marketplace() {
     const [strategies, setStrategies] = useState([]);
@@ -68,10 +69,12 @@ export default function Marketplace() {
                 <p className="text-muted-foreground mt-1">Browse and clone successful trading strategies</p>
             </div>
 
+            <Disclaimer compact />
+
             {message && (
                 <div className={`p-4 rounded-xl ${message.type === 'success'
-                        ? 'bg-green-500/10 border border-green-500/20 text-green-400'
-                        : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                    ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+                    : 'bg-red-500/10 border border-red-500/20 text-red-400'
                     }`}>
                     {message.text}
                 </div>
@@ -121,17 +124,17 @@ export default function Marketplace() {
                     { value: 'pnl', label: 'Most Profitable', icon: TrendingUp },
                     { value: 'clones', label: 'Most Cloned', icon: Users },
                     { value: 'recent', label: 'Recently Added', icon: ArrowUp }
-                ].map(({ value, label, icon: Icon }) => (
+                ].map((item) => (
                     <button
-                        key={value}
-                        onClick={() => setSortBy(value)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${sortBy === value
-                                ? 'bg-primary text-white'
-                                : 'bg-white/5 text-muted-foreground hover:bg-white/10'
+                        key={item.value}
+                        onClick={() => setSortBy(item.value)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${sortBy === item.value
+                            ? 'bg-primary text-white'
+                            : 'bg-white/5 text-muted-foreground hover:bg-white/10'
                             }`}
                     >
-                        <Icon size={16} />
-                        {label}
+                        <item.icon size={16} />
+                        {item.label}
                     </button>
                 ))}
             </div>

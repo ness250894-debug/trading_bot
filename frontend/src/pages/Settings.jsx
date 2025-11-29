@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import styles from './Settings.module.css';
+import Disclaimer from '../components/Disclaimer';
 
 export default function Settings() {
     // API Keys state
@@ -57,13 +58,6 @@ export default function Settings() {
         }
     };
 
-    useEffect(() => {
-        fetchExchanges();
-        fetchUserInfo();
-        checkApiKeyStatus();
-        checkTelegramStatus();
-    }, [exchange]);
-
     const checkApiKeyStatus = async () => {
         try {
             const response = await api.get(`/api-keys/${exchange}`);
@@ -81,6 +75,13 @@ export default function Settings() {
             console.error('Error checking Telegram status:', error);
         }
     };
+
+    useEffect(() => {
+        fetchExchanges();
+        fetchUserInfo();
+        checkApiKeyStatus();
+        checkTelegramStatus();
+    }, [exchange]);
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -176,6 +177,8 @@ export default function Settings() {
     return (
         <div className={styles.container}>
             <h1 className={styles.title}>Settings</h1>
+
+            <Disclaimer compact />
 
             {/* Account Information Section */}
             <div className={styles.section}>

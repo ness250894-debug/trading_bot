@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Disclaimer from '../components/Disclaimer';
+import LoginModal from '../components/LoginModal';
+import SignupModal from '../components/SignupModal';
 import api from '../lib/api';
 import styles from './Pricing.module.css';
 import { CheckCircle, Zap, Shield, TrendingUp } from 'lucide-react';
@@ -58,6 +60,9 @@ export default function Pricing() {
     const [currentPlan, setCurrentPlan] = useState('free');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [showSignupModal, setShowSignupModal] = useState(false);
+    const [pendingPlanId, setPendingPlanId] = useState(null);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -78,7 +83,8 @@ export default function Pricing() {
     const handleUpgrade = async (planId) => {
         const token = localStorage.getItem('token');
         if (!token) {
-            navigate('/signup');
+            setPendingPlanId(planId);
+            setShowSignupModal(true);
             return;
         }
 
@@ -99,6 +105,16 @@ export default function Pricing() {
             });
             setLoading(false);
         }
+    };
+
+    const handleAuthSuccess = () => {
+        setShowLoginModal(false);
+        setShowSignupModal(false);
+        if (pendingPlanId) {
+            handleUpgrade(pendingPlanId);
+            setPendingPlanId(null);
+        }
+        fetchBillingStatus();
     };
 
     return (
@@ -207,6 +223,26 @@ export default function Pricing() {
             <div style={{ marginTop: '4rem' }}>
                 <Disclaimer />
             </div>
+
+            {/* Modals */}
+            <LoginModal
+                isOpen={showLoginModal}
+                onClose={() => setShowLoginModal(false)}
+                onSwitchToSignup={() => {
+                    setShowLoginModal(false);
+                    setShowSignupModal(true);
+                }}
+                onSuccess={handleAuthSuccess}
+            />
+            <SignupModal
+                isOpen={showSignupModal}
+                onClose={() => setShowSignupModal(false)}
+                onSwitchToLogin={() => {
+                    setShowSignupModal(false);
+                    setShowLoginModal(true);
+                }}
+                onSuccess={handleAuthSuccess}
+            />
         </div>
     );
 }
