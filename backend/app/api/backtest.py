@@ -231,6 +231,17 @@ async def websocket_optimize(websocket: WebSocket):
                     await websocket.send_json({"error": f"Unknown strategy: {request.strategy}"})
                     continue
 
+                # Authenticate User
+                token = data.get("token")
+                if not token:
+                    await websocket.send_json({"error": "Authentication required. Please refresh the page."})
+                    continue
+                
+                current_user = await auth.get_current_user_from_token(token)
+                if not current_user:
+                    await websocket.send_json({"error": "Invalid session. Please login again."})
+                    continue
+
                 # Fetch Data Once
                 dummy_strategy = strategy_class()
                 bt = VectorizedBacktester(request.symbol, request.timeframe, dummy_strategy, days=request.days)

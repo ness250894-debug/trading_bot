@@ -342,7 +342,8 @@ export default function Optimization() {
             days: 3,
             strategy: strategy,
             param_ranges: param_ranges,
-            n_trials: nTrials
+            n_trials: nTrials,
+            token: localStorage.getItem('token')
         }));
     };
 

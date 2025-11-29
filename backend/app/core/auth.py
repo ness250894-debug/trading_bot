@@ -74,3 +74,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     if user is None:
         raise credentials_exception
     return user
+
+async def get_current_user_from_token(token: str):
+    """
+    Manual token verification for WebSockets or other non-Depends contexts.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+        token_data = TokenData(email=email)
+    except JWTError:
+        return None
+    
+    user = db.get_user_by_email(email=token_data.email)
+    return user
