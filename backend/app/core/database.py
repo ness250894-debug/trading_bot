@@ -38,6 +38,8 @@ class DuckDBHandler:
                     id INTEGER PRIMARY KEY,
                     email VARCHAR UNIQUE,
                     hashed_password VARCHAR,
+                    telegram_bot_token VARCHAR,
+                    telegram_chat_id VARCHAR,
                     created_at TIMESTAMP
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_user_id START 1;
@@ -91,6 +93,11 @@ class DuckDBHandler:
                 self.conn.execute("ALTER TABLE backtest_results ADD COLUMN IF NOT EXISTS user_id INTEGER")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_backtest_user_id ON backtest_results(user_id)")
                 logger.info("Backtest results table migration completed (user_id column)")
+                
+                # Add Telegram settings to users table if they don't exist
+                self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_bot_token VARCHAR")
+                self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR")
+                logger.info("Users table migration completed (Telegram columns)")
             except Exception as migration_error:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")
@@ -505,5 +512,39 @@ class DuckDBHandler:
             return True
         except Exception as e:
             logger.error(f"Error logging audit event: {e}")
+            return False
+    
+    def get_user_by_id(self, user_id):
+        """Retrieve a user by their ID including Telegram settings."""
+        try:
+            result = self.conn.execute(
+                "SELECT id, email, telegram_bot_token, telegram_chat_id FROM users WHERE id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if not result:
+                return None
+            
+            return {
+                'id': result[0],
+                'email': result[1],
+                'telegram_bot_token': result[2],
+                'telegram_chat_id': result[3]
+            }
+        except Exception as e:
+            logger.error(f"Error fetching user by ID: {e}")
+            return None
+    
+    def update_telegram_settings(self, user_id, bot_token, chat_id):
+        """Update user's Telegram notification settings."""
+        try:
+            self.conn.execute(
+                "UPDATE users SET telegram_bot_token = ?, telegram_chat_id = ? WHERE id = ?",
+                [bot_token, chat_id, user_id]
+            )
+            logger.info(f"Updated Telegram settings for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating Telegram settings: {e}")
             return False
 

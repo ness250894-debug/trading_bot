@@ -126,8 +126,18 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
 
     # Initialize Notifier
     from .notifier import TelegramNotifier
-    notifier = TelegramNotifier()
-    notifier.send_message(f"🚀 *Bot Started for User {user_id}*\nStrategy: {strategy_name}")
+    from . import config
+    
+    # Get user's Telegram settings (Chat ID only)
+    user_settings = db.get_user_by_id(user_id)
+    tg_chat_id = user_settings.get('telegram_chat_id') if user_settings else None
+    
+    # Use global token from config, user's chat_id
+    notifier = TelegramNotifier(token=config.TELEGRAM_BOT_TOKEN, chat_id=tg_chat_id)
+    
+    # Escape underscores for Telegram Markdown
+    safe_strategy_name = strategy_name.replace('_', '\\_')
+    notifier.send_message(f"🚀 *Bot Started for User {user_id}*\nStrategy: {safe_strategy_name}")
 
     logger.info(f"✓ User {user_id} bot initialized. Entering trading loop...")
 

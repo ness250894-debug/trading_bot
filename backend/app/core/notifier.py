@@ -5,13 +5,13 @@ from . import config
 logger = logging.getLogger("Notifier")
 
 class TelegramNotifier:
-    def __init__(self):
-        self.token = config.TELEGRAM_BOT_TOKEN
-        self.chat_id = config.TELEGRAM_CHAT_ID
+    def __init__(self, token=None, chat_id=None):
+        self.token = token or config.TELEGRAM_BOT_TOKEN
+        self.chat_id = chat_id or config.TELEGRAM_CHAT_ID
         self.enabled = bool(self.token and self.chat_id)
         
         if self.enabled:
-            logger.info("Telegram Notifier Enabled")
+            logger.info(f"Telegram Notifier Enabled (Chat ID: {self.chat_id})")
         else:
             logger.warning("Telegram Notifier Disabled (Missing Token or Chat ID)")
 
