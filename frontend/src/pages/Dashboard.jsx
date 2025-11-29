@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Play, Square, Activity, DollarSign, TrendingUp, Terminal, Clock, AlertCircle } from 'lucide-react';
 import TradeHistory from '../components/TradeHistory';
+import Disclaimer from '../components/Disclaimer';
 
 const StatCard = ({ title, value, subtext, icon: Icon, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group">
@@ -194,6 +195,9 @@ export default function Dashboard() {
                         {isRunning ? <><Square size={18} fill="currentColor" /> Stop Bot</> : <><Play size={18} fill="currentColor" /> Start Bot</>}
                     </button>
                 </div>
+
+                {/* Disclaimer */}
+                <Disclaimer compact />
             </div>
 
             {/* Stats Grid */}

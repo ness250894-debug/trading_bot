@@ -79,8 +79,9 @@ function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
+              {/* <Route path="/login" element={<Login />} /> */}
               <Route path="/signup" element={<Signup />} />
+              <Route path="/pricing" element={<Pricing />} />
 
               {/* Protected Routes */}
               <Route path="/dashboard" element={
@@ -132,13 +133,7 @@ function App() {
                   </Layout>
                 </ProtectedRoute>
               } />
-              <Route path="/pricing" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Pricing />
-                  </Layout>
-                </ProtectedRoute>
-              } />
+
               <Route path="/admin" element={
                 <ProtectedRoute>
                   <Layout>

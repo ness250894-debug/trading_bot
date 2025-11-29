@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import Disclaimer from '../components/Disclaimer';
 import api from '../lib/api';
 import styles from './Pricing.module.css';
 import { CheckCircle, Zap, Shield, TrendingUp } from 'lucide-react';
@@ -52,12 +54,16 @@ const PLANS = [
 ];
 
 export default function Pricing() {
+    const navigate = useNavigate();
     const [currentPlan, setCurrentPlan] = useState('free');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
 
     useEffect(() => {
-        fetchBillingStatus();
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetchBillingStatus();
+        }
     }, []);
 
     const fetchBillingStatus = async () => {
@@ -70,6 +76,12 @@ export default function Pricing() {
     };
 
     const handleUpgrade = async (planId) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/signup');
+            return;
+        }
+
         if (planId === 'free' || planId === currentPlan) return;
 
         setLoading(true);
@@ -91,6 +103,17 @@ export default function Pricing() {
 
     return (
         <div className={styles.container}>
+            <Link to="/" style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                color: '#a1a1aa',
+                textDecoration: 'none',
+                marginBottom: '2rem',
+                fontSize: '0.9rem'
+            }}>
+                ← Back to Home
+            </Link>
             <div className={styles.header}>
                 <h1 className={styles.title}>Choose Your Plan</h1>
                 <p className={styles.subtitle}>
@@ -180,6 +203,9 @@ export default function Pricing() {
                         <p>Absolutely. Your API keys are encrypted with AES-256 and stored securely. We never have access to your exchange withdrawal permissions.</p>
                     </div>
                 </div>
+            </div>
+            <div style={{ marginTop: '4rem' }}>
+                <Disclaimer />
             </div>
         </div>
     );

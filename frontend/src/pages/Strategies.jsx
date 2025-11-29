@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity, Globe } from 'lucide-react';
 import { useModal } from '../components/Modal';
+import Disclaimer from '../components/Disclaimer';
 
 const STRATEGY_OPTIONS = [
     { value: 'mean_reversion', label: 'Mean Reversion', desc: 'Buy low, sell high using Bollinger Bands & RSI.', icon: Activity },
@@ -241,6 +242,8 @@ export default function Strategies() {
                     <RefreshCw size={20} />
                 </button>
             </div>
+
+            <Disclaimer compact />
 
             {suggestion && (
                 <div className="glass p-6 rounded-xl border-l-4 border-l-blue-500 flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
