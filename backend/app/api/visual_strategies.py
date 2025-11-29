@@ -11,7 +11,7 @@ from datetime import datetime
 from ..core.strategies.json_strategy import JSONStrategyExecutor
 from ..core.strategies.indicators import IndicatorLibrary
 from ..core.strategies.conditions import ConditionEvaluator
-from .auth import get_current_user
+from ..core.auth import get_current_user
 
 
 router = APIRouter()

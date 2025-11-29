@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 
 from ..core.database import DuckDBHandler
-from .auth import get_current_user
+from ..core.auth import get_current_user
 
 
 router = APIRouter()
