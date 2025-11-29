@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Strategies from './pages/Strategies';
+import StrategyBuilder from './pages/StrategyBuilder';
 import Optimization from './pages/Optimization';
 import Backtest from './pages/Backtest';
 import Login from './pages/Login';
@@ -89,6 +90,13 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Strategies />
+                  </Layout>
+                </ProtectedRoute>
+              } />
+              <Route path="/strategy-builder" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <StrategyBuilder />
                   </Layout>
                 </ProtectedRoute>
               } />

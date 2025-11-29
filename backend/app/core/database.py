@@ -128,6 +128,25 @@ class DuckDBHandler:
                 self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS exchange VARCHAR DEFAULT 'bybit'")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_user_strategies_exchange ON user_strategies(exchange)")
                 logger.info("User strategies table migration completed (exchange column)")
+                
+                # Create visual_strategies table for JSON-based strategies
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS visual_strategies (
+                        id INTEGER PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        name VARCHAR NOT NULL,
+                        description TEXT,
+                        json_config TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_active BOOLEAN DEFAULT 0,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_visual_strategies_user_id ON visual_strategies(user_id)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_visual_strategy_id START 1")
+                logger.info("Visual strategies table created successfully")
+                
             except Exception as migration_error:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")

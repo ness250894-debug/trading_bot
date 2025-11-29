@@ -50,6 +50,10 @@ app.include_router(billing.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(exchanges.router, prefix="/api")
 
+# Visual Strategy Builder
+from .api import visual_strategies
+app.include_router(visual_strategies.router, prefix="/api")
+
 # Serve Static Files (Frontend)
 import os
 from fastapi.staticfiles import StaticFiles
