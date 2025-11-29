@@ -403,27 +403,7 @@ export default function Optimization() {
                         Configuration
                     </h3>
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => {
-                                modal.confirm({
-                                    title: 'Reset Settings',
-                                    message: 'This will reset all optimization settings to defaults. Continue?',
-                                    confirmText: 'Reset',
-                                    cancelText: 'Cancel',
-                                    type: 'danger',
-                                    onConfirm: () => {
-                                        localStorage.removeItem('optimization_strategy');
-                                        localStorage.removeItem('optimization_results');
-                                        localStorage.removeItem('optimization_ranges');
-                                        toast.success('Settings reset successfully!');
-                                        setTimeout(() => window.location.reload(), 500);
-                                    }
-                                });
-                            }}
-                            className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors border border-red-500/20"
-                        >
-                            Reset Settings
-                        </button>
+
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-foreground">Strategy:</label>
                             <select
