@@ -8,7 +8,7 @@ import requests
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 import google.generativeai as genai
-from .config import GEMINI_API_KEY
+from .config import GEMINI_API_KEY, CRYPTOPANIC_API_KEY
 
 logger = logging.getLogger("SentimentAnalyzer")
 
@@ -19,6 +19,7 @@ class SentimentAnalyzer:
     def __init__(self):
         """Initialize sentiment analyzer with Gemini API."""
         self.gemini_key = GEMINI_API_KEY or os.getenv('GEMINI_API_KEY')
+        self.cryptopanic_key = CRYPTOPANIC_API_KEY or os.getenv('CRYPTOPANIC_API_KEY')
         
         if self.gemini_key:
             genai.configure(api_key=self.gemini_key)
@@ -29,13 +30,16 @@ class SentimentAnalyzer:
             self.enabled = False
             logger.warning("Gemini API key not found - sentiment analysis disabled")
         
+        if not self.cryptopanic_key:
+            logger.warning("CryptoPanic API key not found - news fetching disabled")
+
         # Cache for sentiment results (avoid re-analyzing same data)
         self.cache = {}
         self.cache_duration = timedelta(hours=1)
     
     def fetch_cryptopanic_news(self, symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
-        Fetch latest news from CryptoPanic (free tier).
+        Fetch latest news from CryptoPanic.
         
         Args:
             symbol: Crypto symbol (e.g., 'BTC', 'ETH')
@@ -44,11 +48,14 @@ class SentimentAnalyzer:
         Returns:
             List of news items
         """
+        if not self.cryptopanic_key:
+            return []
+
         try:
-            # CryptoPanic free API (no auth required for basic access)
+            # CryptoPanic API
             url = "https://cryptopanic.com/api/v1/posts/"
             params = {
-                'auth_token': 'free',  # Free tier
+                'auth_token': self.cryptopanic_key,
                 'currencies': symbol,
                 'kind': 'news',
                 'filter': 'hot'

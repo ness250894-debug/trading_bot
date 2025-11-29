@@ -22,6 +22,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 # AI/Sentiment Analysis
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')  # Google Gemini for sentiment analysis
+CRYPTOPANIC_API_KEY = os.getenv('CRYPTOPANIC_API_KEY') # CryptoPanic API Key
 
 # Coinbase Commerce (for Billing)
 COINBASE_COMMERCE_API_KEY = os.getenv('COINBASE_COMMERCE_API_KEY')
