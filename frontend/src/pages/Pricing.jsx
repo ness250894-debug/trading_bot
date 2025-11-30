@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import api from '../lib/api';
 import styles from './Pricing.module.css';
-import { CheckCircle, Zap, Shield, TrendingUp } from 'lucide-react';
+import { CheckCircle, Zap, Shield, TrendingUp, Crown, Star } from 'lucide-react';
 
 const PLANS = [
     {
         id: 'free',
         name: 'Free',
-        price: 0,
-        period: 'forever',
+        price: { monthly: 0, yearly: 0 },
         features: [
             '1 Active Bot',
             'Basic Strategies',
@@ -17,38 +16,48 @@ const PLANS = [
             'Community Support'
         ],
         cta: 'Current Plan',
-        featured: false
+        color: 'gray'
     },
     {
-        id: 'pro_monthly',
-        name: 'Pro Monthly',
-        price: 29.99,
-        period: 'per month',
+        id: 'basic',
+        name: 'Basic',
+        price: { monthly: 19, yearly: 190 },
+        features: [
+            '3 Active Bots',
+            'Standard Strategies',
+            'Live Trading',
+            'Email Support'
+        ],
+        cta: 'Start Basic',
+        color: 'blue'
+    },
+    {
+        id: 'pro',
+        name: 'Pro',
+        price: { monthly: 49, yearly: 490 },
         features: [
             'Unlimited Bots',
             'All Strategies',
-            'Live Trading',
             'Priority Support',
             'Advanced Analytics',
             'API Access'
         ],
-        cta: 'Upgrade Now',
-        featured: true
+        cta: 'Go Pro',
+        featured: true,
+        color: 'purple'
     },
     {
-        id: 'pro_yearly',
-        name: 'Pro Yearly',
-        price: 299.99,
-        period: 'per year',
-        savings: 'Save $60/year',
+        id: 'elite',
+        name: 'Elite',
+        price: { monthly: 99, yearly: 990 },
         features: [
-            'Everything in Pro Monthly',
-            '2 Months Free',
-            'Dedicated Support',
-            'Early Access to Features'
+            'Everything in Pro',
+            '1-on-1 Mentoring',
+            'Custom Strategy Dev',
+            'White Glove Support'
         ],
-        cta: 'Best Value',
-        featured: false
+        cta: 'Get Elite',
+        color: 'gold'
     }
 ];
 
@@ -56,9 +65,9 @@ export default function Pricing() {
     const navigate = useNavigate();
     const { openSignupModal } = useOutletContext();
     const [currentPlan, setCurrentPlan] = useState('free');
+    const [billingCycle, setBillingCycle] = useState('monthly');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(null);
-    const [pendingPlanId, setPendingPlanId] = useState(null);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -76,23 +85,24 @@ export default function Pricing() {
         }
     };
 
-    const handleUpgrade = async (planId) => {
+    const handleUpgrade = async (basePlanId) => {
         const token = localStorage.getItem('token');
         if (!token) {
-            setPendingPlanId(planId);
             openSignupModal();
             return;
         }
 
-        if (planId === 'free' || planId === currentPlan) return;
+        if (basePlanId === 'free') return;
+
+        const planId = `${basePlanId}_${billingCycle}`;
+
+        if (planId === currentPlan) return;
 
         setLoading(true);
         setMessage(null);
 
         try {
             const response = await api.post('/billing/charge', { plan_id: planId });
-
-            // Redirect to Coinbase Commerce checkout
             window.location.href = response.data.hosted_url;
         } catch (error) {
             setMessage({
@@ -103,20 +113,26 @@ export default function Pricing() {
         }
     };
 
-    // Note: handling auth success for pending plan upgrade is tricky with context modals.
-    // Ideally PublicLayout or a context provider should handle the "pending action after login" logic.
-    // For now, we'll skip the auto-upgrade after login/signup flow to keep it simple, 
-    // or we would need to lift this state to PublicLayout.
-    // Given the constraints, I will remove the handleAuthSuccess logic for now or leave it unused.
-
     return (
         <div className={styles.container}>
-            {/* Back link removed as Header provides navigation */}
             <div className={styles.header}>
                 <h1 className={styles.title}>Choose Your Plan</h1>
                 <p className={styles.subtitle}>
                     Unlock the full power of automated trading
                 </p>
+
+                <div className={styles.toggleContainer}>
+                    <span className={`${styles.toggleLabel} ${billingCycle === 'monthly' ? styles.active : ''}`}>Monthly</span>
+                    <button
+                        className={`${styles.toggleButton} ${billingCycle === 'yearly' ? styles.toggled : ''}`}
+                        onClick={() => setBillingCycle(prev => prev === 'monthly' ? 'yearly' : 'monthly')}
+                    >
+                        <div className={styles.toggleHandle} />
+                    </button>
+                    <span className={`${styles.toggleLabel} ${billingCycle === 'yearly' ? styles.active : ''}`}>
+                        Yearly <span className={styles.saveBadge}>Save 20%</span>
+                    </span>
+                </div>
             </div>
 
             {message && (
@@ -127,50 +143,52 @@ export default function Pricing() {
 
             <div className={styles.plansGrid}>
                 {PLANS.map((plan) => {
-                    const isCurrent = plan.id === currentPlan;
-                    const Icon = plan.id === 'free' ? Shield : plan.id === 'pro_monthly' ? Zap : TrendingUp;
+                    const isCurrent = currentPlan && currentPlan.startsWith(plan.id);
+
+                    let Icon = Shield;
+                    if (plan.id === 'basic') Icon = Zap;
+                    if (plan.id === 'pro') Icon = TrendingUp;
+                    if (plan.id === 'elite') Icon = Crown;
 
                     return (
                         <div
                             key={plan.id}
-                            className={`${styles.planCard} ${plan.featured ? styles.featured : ''} ${isCurrent ? styles.current : ''}`}
+                            className={`${styles.planCard} ${styles[plan.color]} ${plan.featured ? styles.featured : ''} ${isCurrent ? styles.current : ''}`}
                         >
                             {plan.featured && (
                                 <div className={styles.badge}>Most Popular</div>
                             )}
 
                             <div className={styles.planHeader}>
-                                <Icon size={32} className={styles.planIcon} />
+                                <div className={`${styles.iconWrapper} ${styles[plan.color]}`}>
+                                    <Icon size={32} />
+                                </div>
                                 <h3 className={styles.planName}>{plan.name}</h3>
 
                                 <div className={styles.pricing}>
-                                    {plan.price === 0 ? (
+                                    {plan.price[billingCycle] === 0 ? (
                                         <div className={styles.free}>Free</div>
                                     ) : (
                                         <>
                                             <span className={styles.currency}>$</span>
-                                            <span className={styles.price}>{plan.price}</span>
-                                            <span className={styles.period}>/ {plan.period.replace('per ', '')}</span>
+                                            <span className={styles.price}>{plan.price[billingCycle]}</span>
+                                            <span className={styles.period}>/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
                                         </>
                                     )}
                                 </div>
-
-                                {plan.savings && (
-                                    <div className={styles.savings}>{plan.savings}</div>
-                                )}
                             </div>
 
                             <ul className={styles.features}>
                                 {plan.features.map((feature, idx) => (
                                     <li key={idx} className={styles.feature}>
-                                        <CheckCircle size={18} className={styles.checkIcon} />
+                                        <CheckCircle size={18} className={`${styles.checkIcon} ${styles[plan.color]}`} />
                                         <span>{feature}</span>
                                     </li>
                                 ))}
                             </ul>
 
                             <button
-                                className={`${styles.ctaButton} ${plan.featured ? styles.ctaFeatured : ''} ${isCurrent ? styles.ctaCurrent : ''}`}
+                                className={`${styles.ctaButton} ${styles[plan.color]} ${isCurrent ? styles.ctaCurrent : ''}`}
                                 onClick={() => handleUpgrade(plan.id)}
                                 disabled={loading || isCurrent}
                             >
@@ -202,7 +220,6 @@ export default function Pricing() {
                     </div>
                 </div>
             </div>
-            {/* Disclaimer removed as it is now in Footer */}
         </div>
     );
 }
