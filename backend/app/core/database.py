@@ -427,15 +427,37 @@ class DuckDBHandler:
         """Create a new user."""
         try:
             from datetime import datetime
+            import random
+            
             # Check if user exists
             if self.get_user_by_email(email):
+                return None
+            
+            # Generate a unique 10-digit random ID
+            max_attempts = 10
+            for attempt in range(max_attempts):
+                # Generate random 10-digit number (1000000000 to 9999999999)
+                user_id = random.randint(1000000000, 9999999999)
+                
+                # Check if ID already exists
+                existing = self.conn.execute(
+                    "SELECT 1 FROM users WHERE id = ?",
+                    [user_id]
+                ).fetchone()
+                
+                if not existing:
+                    # ID is unique, use it
+                    break
+            else:
+                # Failed to generate unique ID after max_attempts
+                logger.error("Failed to generate unique user ID after multiple attempts")
                 return None
                 
             query = """
                 INSERT INTO users (id, email, hashed_password, nickname, is_admin, created_at)
-                VALUES (nextval('seq_user_id'), ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
             """
-            self.conn.execute(query, [email, hashed_password, nickname, False, datetime.now()])
+            self.conn.execute(query, [user_id, email, hashed_password, nickname, False, datetime.now()])
             return self.get_user_by_email(email)
         except Exception as e:
             logger.error(f"Error creating user: {e}")
