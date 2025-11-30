@@ -53,21 +53,23 @@ export default function Pricing() {
             // Assumes id format: tier_cycle (e.g., basic_monthly)
             const parts = plan.id.split('_');
             const tier = parts[0];
-            const cycle = parts[1];
+            const cycle = parts[1] || 'monthly'; // Default to monthly if no cycle specified
 
             if (!grouped[tier]) {
                 grouped[tier] = {
                     id: tier,
                     name: plan.name.replace(' Monthly', '').replace(' Yearly', ''),
-                    price: {},
-                    features: plan.features,
+                    price: { monthly: 0, yearly: 0 }, // Initialize both to prevent undefined
+                    features: plan.features || [],
                     ...PLAN_METADATA[tier]
                 };
             }
 
-            grouped[tier].price[cycle] = plan.price;
-            // Prefer monthly features if available, or just take the last one
-            if (cycle === 'monthly') {
+            // Ensure price is a number
+            grouped[tier].price[cycle] = parseFloat(plan.price) || 0;
+
+            // Prefer monthly features if available
+            if (cycle === 'monthly' && plan.features) {
                 grouped[tier].features = plan.features;
             }
         });
@@ -87,7 +89,7 @@ export default function Pricing() {
 
         const planId = `${basePlanId}_${billingCycle}`;
 
-        // Check if already on this plan (ignoring cycle for simplicity in check, but backend handles it)
+        // Check if already on this plan
         if (currentPlan && currentPlan.startsWith(basePlanId) && currentPlan.includes(billingCycle)) return;
 
         setLoading(true);
@@ -141,6 +143,9 @@ export default function Pricing() {
                 {plans.map((plan) => {
                     const isCurrent = currentPlan && currentPlan.startsWith(plan.id);
                     const Icon = plan.icon || Shield;
+                    const displayPrice = plan.price && plan.price[billingCycle] !== undefined
+                        ? plan.price[billingCycle]
+                        : 0;
 
                     return (
                         <div
@@ -158,12 +163,12 @@ export default function Pricing() {
                                 <h3 className={styles.planName}>{plan.name}</h3>
 
                                 <div className={styles.pricing}>
-                                    {plan.price[billingCycle] === 0 ? (
+                                    {displayPrice === 0 ? (
                                         <div className={styles.free}>Free</div>
                                     ) : (
                                         <>
                                             <span className={styles.currency}>$</span>
-                                            <span className={styles.price}>{plan.price[billingCycle]}</span>
+                                            <span className={styles.price}>{displayPrice}</span>
                                             <span className={styles.period}>/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
                                         </>
                                     )}
@@ -171,7 +176,7 @@ export default function Pricing() {
                             </div>
 
                             <ul className={styles.features}>
-                                {plan.features && plan.features.map((feature, idx) => (
+                                {plan.features && Array.isArray(plan.features) && plan.features.map((feature, idx) => (
                                     <li key={idx} className={styles.feature}>
                                         <CheckCircle size={18} className={`${styles.checkIcon} ${styles[plan.color]}`} />
                                         <span>{feature}</span>
