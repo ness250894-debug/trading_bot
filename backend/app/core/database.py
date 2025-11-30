@@ -432,10 +432,10 @@ class DuckDBHandler:
                 return None
                 
             query = """
-                INSERT INTO users (id, email, hashed_password, is_active, is_admin, created_at)
-                VALUES (nextval('seq_user_id'), ?, ?, ?, ?, ?)
+                INSERT INTO users (id, email, hashed_password, is_admin, created_at)
+                VALUES (nextval('seq_user_id'), ?, ?, ?, ?)
             """
-            self.conn.execute(query, [email, hashed_password, True, False, datetime.now()])
+            self.conn.execute(query, [email, hashed_password, False, datetime.now()])
             return self.get_user_by_email(email)
         except Exception as e:
             logger.error(f"Error creating user: {e}")
