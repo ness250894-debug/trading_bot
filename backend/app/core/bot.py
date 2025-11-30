@@ -72,8 +72,14 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
             raise ValueError(f"Missing API credentials for user {user_id} on {exchange}")
     
     if not api_key or not api_secret:
-        logger.error(f"❌ No API keys available for user {user_id}")
-        raise ValueError(f"Missing API credentials for user {user_id}")
+        if dry_run:
+            logger.warning(f"⚠️ No API keys found for user {user_id}. Proceeding in DRY RUN mode with public data only.")
+            # Use dummy keys for public data access in Dry Run
+            api_key = "dummy_key"
+            api_secret = "dummy_secret"
+        else:
+            logger.error(f"❌ No API keys available for user {user_id}")
+            raise ValueError(f"Missing API credentials for user {user_id}")
     
     # Initialize Exchange Client via ClientManager
     try:
