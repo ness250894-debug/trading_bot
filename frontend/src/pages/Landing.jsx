@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
     Zap, Shield, BarChart2, Activity, Target, Clock,
     TrendingUp, Rocket, ArrowRight, Users, DollarSign,
     CheckCircle, Star, Award
 } from 'lucide-react';
-import LoginModal from '../components/LoginModal';
-import SignupModal from '../components/SignupModal';
-import Disclaimer from '../components/Disclaimer';
 
 export default function Landing() {
     const navigate = useNavigate();
-    const [showLoginModal, setShowLoginModal] = useState(false);
-    const [showSignupModal, setShowSignupModal] = useState(false);
+    const { openLoginModal, openSignupModal } = useOutletContext();
 
     const [stats, setStats] = useState({
         totalTrades: 12847,
@@ -107,39 +103,6 @@ export default function Landing() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5 backdrop-blur-xl">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <div className="flex items-center gap-2">
-                            <TrendingUp className="w-8 h-8 text-primary" />
-                            <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
-                                TradingBot
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <Link
-                                to="/pricing"
-                                className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-                            >
-                                Pricing
-                            </Link>
-                            <button
-                                onClick={() => setShowLoginModal(true)}
-                                className="text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                                Sign In
-                            </button>
-                            <button
-                                onClick={() => setShowSignupModal(true)}
-                                className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-primary/25"
-                            >
-                                Get Started
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </nav>
 
             {/* Hero Section */}
             <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
@@ -164,7 +127,7 @@ export default function Landing() {
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-top-16 duration-1000 delay-300">
                             <button
-                                onClick={() => setShowSignupModal(true)}
+                                onClick={openSignupModal}
                                 className="group bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-105 flex items-center justify-center gap-2"
                             >
                                 Start Trading Now
@@ -378,14 +341,14 @@ export default function Landing() {
                             </p>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                 <button
-                                    onClick={() => setShowSignupModal(true)}
+                                    onClick={openSignupModal}
                                     className="group bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-105 flex items-center justify-center gap-2"
                                 >
                                     Get Started Free
                                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </button>
                                 <button
-                                    onClick={() => setShowLoginModal(true)}
+                                    onClick={openLoginModal}
                                     className="bg-white/5 hover:bg-white/10 text-foreground px-8 py-4 rounded-xl font-bold text-lg transition-all border border-white/10 hover:border-white/20"
                                 >
                                     Sign In
@@ -395,47 +358,6 @@ export default function Landing() {
                     </div>
                 </div>
             </section>
-
-            {/* Footer */}
-            <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-white/5">
-                <div className="max-w-7xl mx-auto">
-                    <div className="mb-8">
-                        <Disclaimer />
-                    </div>
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <TrendingUp className="w-6 h-6 text-primary" />
-                            <span className="font-bold text-foreground">TradingBot</span>
-                        </div>
-                        <div className="flex gap-6 text-sm text-muted-foreground">
-                            <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-                            <a href="#" className="hover:text-foreground transition-colors">Documentation</a>
-                            <a href="#" className="hover:text-foreground transition-colors">Support</a>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                            © 2025 TradingBot. All rights reserved.
-                        </div>
-                    </div>
-                </div>
-            </footer>
-
-            {/* Modals */}
-            <LoginModal
-                isOpen={showLoginModal}
-                onClose={() => setShowLoginModal(false)}
-                onSwitchToSignup={() => {
-                    setShowLoginModal(false);
-                    setShowSignupModal(true);
-                }}
-            />
-            <SignupModal
-                isOpen={showSignupModal}
-                onClose={() => setShowSignupModal(false)}
-                onSwitchToLogin={() => {
-                    setShowSignupModal(false);
-                    setShowLoginModal(true);
-                }}
-            />
-        </div>
+        </div >
     );
 }

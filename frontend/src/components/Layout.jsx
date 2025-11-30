@@ -44,14 +44,14 @@ export default function Layout({ children }) {
 
             {/* Top Bar */}
             <header className="h-16 px-4 md:px-8 flex items-center justify-between bg-transparent z-40 border-b border-white/5">
-                <div className="flex items-center gap-2">
+                <NavLink to="/dashboard" className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
                         <Zap size={20} className="text-white" fill="currentColor" />
                     </div>
                     <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 hidden md:block">
                         NovaBot
                     </h1>
-                </div>
+                </NavLink>
 
                 <div className="flex items-center gap-4">
                     <button className="p-2 rounded-full hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors relative">
