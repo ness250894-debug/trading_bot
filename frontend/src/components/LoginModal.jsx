@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { Lock, Mail, AlertCircle, X } from 'lucide-react';
+import { Lock, Mail, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSuccess }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    // Clear form and errors when modal opens/closes
+    useEffect(() => {
+        if (!isOpen) {
+            setEmail('');
+            setPassword('');
+            setError('');
+            setShowPassword(false);
+        }
+    }, [isOpen]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -26,7 +37,6 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
             });
 
             localStorage.setItem('token', response.data.access_token);
-            localStorage.setItem('token', response.data.access_token);
             onClose();
             if (onSuccess) {
                 onSuccess();
@@ -34,7 +44,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
                 navigate('/dashboard');
             }
         } catch (err) {
-            setError(err.response?.data?.detail || 'Login failed');
+            setError(err.response?.data?.detail || 'Invalid email or password. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -107,13 +117,20 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
                                     <div className="relative">
                                         <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                                         <input
-                                            type="password"
+                                            type={showPassword ? "text" : "password"}
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                                            className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 pl-10 pr-12 text-white focus:outline-none focus:border-primary/50 transition-colors"
                                             placeholder="••••••••"
                                             required
                                         />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
                                     </div>
                                 </div>
 
