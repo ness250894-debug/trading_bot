@@ -16,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import { ToastProvider } from './components/Toast';
 import { ModalProvider } from './components/Modal';
 import PublicLayout from './components/PublicLayout';
+import HybridLayout from './components/HybridLayout';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -78,12 +79,15 @@ function App() {
         <ToastProvider>
           <ModalProvider>
             <Routes>
-              {/* Public Routes */}
+              {/* Public Routes - now use HybridLayout for auth-aware header */}
+              <Route element={<HybridLayout />}>
+                <Route path="/pricing" element={<Pricing />} />
+              </Route>
+
               <Route element={<PublicLayout />}>
                 <Route path="/" element={<Landing />} />
                 {/* <Route path="/login" element={<Login />} /> */}
                 <Route path="/signup" element={<Signup />} />
-                <Route path="/pricing" element={<Pricing />} />
               </Route>
 
               {/* Protected Routes */}

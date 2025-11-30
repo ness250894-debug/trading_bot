@@ -28,7 +28,7 @@ const AdminPlans = () => {
 
     const fetchPlans = async () => {
         try {
-            const response = await api.get('/billing/plans');
+            const response = await api.get('/admin/plans');
             setPlans(response.data);
         } catch (error) {
             console.error('Error fetching plans:', error);
