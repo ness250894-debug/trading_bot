@@ -464,11 +464,11 @@ class DuckDBHandler:
             return None
 
     def get_user_strategy(self, user_id):
-        """Get strategy for a user."""
+        """Get strategy configuration for a user."""
         try:
             import json
             result = self.conn.execute(
-                "SELECT * FROM user_strategies WHERE user_id = ?",
+                "SELECT symbol, timeframe, amount_usdt, strategy, strategy_params, dry_run, take_profit_pct, stop_loss_pct, exchange, updated_at FROM user_strategies WHERE user_id = ?",
                 [user_id]
             ).fetchone()
             
@@ -476,18 +476,28 @@ class DuckDBHandler:
                 return None
                 
             return {
-                'user_id': result[0],
-                'strategy_name': result[1],
-                'parameters': json.loads(result[2]) if result[2] else {},
-                'is_active': result[3],
-                'updated_at': result[4]
+                'SYMBOL': result[0],
+                'TIMEFRAME': result[1],
+                'AMOUNT_USDT': result[2],
+                'STRATEGY': result[3],
+                'STRATEGY_PARAMS': json.loads(result[4]) if result[4] else {},
+                'DRY_RUN': result[5],
+                'TAKE_PROFIT_PCT': result[6],
+                'STOP_LOSS_PCT': result[7],
+                'EXCHANGE': result[8] if result[8] else 'bybit',
+                'updated_at': result[9]
             }
         except Exception as e:
             logger.error(f"Error fetching strategy: {e}")
             return None
 
-    def save_user_strategy(self, user_id, strategy_name, parameters, is_active=True):
-        """Save or update user strategy."""
+    def save_user_strategy(self, user_id, config):
+        """Save or update user strategy configuration.
+        
+        Args:
+            user_id: The user's ID
+            config: Dict with keys: SYMBOL, TIMEFRAME, AMOUNT_USDT, STRATEGY, STRATEGY_PARAMS, DRY_RUN, TAKE_PROFIT_PCT, STOP_LOSS_PCT
+        """
         try:
             import json
             from datetime import datetime
@@ -501,26 +511,40 @@ class DuckDBHandler:
             if existing:
                 query = """
                     UPDATE user_strategies 
-                    SET strategy_name = ?, parameters = ?, is_active = ?, updated_at = ?
+                    SET symbol = ?, timeframe = ?, amount_usdt = ?, strategy = ?, strategy_params = ?, 
+                        dry_run = ?, take_profit_pct = ?, stop_loss_pct = ?, exchange = ?, updated_at = ?
                     WHERE user_id = ?
                 """
                 self.conn.execute(query, [
-                    strategy_name,
-                    json.dumps(parameters),
-                    is_active,
+                    config.get('SYMBOL'),
+                    config.get('TIMEFRAME'),
+                    config.get('AMOUNT_USDT'),
+                    config.get('STRATEGY'),
+                    json.dumps(config.get('STRATEGY_PARAMS', {})),
+                    config.get('DRY_RUN', True),
+                    config.get('TAKE_PROFIT_PCT'),
+                    config.get('STOP_LOSS_PCT'),
+                    config.get('EXCHANGE', 'bybit'),
                     datetime.now(),
                     user_id
                 ])
             else:
                 query = """
-                    INSERT INTO user_strategies (user_id, strategy_name, parameters, is_active, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO user_strategies 
+                    (id, user_id, symbol, timeframe, amount_usdt, strategy, strategy_params, dry_run, take_profit_pct, stop_loss_pct, exchange, updated_at)
+                    VALUES (nextval('seq_user_strategy_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
                 self.conn.execute(query, [
                     user_id,
-                    strategy_name,
-                    json.dumps(parameters),
-                    is_active,
+                    config.get('SYMBOL'),
+                    config.get('TIMEFRAME'),
+                    config.get('AMOUNT_USDT'),
+                    config.get('STRATEGY'),
+                    json.dumps(config.get('STRATEGY_PARAMS', {})),
+                    config.get('DRY_RUN', True),
+                    config.get('TAKE_PROFIT_PCT'),
+                    config.get('STOP_LOSS_PCT'),
+                    config.get('EXCHANGE', 'bybit'),
                     datetime.now()
                 ])
             return True
