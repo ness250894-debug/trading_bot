@@ -18,37 +18,37 @@ async def get_all_users(current_user: dict = Depends(auth.get_current_admin_user
 
 @router.put("/admin/users/{user_id}/subscription")
 async def update_user_subscription(
-    user_id: int, 
+    user_id: str,  # Changed to str to support BIGINT
     update: UserUpdate,
     current_user: dict = Depends(auth.get_current_admin_user)
 ):
     """Update user subscription (Admin only)."""
-    success = db.update_user_subscription(user_id, update.plan_id, update.status)
+    success = db.update_user_subscription(int(user_id), update.plan_id, update.status)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update subscription")
     return {"status": "success"}
 
 @router.delete("/admin/users/{user_id}")
 async def delete_user(
-    user_id: int,
+    user_id: str,  # Changed to str to support BIGINT
     current_user: dict = Depends(auth.get_current_admin_user)
 ):
     """Delete user (Admin only)."""
-    if user_id == current_user['id']:
+    if int(user_id) == current_user['id']:
         raise HTTPException(status_code=400, detail="Cannot delete yourself")
         
-    success = db.delete_user(user_id)
+    success = db.delete_user(int(user_id))
     if not success:
         raise HTTPException(status_code=500, detail="Failed to delete user")
     return {"status": "success"}
 
 @router.post("/admin/users/{user_id}/make_admin")
 async def make_admin(
-    user_id: int,
+    user_id: str,  # Changed to str to support BIGINT
     current_user: dict = Depends(auth.get_current_admin_user)
 ):
     """Make a user an admin (Admin only)."""
-    success = db.set_admin_status(user_id, True)
+    success = db.set_admin_status(int(user_id), True)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update admin status")
     return {"status": "success"}
