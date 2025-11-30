@@ -35,7 +35,7 @@ class DuckDBHandler:
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_backtest_id START 1;
                 CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY,
+                    id BIGINT PRIMARY KEY,
                     email VARCHAR UNIQUE,
                     hashed_password VARCHAR,
                     nickname VARCHAR,
