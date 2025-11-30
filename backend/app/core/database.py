@@ -204,6 +204,13 @@ class DuckDBHandler:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")
             
+            # Migration: Add nickname column to existing users tables  
+            try:
+                self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR")
+                logger.info("Migration: nickname column added/verified in users table")
+            except Exception as e:
+                logger.debug(f"Nickname migration: {e}")
+            
             logger.info("Tables checked/created.")
         except Exception as e:
             logger.error(f"Error creating tables: {e}")
@@ -347,30 +354,6 @@ class DuckDBHandler:
             if not df.empty:
                 df['timestamp'] = df['timestamp'].astype(str)
             return df
-        except Exception as e:
-            logger.error(f"Error fetching trades: {e}")
-            return pd.DataFrame()
-
-    def clear_trades(self, user_id=None):
-        """Deletes trades from the database, optionally filtered by user_id."""
-        try:
-            if user_id is not None:
-                self.conn.execute("DELETE FROM trades WHERE user_id = ?", [user_id])
-                logger.info(f"Cleared trades for user {user_id}")
-            else:
-                self.conn.execute("DELETE FROM trades")
-                logger.info("All trades cleared from database.")
-            return True
-        except Exception as e:
-            logger.error(f"Error clearing trades: {e}")
-            return False
-
-    def get_recent_trades(self, limit=10):
-        """Returns recent trades as a list of dictionaries for internal logic."""
-        try:
-            df = self.get_trades(limit)
-            if df.empty:
-                return []
             return df.to_dict('records')
         except Exception as e:
             logger.error(f"Error fetching recent trades: {e}")
