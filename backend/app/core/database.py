@@ -31,7 +31,7 @@ class DuckDBHandler:
                     win_rate_pct DOUBLE,
                     trades INTEGER,
                     final_balance DOUBLE,
-                    user_id INTEGER
+                    user_id BIGINT
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_backtest_id START 1;
                 CREATE TABLE IF NOT EXISTS users (
@@ -47,7 +47,7 @@ class DuckDBHandler:
                 CREATE SEQUENCE IF NOT EXISTS seq_user_id START 1;
                 CREATE TABLE IF NOT EXISTS user_strategies (
                     id INTEGER PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
+                    user_id BIGINT NOT NULL,
                     symbol VARCHAR,
                     timeframe VARCHAR,
                     amount_usdt DOUBLE,
@@ -63,7 +63,7 @@ class DuckDBHandler:
                 CREATE SEQUENCE IF NOT EXISTS seq_user_strategy_id START 1;
                 CREATE TABLE IF NOT EXISTS api_keys (
                     id INTEGER PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
+                    user_id BIGINT NOT NULL,
                     exchange VARCHAR NOT NULL,
                     api_key_encrypted VARCHAR NOT NULL,
                     api_secret_encrypted VARCHAR NOT NULL,
@@ -74,7 +74,7 @@ class DuckDBHandler:
                 CREATE SEQUENCE IF NOT EXISTS seq_api_key_id START 1;
                 CREATE TABLE IF NOT EXISTS audit_log (
                     id INTEGER PRIMARY KEY,
-                    user_id INTEGER,
+                    user_id BIGINT,
                     action VARCHAR,
                     resource_type VARCHAR,
                     resource_id VARCHAR,
@@ -85,7 +85,7 @@ class DuckDBHandler:
                 CREATE SEQUENCE IF NOT EXISTS seq_audit_id START 1;
                 CREATE TABLE IF NOT EXISTS subscriptions (
                     id INTEGER PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
+                    user_id BIGINT NOT NULL,
                     plan_id VARCHAR NOT NULL,
                     status VARCHAR NOT NULL,
                     starts_at TIMESTAMP,
@@ -97,7 +97,7 @@ class DuckDBHandler:
                 CREATE SEQUENCE IF NOT EXISTS seq_subscription_id START 1;
                 CREATE TABLE IF NOT EXISTS payments (
                     id INTEGER PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
+                    user_id BIGINT NOT NULL,
                     charge_code VARCHAR NOT NULL,
                     amount DOUBLE,
                     currency VARCHAR,
@@ -112,12 +112,12 @@ class DuckDBHandler:
             # Run migrations for existing tables
             try:
                 # Add user_id column to trades table if it doesn't exist
-                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS user_id INTEGER")
+                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS user_id BIGINT")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id)")
                 logger.info("Trades table migration completed (user_id column)")
                 
                 # Add user_id column to backtest_results table if it doesn't exist
-                self.conn.execute("ALTER TABLE backtest_results ADD COLUMN IF NOT EXISTS user_id INTEGER")
+                self.conn.execute("ALTER TABLE backtest_results ADD COLUMN IF NOT EXISTS user_id BIGINT")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_backtest_user_id ON backtest_results(user_id)")
                 logger.info("Backtest results table migration completed (user_id column)")
                 
@@ -138,12 +138,35 @@ class DuckDBHandler:
                 self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS exchange VARCHAR DEFAULT 'bybit'")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_user_strategies_exchange ON user_strategies(exchange)")
                 logger.info("User strategies table migration completed (exchange column)")
+
+                # Migration: Convert INTEGER user_id columns to BIGINT
+                tables_to_migrate = [
+                    'user_strategies', 'api_keys', 'audit_log', 'subscriptions', 
+                    'payments', 'trades', 'backtest_results', 'visual_strategies',
+                    'public_strategies', 'strategy_clones'
+                ]
                 
+                for table in tables_to_migrate:
+                    try:
+                        # Check if table exists
+                        table_exists = self.conn.execute(
+                            "SELECT count(*) FROM information_schema.tables WHERE table_name = ?", 
+                            [table]
+                        ).fetchone()[0] > 0
+                        
+                        if table_exists:
+                            # Try to alter column type
+                            self.conn.execute(f"ALTER TABLE {table} ALTER COLUMN user_id TYPE BIGINT")
+                            logger.info(f"Migrated {table}.user_id to BIGINT")
+                    except Exception as e:
+                        # Ignore if column doesn't exist or other error (might already be BIGINT)
+                        logger.debug(f"Migration skip for {table}: {e}")
+
                 # Create visual_strategies table for JSON-based strategies
                 self.conn.execute("""
                     CREATE TABLE IF NOT EXISTS visual_strategies (
                         id INTEGER PRIMARY KEY,
-                        user_id INTEGER NOT NULL,
+                        user_id BIGINT NOT NULL,
                         name VARCHAR NOT NULL,
                         description TEXT,
                         json_config TEXT NOT NULL,
@@ -161,7 +184,7 @@ class DuckDBHandler:
                 self.conn.execute("""
                     CREATE TABLE IF NOT EXISTS public_strategies (
                         id INTEGER PRIMARY KEY,
-                        user_id INTEGER NOT NULL,
+                        user_id BIGINT NOT NULL,
                         strategy_id INTEGER NOT NULL,
                         name VARCHAR NOT NULL,
                         description TEXT,
@@ -187,7 +210,7 @@ class DuckDBHandler:
                 self.conn.execute("""
                     CREATE TABLE IF NOT EXISTS strategy_clones (
                         id INTEGER PRIMARY KEY,
-                        user_id INTEGER NOT NULL,
+                        user_id BIGINT NOT NULL,
                         public_strategy_id INTEGER NOT NULL,
                         cloned_strategy_id INTEGER NOT NULL,
                         cloned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
