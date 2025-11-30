@@ -548,23 +548,41 @@ class DuckDBHandler:
                 'id': result[0],
                 'user_id': result[1],
                 'exchange': result[2],
-                'api_key': result[3],
-                'api_secret': result[4],
-                'created_at': result[5]
+                'api_key_encrypted': result[3],
+                'api_secret_encrypted': result[4],
+                'created_at': result[5],
+                'updated_at': result[6] if len(result) > 6 else None
             }
         except Exception as e:
             logger.error(f"Error fetching API key: {e}")
             return None
 
-    def save_api_key(self, user_id, exchange, api_key, api_secret):
-        """Save API key."""
+    def save_api_key(self, user_id, exchange, api_key_encrypted, api_secret_encrypted):
+        """Save encrypted API key."""
         try:
             from datetime import datetime
-            query = """
-                INSERT INTO api_keys (id, user_id, exchange, api_key, api_secret, created_at)
-                VALUES (nextval('seq_api_key_id'), ?, ?, ?, ?, ?)
-            """
-            self.conn.execute(query, [user_id, exchange, api_key, api_secret, datetime.now()])
+            
+            # Check if key already exists
+            existing = self.conn.execute(
+                "SELECT 1 FROM api_keys WHERE user_id = ? AND exchange = ?",
+                [user_id, exchange]
+            ).fetchone()
+            
+            if existing:
+                # Update existing key
+                query = """
+                    UPDATE api_keys 
+                    SET api_key_encrypted = ?, api_secret_encrypted = ?, updated_at = ?
+                    WHERE user_id = ? AND exchange = ?
+                """
+                self.conn.execute(query, [api_key_encrypted, api_secret_encrypted, datetime.now(), user_id, exchange])
+            else:
+                # Insert new key
+                query = """
+                    INSERT INTO api_keys (id, user_id, exchange, api_key_encrypted, api_secret_encrypted, created_at, updated_at)
+                    VALUES (nextval('seq_api_key_id'), ?, ?, ?, ?, ?, ?)
+                """
+                self.conn.execute(query, [user_id, exchange, api_key_encrypted, api_secret_encrypted, datetime.now(), datetime.now()])
             return True
         except Exception as e:
             logger.error(f"Error saving API key: {e}")
@@ -582,15 +600,15 @@ class DuckDBHandler:
             logger.error(f"Error deleting API key: {e}")
             return False
 
-    def log_audit(self, user_id, action, details):
+    def log_audit(self, user_id, action, resource_type, resource_id, details, ip_address=None):
         """Log an audit event."""
         try:
             from datetime import datetime
             query = """
-                INSERT INTO audit_logs (id, user_id, action, details, timestamp)
-                VALUES (nextval('seq_audit_id'), ?, ?, ?, ?)
+                INSERT INTO audit_log (id, user_id, action, resource_type, resource_id, details, ip_address, created_at)
+                VALUES (nextval('seq_audit_id'), ?, ?, ?, ?, ?, ?, ?)
             """
-            self.conn.execute(query, [user_id, action, details, datetime.now()])
+            self.conn.execute(query, [user_id, action, resource_type, resource_id, details, ip_address, datetime.now()])
             return True
         except Exception as e:
             logger.error(f"Error logging audit: {e}")
