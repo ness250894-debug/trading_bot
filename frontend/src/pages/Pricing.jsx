@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import api from '../lib/api';
 import styles from './Pricing.module.css';
-import { CheckCircle, Zap, Shield, TrendingUp, Crown, Star } from 'lucide-react';
+import { CheckCircle, Zap, Shield, TrendingUp, Crown } from 'lucide-react';
 
 const PLAN_METADATA = {
     free: { color: 'gray', icon: Shield, cta: 'Current Plan', order: 0 },
@@ -31,12 +31,12 @@ export default function Pricing() {
                 api.get('/billing/status')
             ]);
 
-            if (plansRes.status === 'fulfilled') {
+            if (plansRes.status === 'fulfilled' && plansRes.value?.data) {
                 processPlans(plansRes.value.data);
             }
 
-            if (statusRes.status === 'fulfilled') {
-                setCurrentPlan(statusRes.value.data.plan);
+            if (statusRes.status === 'fulfilled' && statusRes.value?.data?.plan) {
+                setCurrentPlan(String(statusRes.value.data.plan));
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -47,34 +47,54 @@ export default function Pricing() {
     };
 
     const processPlans = (apiPlans) => {
+        if (!Array.isArray(apiPlans)) {
+            console.error('API plans is not an array:', apiPlans);
+            return;
+        }
+
         const grouped = {};
 
         apiPlans.forEach(plan => {
-            // Assumes id format: tier_cycle (e.g., basic_monthly)
-            const parts = plan.id.split('_');
-            const tier = parts[0];
-            const cycle = parts[1] || 'monthly'; // Default to monthly if no cycle specified
+            if (!plan || typeof plan !== 'object') return;
 
+            // Safely extract tier and cycle from plan ID
+            const planId = String(plan.id || '');
+            const parts = planId.split('_');
+            const tier = parts[0] || 'unknown';
+            const cycle = parts[1] || 'monthly';
+
+            // Skip if no metadata for this tier
+            if (!PLAN_METADATA[tier]) return;
+
+            // Initialize grouped plan if it doesn't exist
             if (!grouped[tier]) {
+                const planName = String(plan.name || tier);
                 grouped[tier] = {
                     id: tier,
-                    name: plan.name.replace(' Monthly', '').replace(' Yearly', ''),
-                    price: { monthly: 0, yearly: 0 }, // Initialize both to prevent undefined
-                    features: plan.features || [],
+                    name: planName.replace(/ Monthly$/i, '').replace(/ Yearly$/i, ''),
+                    price: { monthly: 0, yearly: 0 },
+                    features: [],
                     ...PLAN_METADATA[tier]
                 };
             }
 
-            // Ensure price is a number
-            grouped[tier].price[cycle] = parseFloat(plan.price) || 0;
+            // Safely parse price as number
+            const priceValue = parseFloat(plan.price);
+            grouped[tier].price[cycle] = isNaN(priceValue) ? 0 : priceValue;
 
-            // Prefer monthly features if available
-            if (cycle === 'monthly' && plan.features) {
-                grouped[tier].features = plan.features;
+            // Set features (prefer monthly)
+            if (Array.isArray(plan.features) && plan.features.length > 0) {
+                if (cycle === 'monthly' || !grouped[tier].features.length) {
+                    grouped[tier].features = plan.features.map(f => String(f));
+                }
             }
         });
 
-        const sortedPlans = Object.values(grouped).sort((a, b) => (a.order || 0) - (b.order || 0));
+        // Sort and set plans
+        const sortedPlans = Object.values(grouped)
+            .filter(p => p && p.id)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
         setPlans(sortedPlans);
     };
 
@@ -89,15 +109,16 @@ export default function Pricing() {
 
         const planId = `${basePlanId}_${billingCycle}`;
 
-        // Check if already on this plan
-        if (currentPlan && currentPlan.startsWith(basePlanId) && currentPlan.includes(billingCycle)) return;
+        if (currentPlan && currentPlan.startsWith(basePlanId)) return;
 
         setLoading(true);
         setMessage(null);
 
         try {
             const response = await api.post('/billing/charge', { plan_id: planId });
-            window.location.href = response.data.hosted_url;
+            if (response?.data?.hosted_url) {
+                window.location.href = response.data.hosted_url;
+            }
         } catch (error) {
             setMessage({
                 type: 'error',
@@ -141,34 +162,38 @@ export default function Pricing() {
 
             <div className={styles.plansGrid}>
                 {plans.map((plan) => {
-                    const isCurrent = currentPlan && currentPlan.startsWith(plan.id);
+                    if (!plan || !plan.id) return null;
+
+                    const isCurrent = currentPlan && String(currentPlan).startsWith(String(plan.id));
                     const Icon = plan.icon || Shield;
-                    const displayPrice = plan.price && plan.price[billingCycle] !== undefined
+                    const planColor = plan.color || 'gray';
+                    const planName = String(plan.name || plan.id);
+                    const priceValue = typeof plan.price?.[billingCycle] === 'number'
                         ? plan.price[billingCycle]
                         : 0;
 
                     return (
                         <div
                             key={plan.id}
-                            className={`${styles.planCard} ${styles[plan.color]} ${plan.featured ? styles.featured : ''} ${isCurrent ? styles.current : ''}`}
+                            className={`${styles.planCard} ${styles[planColor]} ${plan.featured ? styles.featured : ''} ${isCurrent ? styles.current : ''}`}
                         >
                             {plan.featured && (
                                 <div className={styles.badge}>Most Popular</div>
                             )}
 
                             <div className={styles.planHeader}>
-                                <div className={`${styles.iconWrapper} ${styles[plan.color]}`}>
+                                <div className={`${styles.iconWrapper} ${styles[planColor]}`}>
                                     <Icon size={32} />
                                 </div>
-                                <h3 className={styles.planName}>{plan.name}</h3>
+                                <h3 className={styles.planName}>{planName}</h3>
 
                                 <div className={styles.pricing}>
-                                    {displayPrice === 0 ? (
+                                    {priceValue === 0 ? (
                                         <div className={styles.free}>Free</div>
                                     ) : (
                                         <>
                                             <span className={styles.currency}>$</span>
-                                            <span className={styles.price}>{displayPrice}</span>
+                                            <span className={styles.price}>{Math.round(priceValue)}</span>
                                             <span className={styles.period}>/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
                                         </>
                                     )}
@@ -176,20 +201,20 @@ export default function Pricing() {
                             </div>
 
                             <ul className={styles.features}>
-                                {plan.features && Array.isArray(plan.features) && plan.features.map((feature, idx) => (
+                                {Array.isArray(plan.features) && plan.features.map((feature, idx) => (
                                     <li key={idx} className={styles.feature}>
-                                        <CheckCircle size={18} className={`${styles.checkIcon} ${styles[plan.color]}`} />
-                                        <span>{feature}</span>
+                                        <CheckCircle size={18} className={`${styles.checkIcon} ${styles[planColor]}`} />
+                                        <span>{String(feature)}</span>
                                     </li>
                                 ))}
                             </ul>
 
                             <button
-                                className={`${styles.ctaButton} ${styles[plan.color]} ${isCurrent ? styles.ctaCurrent : ''}`}
+                                className={`${styles.ctaButton} ${styles[planColor]} ${isCurrent ? styles.ctaCurrent : ''}`}
                                 onClick={() => handleUpgrade(plan.id)}
                                 disabled={loading || isCurrent}
                             >
-                                {isCurrent ? 'Current Plan' : plan.cta}
+                                {isCurrent ? 'Current Plan' : (plan.cta || 'Get Started')}
                             </button>
                         </div>
                     );
