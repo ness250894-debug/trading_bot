@@ -107,6 +107,19 @@ class DuckDBHandler:
                     confirmed_at TIMESTAMP
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_payment_id START 1;
+                CREATE TABLE IF NOT EXISTS trades (
+                    id INTEGER PRIMARY KEY,
+                    user_id BIGINT,
+                    symbol VARCHAR,
+                    side VARCHAR,
+                    price DOUBLE,
+                    amount DOUBLE,
+                    type VARCHAR,
+                    pnl DOUBLE,
+                    strategy VARCHAR,
+                    timestamp TIMESTAMP
+                );
+                CREATE SEQUENCE IF NOT EXISTS seq_trade_id START 1;
             """)
             
             # Run migrations for existing tables
@@ -156,11 +169,13 @@ class DuckDBHandler:
                         
                         if table_exists:
                             # Try to alter column type
+                            # Note: DuckDB might fail if there's data that can't be cast, but INT -> BIGINT is safe
                             self.conn.execute(f"ALTER TABLE {table} ALTER COLUMN user_id TYPE BIGINT")
                             logger.info(f"Migrated {table}.user_id to BIGINT")
                     except Exception as e:
-                        # Ignore if column doesn't exist or other error (might already be BIGINT)
-                        logger.debug(f"Migration skip for {table}: {e}")
+                        # If column doesn't exist or already BIGINT, it might fail. 
+                        # We log it but continue.
+                        logger.info(f"Migration note for {table}: {e}")
 
                 # Create visual_strategies table for JSON-based strategies
                 self.conn.execute("""
