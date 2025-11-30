@@ -165,10 +165,26 @@ export default function Strategies() {
 
     const applySuggestion = () => {
         if (!suggestion || !config) return;
-        setConfig(prev => ({ ...prev, strategy: suggestion.strategy, parameters: { ...suggestion.params } }));
+
+        const params = { ...suggestion.params };
+        let newTimeframe = config.timeframe;
+
+        // Extract timeframe if present
+        if (params.timeframe) {
+            newTimeframe = params.timeframe;
+            delete params.timeframe;
+        }
+
+        setConfig(prev => ({
+            ...prev,
+            strategy: suggestion.strategy,
+            timeframe: newTimeframe,
+            parameters: params
+        }));
+
         localStorage.removeItem('suggested_strategy_params');
         setSuggestion(null);
-        setMessage({ type: 'success', text: 'Applied suggested parameters! Click Update to save.' });
+        setMessage({ type: 'success', text: 'Applied suggested parameters and timeframe! Click Update to save.' });
     };
 
     const dismissSuggestion = () => {

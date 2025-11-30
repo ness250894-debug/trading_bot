@@ -267,6 +267,7 @@ async def websocket_optimize(websocket: WebSocket):
                     for result in results_list:
                         # Construct params for all results
                         params = {k: v for k, v in result.items() if k not in ['return', 'strategy', 'number', 'state', 'datetime_start', 'datetime_complete', 'duration', 'win_rate', 'trades', 'final_balance']}
+                        params['timeframe'] = request.timeframe
                         result['params'] = params
                         
                         # Metrics are now in result from Hyperopt user_attrs
