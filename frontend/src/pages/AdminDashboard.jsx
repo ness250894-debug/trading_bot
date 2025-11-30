@@ -16,6 +16,7 @@ const AdminDashboard = () => {
     const [editingNickname, setEditingNickname] = useState(null);
     const [nicknameValue, setNicknameValue] = useState('');
     const [activeTab, setActiveTab] = useState('users');
+    const [billingCycle, setBillingCycle] = useState({}); // Track billing cycle per user
 
     // Fetch users on mount and get current user ID
     useEffect(() => {
@@ -340,21 +341,52 @@ const AdminDashboard = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     {editingUser === user.id ? (
-                                                        <select
-                                                            className="bg-background border border-border rounded px-2 py-1 text-sm"
-                                                            defaultValue={user.plan_id || 'free'}
-                                                            id={`plan-${user.id}`}
-                                                        >
-                                                            <option value="free">Free</option>
-                                                            <option value="pro_monthly">Pro Monthly</option>
-                                                            <option value="pro_yearly">Pro Yearly</option>
-                                                        </select>
+                                                        <div className="flex flex-col gap-2 min-w-[200px]">
+                                                            {/* Billing Cycle Toggle */}
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="text-xs text-muted-foreground">Billing:</span>
+                                                                <div className="relative inline-flex bg-muted rounded-lg p-0.5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setBillingCycle(prev => ({ ...prev, [user.id]: 'monthly' }))}
+                                                                        className={`px-3 py-1 text-xs font-medium rounded transition-all ${(billingCycle[user.id] || 'monthly') === 'monthly'
+                                                                                ? 'bg-primary text-white shadow-sm'
+                                                                                : 'text-muted-foreground hover:text-foreground'
+                                                                            }`}
+                                                                    >
+                                                                        Monthly
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setBillingCycle(prev => ({ ...prev, [user.id]: 'yearly' }))}
+                                                                        className={`px-3 py-1 text-xs font-medium rounded transition-all ${(billingCycle[user.id] || 'monthly') === 'yearly'
+                                                                                ? 'bg-primary text-white shadow-sm'
+                                                                                : 'text-muted-foreground hover:text-foreground'
+                                                                            }`}
+                                                                    >
+                                                                        Yearly
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {/* Plan Tier Selector */}
+                                                            <select
+                                                                className="bg-background border border-border rounded px-2 py-1 text-sm"
+                                                                defaultValue={user.plan_id || 'free_monthly'}
+                                                                id={`plan-${user.id}`}
+                                                            >
+                                                                <option value={`free_${billingCycle[user.id] || 'monthly'}`}>Free</option>
+                                                                <option value={`basic_${billingCycle[user.id] || 'monthly'}`}>Basic</option>
+                                                                <option value={`pro_${billingCycle[user.id] || 'monthly'}`}>Pro</option>
+                                                                <option value={`elite_${billingCycle[user.id] || 'monthly'}`}>Elite</option>
+                                                            </select>
+                                                        </div>
                                                     ) : (
-                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full border ${(user.plan_id || 'free').includes('pro')
-                                                            ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                                            : 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+                                                        <span className={`px-2 py-1 text-xs font-medium rounded-full border ${(user.plan_id || 'free').includes('elite') ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
+                                                                (user.plan_id || 'free').includes('pro') ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                                                                    (user.plan_id || 'free').includes('basic') ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                                                        'bg-gray-500/10 text-gray-500 border-gray-500/20'
                                                             }`}>
-                                                            {(user.plan_id || 'Free').replace('_', ' ').toUpperCase()}
+                                                            {(user.plan_id || 'Free').replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                                         </span>
                                                     )}
                                                 </td>
