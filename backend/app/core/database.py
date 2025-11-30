@@ -372,12 +372,12 @@ class DuckDBHandler:
             logger.error(f"Error saving trade: {e}")
             return False
 
-    def get_trades(self, user_id):
+    def get_trades(self, user_id, limit=100, offset=0):
         """Get trades for a user."""
         try:
             return self.conn.execute(
-                "SELECT * FROM trades WHERE user_id = ? ORDER BY timestamp DESC",
-                [user_id]
+                "SELECT * FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+                [user_id, limit, offset]
             ).fetchdf()
         except Exception as e:
             logger.error(f"Error fetching trades: {e}")
