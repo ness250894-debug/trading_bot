@@ -29,10 +29,18 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 401) {
-            // Clear token and redirect to login
-            localStorage.removeItem('token');
-            if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
-                window.location.href = '/login';
+            // Don't redirect if this is a login or signup request (wrong password is expected)
+            const isAuthEndpoint = error.config?.url?.includes('/auth/login') ||
+                error.config?.url?.includes('/auth/signup');
+
+            if (!isAuthEndpoint) {
+                // Clear token and redirect to login for protected routes
+                localStorage.removeItem('token');
+                if (window.location.pathname !== '/login' &&
+                    window.location.pathname !== '/signup' &&
+                    window.location.pathname !== '/') {
+                    window.location.href = '/';
+                }
             }
         }
         return Promise.reject(error);
