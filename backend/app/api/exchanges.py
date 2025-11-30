@@ -9,12 +9,12 @@ router = APIRouter()
 
 
 @router.get("/exchanges", tags=["exchanges"])
-async def get_supported_exchanges() -> Dict[str, List[Dict]]:
+async def get_supported_exchanges() -> Dict:
     """
     Get list of supported exchanges with their capabilities.
     
     Returns:
-        Dictionary with exchanges list
+        Dictionary with exchanges list and count
     """
     try:
         exchanges = ExchangeFactory.get_exchange_info()
