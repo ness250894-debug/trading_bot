@@ -1,7 +1,7 @@
 import React from 'react';
 import axios from 'axios';
-import { Clock, TrendingUp, TrendingDown, DollarSign, Activity, Trash2 } from 'lucide-react';
-import { useToast } from './Toast';
+import { Clock, Activity, Trash2 } from 'lucide-react';
+import { useToast } from './ToastContext';
 import { useModal } from './Modal';
 
 const TradeHistory = ({ trades, onRefresh }) => {
@@ -85,7 +85,7 @@ const TradeHistory = ({ trades, onRefresh }) => {
                                             <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
                                                 <div className="flex items-center gap-2">
                                                     <Clock size={14} />
-                                                    {new Date(trade.timestamp || Date.now()).toLocaleString()}
+                                                    {trade.timestamp ? new Date(trade.timestamp).toLocaleString() : '-'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 font-medium">

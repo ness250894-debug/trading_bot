@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { Plus, Edit, Trash2, Check, X, DollarSign, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, DollarSign, Calendar } from 'lucide-react';
 import api from '../lib/api';
 import { useModal } from './Modal';
 

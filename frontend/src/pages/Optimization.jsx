@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
 import Disclaimer from '../components/Disclaimer';
 
@@ -107,6 +107,13 @@ const presets = {
         { name: 'Standard', ranges: { fast_period: { start: 12, end: 12, step: 1 }, slow_period: { start: 26, end: 26, step: 1 }, signal_period: { start: 9, end: 9, step: 1 } } },
         { name: 'Fast', ranges: { fast_period: { start: 5, end: 15, step: 1 }, slow_period: { start: 15, end: 30, step: 2 }, signal_period: { start: 5, end: 10, step: 1 } } }
     ]
+};
+
+const STRATEGY_NAME_MAP = {
+    'SMA Crossover': 'sma_crossover',
+    'Mean Reversion': 'mean_reversion',
+    'RSI': 'rsi',
+    'MACD': 'macd'
 };
 
 export default function Optimization() {
@@ -344,17 +351,8 @@ export default function Optimization() {
     };
 
     // Map display names to backend strategy names
-    const STRATEGY_NAME_MAP = {
-        'SMA Crossover': 'sma_crossover',
-        'Mean Reversion': 'mean_reversion',
-        'RSI': 'rsi',
-        'MACD': 'macd'
-    };
-
     const applyToStrategy = (params) => {
-        // Convert display name to backend format
         const backendStrategyName = STRATEGY_NAME_MAP[strategy] || strategy.toLowerCase().replace(/\s+/g, '_');
-
         const suggestion = {
             strategy: backendStrategyName,
             params: params
@@ -362,6 +360,9 @@ export default function Optimization() {
         localStorage.setItem('suggested_strategy_params', JSON.stringify(suggestion));
         window.location.href = '/strategies';
     };
+
+
+
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">

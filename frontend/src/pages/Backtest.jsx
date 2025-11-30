@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Play, Loader2 } from 'lucide-react';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 import Disclaimer from '../components/Disclaimer';
 
 const STRATEGIES = [

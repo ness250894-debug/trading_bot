@@ -35,7 +35,7 @@ const AdminDashboard = () => {
                 const user = await response.json();
                 setCurrentUserId(user.id);
             }
-        } catch (error) {
+        } catch {
             toast.error('Error fetching current user');
         }
     };
@@ -60,7 +60,7 @@ const AdminDashboard = () => {
 
             const data = await response.json();
             setUsers(data);
-        } catch (error) {
+        } catch {
             toast.error('Failed to load users');
             toast.error('Failed to load users');
         } finally {
@@ -85,7 +85,7 @@ const AdminDashboard = () => {
             toast.success('Subscription updated');
             setEditingUser(null);
             fetchUsers(); // Refresh list
-        } catch (error) {
+        } catch {
             toast.error('Update failed');
             toast.error('Update failed');
         }
@@ -113,7 +113,7 @@ const AdminDashboard = () => {
 
                     toast.success('User deleted');
                     fetchUsers();
-                } catch (error) {
+                } catch {
                     toast.error('Delete failed');
                     toast.error('Delete failed');
                 }
@@ -141,7 +141,7 @@ const AdminDashboard = () => {
 
                     toast.success('User is now an admin');
                     fetchUsers();
-                } catch (error) {
+                } catch {
                     toast.error('Operation failed');
                     toast.error('Operation failed');
                 }
@@ -166,7 +166,7 @@ const AdminDashboard = () => {
             toast.success('Nickname updated');
             setEditingNickname(null);
             fetchUsers();
-        } catch (error) {
+        } catch {
             toast.error('Update failed');
             toast.error('Update failed');
         }

@@ -108,7 +108,7 @@ export default function Strategies() {
             if (savedSuggestion) {
                 setSuggestion(JSON.parse(savedSuggestion));
             }
-        } catch (err) {
+        } catch {
             setMessage({ type: 'error', text: 'Failed to load configuration.' });
         } finally {
             setLoading(false);
@@ -200,7 +200,7 @@ export default function Strategies() {
                             setSaving(false);
                             setMessage({ type: 'success', text: 'Bot restarted successfully!' });
                             fetchConfig();
-                        } catch (e) {
+                        } catch {
                             retries++;
                             if (retries > 20) {
                                 clearInterval(interval);
@@ -210,7 +210,7 @@ export default function Strategies() {
                             }
                         }
                     }, 1000);
-                } catch (err) {
+                } catch {
                     setMessage({ type: 'error', text: 'Failed to save configuration.' });
                     setSaving(false);
                 }

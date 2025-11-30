@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, DollarSign, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserDropdown from './UserDropdown';
@@ -8,7 +8,6 @@ export default function Layout({ children }) {
     const [isAdmin, setIsAdmin] = React.useState(false);
     const [currentUser, setCurrentUser] = React.useState(null);
     const location = useLocation();
-    const navigate = useNavigate();
 
     React.useEffect(() => {
         const fetchCurrentUser = async () => {

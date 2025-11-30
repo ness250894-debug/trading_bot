@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import api from '../lib/api';
 import styles from './Pricing.module.css';
 import { CheckCircle, Zap, Shield, TrendingUp, Crown } from 'lucide-react';
@@ -12,7 +12,6 @@ const PLAN_METADATA = {
 };
 
 export default function Pricing() {
-    const navigate = useNavigate();
     const { openSignupModal } = useOutletContext();
     const [plans, setPlans] = useState([]);
     const [currentPlan, setCurrentPlan] = useState('free');

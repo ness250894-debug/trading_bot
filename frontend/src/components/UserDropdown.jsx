@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, ChevronDown, LogOut, LayoutDashboard, Settings, TrendingUp, History, Zap, DollarSign, Shield } from 'lucide-react';
+import { ChevronDown, LogOut, LayoutDashboard, Settings, TrendingUp, History, Zap, DollarSign, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function UserDropdown({ user }) {
@@ -102,8 +102,8 @@ export default function UserDropdown({ user }) {
                                         key={index}
                                         onClick={() => handleNavigate(item.path)}
                                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${isActive
-                                                ? 'bg-primary/20 text-primary'
-                                                : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                                            ? 'bg-primary/20 text-primary'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                                             }`}
                                     >
                                         <Icon size={18} />
