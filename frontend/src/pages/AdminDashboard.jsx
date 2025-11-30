@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Shield, Trash2, Edit, Check, X, Search } from 'lucide-react';
 import Disclaimer from '../components/Disclaimer';
+import { useModal } from '../components/Modal';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -93,48 +94,62 @@ const AdminDashboard = () => {
         }
     };
 
-    const handleDeleteUser = async (userId) => {
-        if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    const { confirm } = useModal();
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/admin/users/${userId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
+    const handleDeleteUser = (userId) => {
+        confirm({
+            title: 'Delete User',
+            message: 'Are you sure you want to delete this user? This action cannot be undone and will remove all user data including strategies and trade history.',
+            confirmText: 'Delete User',
+            type: 'danger',
+            onConfirm: async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`/api/admin/users/${userId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to delete user');
+
+                    toast.success('User deleted');
+                    fetchUsers();
+                } catch (error) {
+                    console.error('Error:', error);
+                    toast.error('Delete failed');
                 }
-            });
-
-            if (!response.ok) throw new Error('Failed to delete user');
-
-            toast.success('User deleted');
-            fetchUsers();
-        } catch (error) {
-            console.error('Error:', error);
-            toast.error('Delete failed');
-        }
+            }
+        });
     };
 
-    const handleMakeAdmin = async (userId) => {
-        if (!window.confirm('Grant admin privileges to this user?')) return;
+    const handleMakeAdmin = (userId) => {
+        confirm({
+            title: 'Grant Admin Privileges',
+            message: 'Are you sure you want to make this user an administrator? They will have full access to manage users and system settings.',
+            confirmText: 'Make Admin',
+            type: 'warning',
+            onConfirm: async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`/api/admin/users/${userId}/make_admin`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/admin/users/${userId}/make_admin`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
+                    if (!response.ok) throw new Error('Failed to update admin status');
+
+                    toast.success('User is now an admin');
+                    fetchUsers();
+                } catch (error) {
+                    console.error('Error:', error);
+                    toast.error('Operation failed');
                 }
-            });
-
-            if (!response.ok) throw new Error('Failed to update admin status');
-
-            toast.success('User is now an admin');
-            fetchUsers();
-        } catch (error) {
-            console.error('Error:', error);
-            toast.error('Operation failed');
-        }
+            }
+        });
     };
 
     const handleUpdateNickname = async (userId, nickname) => {
