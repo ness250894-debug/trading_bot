@@ -74,8 +74,8 @@ class EncryptionHelper:
                     decrypted = old_fernet.decrypt(ciphertext.encode())
                     logger.info("Successfully decrypted with old key (consider re-encrypting)")
                     return decrypted.decode()
-                except:
-                    pass
+                except Exception as fallback_error:
+                    logger.debug(f"Failed to decrypt with old key: {fallback_error}")
             
             logger.error(f"Decryption failed: {e}")
             raise

@@ -52,7 +52,6 @@ export default function Dashboard() {
             } catch (err) {
                 const errorMsg = err.response?.data?.detail || 'Failed to connect to bot';
                 setError(errorMsg);
-                console.error('Dashboard data fetch error:', err);
             } finally {
                 setLoading(false);
             }
@@ -77,7 +76,6 @@ export default function Dashboard() {
         } catch (err) {
             const errorMsg = err.response?.data?.detail || `Failed to ${isRunning ? 'stop' : 'start'} bot`;
             setError(errorMsg);
-            console.error('Start/Stop error:', err);
         }
     };
 
@@ -89,7 +87,6 @@ export default function Dashboard() {
 
         ws.onopen = () => {
             setWsConnected(true);
-            console.log("WS Connected");
         };
 
         ws.onmessage = (event) => {
@@ -98,7 +95,6 @@ export default function Dashboard() {
 
         ws.onclose = () => {
             setWsConnected(false);
-            console.log("WS Disconnected");
         };
 
         return () => ws.close();
@@ -137,7 +133,7 @@ export default function Dashboard() {
             const statusRes = await api.get('/status');
             setStatus(statusRes.data);
         } catch (err) {
-            console.error('Failed to refresh trades:', err);
+            // Failed to refresh trades
         }
     };
 

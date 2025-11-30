@@ -125,7 +125,6 @@ export default function Optimization() {
             const parsed = JSON.parse(saved);
             // Check for legacy keys and discard if found
             if (parsed.short_window || parsed.rsi_length || parsed.bb_length) {
-                console.log("Legacy optimization ranges detected, resetting to defaults.");
                 return {
                     fast_period: { start: 5, end: 20, step: 5 },
                     slow_period: { start: 30, end: 60, step: 10 }
@@ -235,7 +234,6 @@ export default function Optimization() {
         const hasExtraKeys = currentKeys.some(key => !expected.includes(key));
 
         if (!hasAllKeys || hasExtraKeys) {
-            console.log(`Parameter mismatch for ${strategy}. Resetting to defaults.`);
             if (presets[strategy] && presets[strategy].length > 0) {
                 setRanges(presets[strategy][0].ranges);
             }
@@ -249,7 +247,7 @@ export default function Optimization() {
         const socket = new WebSocket(wsUrl);
 
         socket.onopen = () => {
-            console.log("Connected to Optimization WS");
+            // WebSocket connected
         };
 
         socket.onmessage = (event) => {
@@ -281,7 +279,6 @@ export default function Optimization() {
                 setIsOptimizing(false);
                 // Don't close socket, keep it open for next run
             } else if (data.type === 'error') {
-                console.error(data.error);
                 toast.error('Optimization error: ' + data.error);
                 setLoading(false);
                 setIsOptimizing(false);
@@ -292,7 +289,7 @@ export default function Optimization() {
         };
 
         socket.onclose = () => {
-            console.log("Optimization WS Closed");
+            // WebSocket closed
         };
 
         setWs(socket);
@@ -334,8 +331,6 @@ export default function Optimization() {
                 param_ranges[key] = [range.start, range.end, range.step];
             }
         }
-
-        console.log("Sending optimization params:", param_ranges);
 
         ws.send(JSON.stringify({
             symbol: 'BTC/USDT',

@@ -185,13 +185,13 @@ Summary: [one sentence]
                 elif line.startswith('Score:'):
                     try:
                         score = int(line.split(':', 1)[1].strip())
-                    except:
-                        pass
+                    except (ValueError, IndexError) as e:
+                        logger.debug(f"Failed to parse score: {e}")
                 elif line.startswith('Confidence:'):
                     try:
                         confidence = int(line.split(':', 1)[1].strip())
-                    except:
-                        pass
+                    except (ValueError, IndexError) as e:
+                        logger.debug(f"Failed to parse confidence: {e}")
                 elif line.startswith('Summary:'):
                     summary = line.split(':', 1)[1].strip()
             

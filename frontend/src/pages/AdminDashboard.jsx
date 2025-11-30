@@ -36,22 +36,19 @@ const AdminDashboard = () => {
                 setCurrentUserId(user.id);
             }
         } catch (error) {
-            console.error('Error fetching current user:', error);
+            toast.error('Error fetching current user');
         }
     };
 
     const fetchUsers = async () => {
         try {
             const token = localStorage.getItem('token');
-            console.log('Fetching users with token:', token ? 'exists' : 'missing');
 
             const response = await fetch('/api/admin/users', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-
-            console.log('Admin users response status:', response.status);
 
             if (response.status === 403) {
                 toast.error("Access Denied: Admin privileges required");
@@ -62,11 +59,9 @@ const AdminDashboard = () => {
             if (!response.ok) throw new Error('Failed to fetch users');
 
             const data = await response.json();
-            console.log('Fetched users data:', data);
-            console.log('Number of users:', data.length);
             setUsers(data);
         } catch (error) {
-            console.error('Error fetching users:', error);
+            toast.error('Failed to load users');
             toast.error('Failed to load users');
         } finally {
             setLoading(false);
@@ -91,7 +86,7 @@ const AdminDashboard = () => {
             setEditingUser(null);
             fetchUsers(); // Refresh list
         } catch (error) {
-            console.error('Error:', error);
+            toast.error('Update failed');
             toast.error('Update failed');
         }
     };
@@ -119,7 +114,7 @@ const AdminDashboard = () => {
                     toast.success('User deleted');
                     fetchUsers();
                 } catch (error) {
-                    console.error('Error:', error);
+                    toast.error('Delete failed');
                     toast.error('Delete failed');
                 }
             }
@@ -147,7 +142,7 @@ const AdminDashboard = () => {
                     toast.success('User is now an admin');
                     fetchUsers();
                 } catch (error) {
-                    console.error('Error:', error);
+                    toast.error('Operation failed');
                     toast.error('Operation failed');
                 }
             }
@@ -172,7 +167,7 @@ const AdminDashboard = () => {
             setEditingNickname(null);
             fetchUsers();
         } catch (error) {
-            console.error('Error:', error);
+            toast.error('Update failed');
             toast.error('Update failed');
         }
     };
@@ -220,8 +215,8 @@ const AdminDashboard = () => {
                     <button
                         onClick={() => setActiveTab('users')}
                         className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${activeTab === 'users'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
                             }`}
                     >
                         <div className="flex items-center gap-2">
@@ -232,8 +227,8 @@ const AdminDashboard = () => {
                     <button
                         onClick={() => setActiveTab('plans')}
                         className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${activeTab === 'plans'
-                                ? 'border-primary text-primary'
-                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
                             }`}
                     >
                         <div className="flex items-center gap-2">

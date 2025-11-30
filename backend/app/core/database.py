@@ -174,14 +174,16 @@ class DuckDBHandler:
                         ).fetchone()[0] > 0
                         
                         if table_exists:
-                            # Check column type
+                            # Check column type - FIXED: Use parameterized query instead of f-string
                             col_type = self.conn.execute(
-                                f"SELECT data_type FROM information_schema.columns WHERE table_name = '{table}' AND column_name = 'user_id'"
+                                "SELECT data_type FROM information_schema.columns WHERE table_name = ? AND column_name = ?",
+                                [table, 'user_id']
                             ).fetchone()
                             
                             if col_type and col_type[0] != 'BIGINT':
                                 logger.info(f"Migrating {table} to BIGINT...")
                                 # 1. Rename old table
+                                # NOTE: Table names cannot be parameterized in DuckDB, but we control the table list
                                 self.conn.execute(f"ALTER TABLE {table} RENAME TO {table}_old")
                                 
                                 # 2. Create new table with correct schema (we rely on the CREATE TABLE IF NOT EXISTS above, 
@@ -201,9 +203,10 @@ class DuckDBHandler:
                         logger.error(f"Migration failed for {table}: {e}")
                         # Attempt to restore if stuck
                         try:
+                            # NOTE: Table names cannot be parameterized, but we control the table name
                             self.conn.execute(f"ALTER TABLE {table}_old RENAME TO {table}")
-                        except:
-                            pass
+                        except Exception as restore_error:
+                            logger.error(f"Failed to restore table after migration: {restore_error}")
 
                 # Create visual_strategies table for JSON-based strategies
                 self.conn.execute("""

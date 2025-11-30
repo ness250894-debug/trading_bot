@@ -20,11 +20,31 @@ app = FastAPI(title="Trading Bot API", version="1.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
-# CORS configuration - restrict in production
+# CORS configuration - strict validation for production
 import os
-allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
-if allowed_origins == ["*"]:
-    logger.warning("⚠️ CORS is set to allow all origins. This is insecure for production!")
+
+# Check if running in production
+environment = os.getenv("ENVIRONMENT", "development")
+allowed_origins_str = os.getenv("CORS_ORIGINS", "")
+
+# Validate and configure CORS
+if not allowed_origins_str or allowed_origins_str.strip() == "":
+    if environment == "production":
+        raise ValueError("🚨 CORS_ORIGINS must be explicitly configured in production. Set ENVIRONMENT=development for dev mode.")
+    else:
+        logger.warning("⚠️ CORS not configured, defaulting to localhost")
+        allowed_origins = ["http://localhost:3000", "http://localhost:5173"]
+else:
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+    
+    # Prevent wildcard in production
+    if "*" in allowed_origins:
+        if environment == "production":
+            raise ValueError("🚨 CORS_ORIGINS cannot be '*' in production. Specify allowed domains explicitly.")
+        else:
+            logger.warning("⚠️ CORS is set to allow all origins. This is INSECURE for production!")
+
+logger.info(f"CORS allowed origins: {allowed_origins}")
 
 # CORS (Allow Frontend)
 app.add_middleware(

@@ -73,7 +73,8 @@ async def detailed_health_check() -> Dict:
             health_status["components"]["telegram"] = {
                 "status": "not_configured"
             }
-    except:
+    except Exception as e:
+        logger.debug(f"Telegram config check failed: {e}")
         health_status["components"]["telegram"] = {
             "status": "not_configured"
         }
