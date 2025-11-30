@@ -58,6 +58,8 @@ class ByBitClient(BaseExchangeClient):
         except Exception as e:
              if self.demo and "10032" in str(e):
                  self.logger.warning(f"ByBit Demo: load_markets not supported (using manual precisions).")
+             elif self.demo and "10003" in str(e):
+                 self.logger.warning(f"ByBit Demo: Invalid/Missing API key. Using public data only.")
              else:
                  self.logger.error(f"Failed to load markets: {e}")
 
