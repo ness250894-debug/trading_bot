@@ -81,7 +81,8 @@ async def create_charge(
         response = requests.post(
             f'{COINBASE_API_URL}/charges',
             json=payload,
-            headers=headers
+            headers=headers,
+            timeout=10  # 10 second timeout
         )
         
         if response.status_code != 201:
@@ -159,7 +160,7 @@ async def handle_webhook(
             # Parse ISO format timestamp
             try:
                 event_time = datetime.fromisoformat(event_created_at.replace('Z', '+00:00'))
-                current_time = datetime.utcnow()
+                current_time = datetime.now(timezone.utc)
                 time_diff = abs((current_time - event_time.replace(tzinfo=None)).total_seconds())
                 
                 # Reject events older than 5 minutes

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import HTTPException, RequestValidationError
 import logging
 import asyncio
 import threading
@@ -8,17 +9,32 @@ from .core.logging_utils import manager, AsyncWebSocketLogHandler
 from .api import backtest, bot, trades, auth, api_keys, health, user, billing, exchanges
 from .core.rate_limit import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from .core.exception_handlers import (
+    http_exception_handler,
+    validation_exception_handler,
+    general_exception_handler
+)
 
 # Configure logging
 # We need to get the root logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("API")
 
+# Add PII filter to protect sensitive data in logs
+from .core.pii_filter import add_pii_filter_to_logger
+add_pii_filter_to_logger()  # Apply to root logger
+logger.info("✅ PII filter enabled - sensitive data will be redacted from logs")
+
 app = FastAPI(title="Trading Bot API", version="1.0.0")
 
 # Add rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+# Global exception handlers for standardized error responses
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
 
 # CORS configuration - strict validation for production
 import os

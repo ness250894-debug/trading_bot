@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..core.strategies.json_strategy import JSONStrategyExecutor
 from ..core.strategies.indicators import IndicatorLibrary
@@ -174,7 +174,7 @@ async def create_strategy(
         db = DuckDBHandler()
         
         # Insert into database
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         result = db.conn.execute("""
             INSERT INTO visual_strategies 
             (user_id, name, description, json_config, created_at, updated_at, is_active)
@@ -306,7 +306,7 @@ async def update_strategy(
         if not updates:
             raise HTTPException(status_code=400, detail="No fields to update")
         
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         updates.append("updated_at = ?")
         params.append(now)
         

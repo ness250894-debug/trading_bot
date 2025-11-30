@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..core.database import DuckDBHandler
 from ..core.auth import get_current_user
@@ -202,7 +202,7 @@ async def publish_strategy(
         win_rate = (wins / total_trades * 100) if total_trades > 0 else 0
         
         # Insert into public_strategies
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         db.conn.execute("""
             INSERT INTO public_strategies 
             (user_id, strategy_id, name, description, strategy_config, 

@@ -870,8 +870,8 @@ class DuckDBHandler:
             logger.error(f"Error deactivating plan: {e}")
             return False
 
-    def get_all_users(self):
-        """Get all users with their subscription status."""
+    def get_all_users(self, skip: int = 0, limit: int = 100):
+        """Get all users with their subscription status (with pagination)."""
         try:
             query = """
                 SELECT u.id, u.email, u.nickname, u.created_at, u.is_admin, 
@@ -879,8 +879,9 @@ class DuckDBHandler:
                 FROM users u
                 LEFT JOIN subscriptions s ON u.id = s.user_id
                 ORDER BY u.id DESC
+                LIMIT ? OFFSET ?
             """
-            df = self.conn.execute(query).fetchdf()
+            df = self.conn.execute(query, [limit, skip]).fetchdf()
             
             # Convert timestamps to string
             if not df.empty:

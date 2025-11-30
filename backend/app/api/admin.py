@@ -12,9 +12,13 @@ class UserUpdate(BaseModel):
     status: str
 
 @router.get("/admin/users")
-async def get_all_users(current_user: dict = Depends(auth.get_current_admin_user)):
-    """Get all users (Admin only)."""
-    return db.get_all_users()
+async def get_all_users(
+    skip: int = 0,
+    limit: int = 100,
+    current_user: dict = Depends(auth.get_current_admin_user)
+):
+    """Get all users with pagination (Admin only)."""
+    return db.get_all_users(skip=skip, limit=limit)
 
 @router.put("/admin/users/{user_id}/subscription")
 async def update_user_subscription(
