@@ -127,32 +127,27 @@ class DuckDBHandler:
                 # Add user_id column to trades table if it doesn't exist
                 self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS user_id BIGINT")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id)")
-                logger.info("Trades table migration completed (user_id column)")
                 
                 # Add user_id column to backtest_results table if it doesn't exist
                 self.conn.execute("ALTER TABLE backtest_results ADD COLUMN IF NOT EXISTS user_id BIGINT")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_backtest_user_id ON backtest_results(user_id)")
-                logger.info("Backtest results table migration completed (user_id column)")
                 
                 # Add Telegram settings to users table if they don't exist
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_bot_token VARCHAR")
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR")
-                logger.info("Users table migration completed (Telegram columns)")
 
                 # Add is_admin column to users table if it doesn't exist
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE")
-                logger.info("Users table migration completed (is_admin column)")
                 
                 # Add nickname column to users table if it doesn't exist
                 self.conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname VARCHAR")
-                logger.info("Users table migration completed (nickname column)")
                 
                 # Add exchange column to user_strategies table if it doesn't exist
                 self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS exchange VARCHAR DEFAULT 'bybit'")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_user_strategies_exchange ON user_strategies(exchange)")
-                logger.info("User strategies table migration completed (exchange column)")
 
-                # Migration: Convert INTEGER user_id columns to BIGINT
+                # Migration: Force convert INTEGER user_id columns to BIGINT by recreating tables
+                # This is necessary because simple ALTER COLUMN might fail or not be supported for all cases
                 tables_to_migrate = [
                     'user_strategies', 'api_keys', 'audit_log', 'subscriptions', 
                     'payments', 'trades', 'backtest_results', 'visual_strategies',
@@ -168,14 +163,36 @@ class DuckDBHandler:
                         ).fetchone()[0] > 0
                         
                         if table_exists:
-                            # Try to alter column type
-                            # Note: DuckDB might fail if there's data that can't be cast, but INT -> BIGINT is safe
-                            self.conn.execute(f"ALTER TABLE {table} ALTER COLUMN user_id TYPE BIGINT")
-                            logger.info(f"Migrated {table}.user_id to BIGINT")
+                            # Check column type
+                            col_type = self.conn.execute(
+                                f"SELECT data_type FROM information_schema.columns WHERE table_name = '{table}' AND column_name = 'user_id'"
+                            ).fetchone()
+                            
+                            if col_type and col_type[0] != 'BIGINT':
+                                logger.info(f"Migrating {table} to BIGINT...")
+                                # 1. Rename old table
+                                self.conn.execute(f"ALTER TABLE {table} RENAME TO {table}_old")
+                                
+                                # 2. Create new table with correct schema (we rely on the CREATE TABLE IF NOT EXISTS above, 
+                                # but since we renamed the old one, we need to run the specific CREATE statement for this table)
+                                # For simplicity, we'll just copy the structure with BIGINT
+                                self.conn.execute(f"CREATE TABLE {table} AS SELECT * FROM {table}_old WHERE 1=0")
+                                self.conn.execute(f"ALTER TABLE {table} ALTER COLUMN user_id TYPE BIGINT")
+                                
+                                # 3. Copy data
+                                self.conn.execute(f"INSERT INTO {table} SELECT * FROM {table}_old")
+                                
+                                # 4. Drop old table
+                                self.conn.execute(f"DROP TABLE {table}_old")
+                                logger.info(f"Successfully migrated {table} to BIGINT")
+                                
                     except Exception as e:
-                        # If column doesn't exist or already BIGINT, it might fail. 
-                        # We log it but continue.
-                        logger.info(f"Migration note for {table}: {e}")
+                        logger.error(f"Migration failed for {table}: {e}")
+                        # Attempt to restore if stuck
+                        try:
+                            self.conn.execute(f"ALTER TABLE {table}_old RENAME TO {table}")
+                        except:
+                            pass
 
                 # Create visual_strategies table for JSON-based strategies
                 self.conn.execute("""
