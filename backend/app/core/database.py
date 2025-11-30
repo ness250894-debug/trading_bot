@@ -643,8 +643,8 @@ class DuckDBHandler:
                 ])
             else:
                 query = """
-                    INSERT INTO subscriptions (user_id, plan_id, status, created_at, expires_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO subscriptions (id, user_id, plan_id, status, starts_at, expires_at, updated_at)
+                    VALUES (nextval('seq_subscription_id'), ?, ?, ?, ?, ?, ?)
                 """
                 self.conn.execute(query, [
                     user_id,
