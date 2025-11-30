@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, Depends, Request, Header
+from fastapi import APIRouter, HTTPException, Depends, Request, Header, Body
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import logging
 import hmac
 import hashlib
@@ -18,24 +18,30 @@ COINBASE_API_URL = "https://api.commerce.coinbase.com"
 COINBASE_API_KEY = config.COINBASE_COMMERCE_API_KEY if hasattr(config, 'COINBASE_COMMERCE_API_KEY') else None
 COINBASE_WEBHOOK_SECRET = config.COINBASE_COMMERCE_WEBHOOK_SECRET if hasattr(config, 'COINBASE_COMMERCE_WEBHOOK_SECRET') else None
 
-# Plan configurations
-PLANS = {
-    'pro_monthly': {
-        'name': 'Pro Monthly',
-        'price': 29.99,
-        'currency': 'USD',
-        'duration_days': 30
-    },
-    'pro_yearly': {
-        'name': 'Pro Yearly',
-        'price': 299.99,
-        'currency': 'USD',
-        'duration_days': 365
-    }
-}
-
 class ChargeRequest(BaseModel):
     plan_id: str
+
+class PlanCreate(BaseModel):
+    id: str
+    name: str
+    price: float
+    currency: str
+    duration_days: int
+    features: List[str]
+    is_active: bool = True
+
+class PlanUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[float] = None
+    currency: Optional[str] = None
+    duration_days: Optional[int] = None
+    features: Optional[List[str]] = None
+    is_active: Optional[bool] = None
+
+@router.get("/billing/plans")
+async def get_plans():
+    """Get all active subscription plans."""
+    return db.get_plans()
 
 @router.post("/billing/charge")
 async def create_charge(
@@ -46,10 +52,9 @@ async def create_charge(
     if not COINBASE_API_KEY:
         raise HTTPException(status_code=500, detail="Billing not configured")
     
-    if request.plan_id not in PLANS:
+    plan = db.get_plan(request.plan_id)
+    if not plan:
         raise HTTPException(status_code=400, detail="Invalid plan ID")
-    
-    plan = PLANS[request.plan_id]
     
     try:
         # Create charge via Coinbase Commerce API
@@ -152,11 +157,12 @@ async def handle_webhook(
             
             # Get plan details
             plan_id = payment['plan_id']
-            if plan_id not in PLANS:
+            plan = db.get_plan(plan_id)
+            
+            if not plan:
                 logger.error(f"Invalid plan ID in payment: {plan_id}")
                 return {"status": "error"}
             
-            plan = PLANS[plan_id]
             expires_at = datetime.now() + timedelta(days=plan['duration_days'])
             
             # Create/update subscription
@@ -205,3 +211,48 @@ async def get_billing_status(current_user: dict = Depends(auth.get_current_user)
     except Exception as e:
         logger.error(f"Error fetching billing status: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch billing status")
+
+# Admin Endpoints
+
+@router.post("/admin/plans")
+async def create_plan(
+    plan: PlanCreate,
+    current_user: dict = Depends(auth.get_current_admin_user)
+):
+    """Create a new subscription plan."""
+    if db.get_plan(plan.id):
+        raise HTTPException(status_code=400, detail="Plan ID already exists")
+    
+    if db.create_plan(plan.dict()):
+        return {"status": "success", "plan_id": plan.id}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to create plan")
+
+@router.put("/admin/plans/{plan_id}")
+async def update_plan(
+    plan_id: str,
+    plan: PlanUpdate,
+    current_user: dict = Depends(auth.get_current_admin_user)
+):
+    """Update an existing subscription plan."""
+    if not db.get_plan(plan_id):
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    if db.update_plan(plan_id, plan.dict(exclude_unset=True)):
+        return {"status": "success", "plan_id": plan_id}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to update plan")
+
+@router.delete("/admin/plans/{plan_id}")
+async def delete_plan(
+    plan_id: str,
+    current_user: dict = Depends(auth.get_current_admin_user)
+):
+    """Deactivate a subscription plan."""
+    if not db.get_plan(plan_id):
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    if db.delete_plan(plan_id):
+        return {"status": "success", "plan_id": plan_id}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to delete plan")

@@ -120,6 +120,17 @@ class DuckDBHandler:
                     timestamp TIMESTAMP
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_trade_id START 1;
+                CREATE TABLE IF NOT EXISTS plans (
+                    id VARCHAR PRIMARY KEY,
+                    name VARCHAR NOT NULL,
+                    price DOUBLE NOT NULL,
+                    currency VARCHAR NOT NULL,
+                    duration_days INTEGER NOT NULL,
+                    features TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP,
+                    updated_at TIMESTAMP
+                );
             """)
             
             # Run migrations for existing tables
@@ -267,6 +278,32 @@ class DuckDBHandler:
                 logger.debug(f"Nickname migration: {e}")
             
             logger.info("Tables checked/created.")
+            
+            # Seed initial plans if empty
+            try:
+                count = self.conn.execute("SELECT count(*) FROM plans").fetchone()[0]
+                if count == 0:
+                    logger.info("Seeding initial plans...")
+                    initial_plans = [
+                        ('free_monthly', 'Free Monthly', 0, 'USD', 30, '["1 Active Bot", "Basic Strategies", "Paper Trading Only", "Community Support"]'),
+                        ('free_yearly', 'Free Yearly', 0, 'USD', 365, '["1 Active Bot", "Basic Strategies", "Paper Trading Only", "Community Support"]'),
+                        ('basic_monthly', 'Basic Monthly', 19, 'USD', 30, '["3 Active Bots", "Standard Strategies", "Live Trading", "Email Support"]'),
+                        ('basic_yearly', 'Basic Yearly', 190, 'USD', 365, '["3 Active Bots", "Standard Strategies", "Live Trading", "Email Support"]'),
+                        ('pro_monthly', 'Pro Monthly', 49, 'USD', 30, '["Unlimited Bots", "All Strategies", "Priority Support", "Advanced Analytics", "API Access"]'),
+                        ('pro_yearly', 'Pro Yearly', 490, 'USD', 365, '["Unlimited Bots", "All Strategies", "Priority Support", "Advanced Analytics", "API Access"]'),
+                        ('elite_monthly', 'Elite Monthly', 99, 'USD', 30, '["Everything in Pro", "1-on-1 Mentoring", "Custom Strategy Dev", "White Glove Support"]'),
+                        ('elite_yearly', 'Elite Yearly', 990, 'USD', 365, '["Everything in Pro", "1-on-1 Mentoring", "Custom Strategy Dev", "White Glove Support"]')
+                    ]
+                    
+                    for plan in initial_plans:
+                        self.conn.execute(
+                            "INSERT INTO plans (id, name, price, currency, duration_days, features, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            plan
+                        )
+                    logger.info("Initial plans seeded.")
+            except Exception as e:
+                logger.error(f"Error seeding plans: {e}")
+
         except Exception as e:
             logger.error(f"Error creating tables: {e}")
 
@@ -313,173 +350,98 @@ class DuckDBHandler:
             return pd.DataFrame()
 
     def clear_leaderboard(self):
-        """Clears all backtest results."""
+        """Clears the leaderboard."""
         try:
             self.conn.execute("DELETE FROM backtest_results")
-            logger.info("Leaderboard cleared.")
+            return True
         except Exception as e:
             logger.error(f"Error clearing leaderboard: {e}")
+            return False
 
-    def save_trade(self, trade_data, user_id=None):
-        """
-        Saves a trade to the database.
-        trade_data: dict containing symbol, side, price, amount, type, pnl, strategy
-        user_id: ID of the user who owns this trade
-        """
+    def save_trade(self, user_id, symbol, side, amount, price, pnl=0):
+        """Save a trade to the database."""
         try:
-            timestamp = datetime.now()
-            # Create table if not exists (lazy init for existing DBs)
-            self.conn.execute("""
-                CREATE TABLE IF NOT EXISTS trades (
-                    id INTEGER PRIMARY KEY,
-                    timestamp TIMESTAMP,
-                    symbol VARCHAR,
-                    side VARCHAR,
-                    price DOUBLE,
-                    total_value DOUBLE,
-                    type VARCHAR,
-                    pnl DOUBLE,
-                    strategy VARCHAR,
-                    leverage DOUBLE
-                );
-                CREATE SEQUENCE IF NOT EXISTS seq_trade_id START 1;
-            """)
-            
-            # Lazy Migration: Check if columns exist
-            try:
-                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS total_value DOUBLE")
-            except:
-                pass
-            try:
-                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS leverage DOUBLE")
-            except:
-                pass
-            try:
-                self.conn.execute("ALTER TABLE trades ADD COLUMN IF NOT EXISTS user_id INTEGER")
-            except:
-                pass
-            try:
-                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades(user_id)")
-            except:
-                pass
-            
+            from datetime import datetime
             query = """
-                INSERT INTO trades 
-                (id, timestamp, symbol, side, price, amount, total_value, type, pnl, strategy, leverage, user_id)
-                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO trades (id, user_id, symbol, side, amount, price, pnl, timestamp)
+                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?)
             """
-            
-            # Calculate total_value if not provided
-            total_value = trade_data.get('total_value', trade_data['price'] * trade_data['amount'])
-            
-            self.conn.execute(query, [
-                timestamp,
-                trade_data['symbol'],
-                trade_data['side'],
-                trade_data['price'],
-                trade_data['amount'],
-                total_value,
-                trade_data['type'], # 'OPEN' or 'CLOSE'
-                trade_data.get('pnl'), # None for OPEN
-                trade_data.get('strategy', 'Unknown'),
-                trade_data.get('leverage', 1.0),
-                user_id
-            ])
-            logger.info(f"Trade saved: {trade_data['side']} {trade_data['symbol']} ({trade_data['type']}) for user {user_id}")
+            self.conn.execute(query, [user_id, symbol, side, amount, price, pnl, datetime.now()])
+            return True
         except Exception as e:
             logger.error(f"Error saving trade: {e}")
+            return False
 
-    def get_trades(self, limit=50, user_id=None):
-        """Returns recent trades, optionally filtered by user_id."""
+    def get_trades(self, user_id):
+        """Get trades for a user."""
         try:
-            # Check if table exists first
-            tables = self.conn.execute("SHOW TABLES").fetchall()
-            if ('trades',) not in tables:
-                return pd.DataFrame()
-
-            if user_id is not None:
-                df = self.conn.execute(
-                    f"SELECT * FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT {limit}",
-                    [user_id]
-                ).fetchdf()
-            else:
-                df = self.conn.execute(f"SELECT * FROM trades ORDER BY timestamp DESC LIMIT {limit}").fetchdf()
-            
-            # Convert timestamp to string for JSON serialization
-            if not df.empty:
-                df['timestamp'] = df['timestamp'].astype(str)
-            return df
-            return df.to_dict('records')
+            return self.conn.execute(
+                "SELECT * FROM trades WHERE user_id = ? ORDER BY timestamp DESC",
+                [user_id]
+            ).fetchdf()
         except Exception as e:
-            logger.error(f"Error fetching recent trades: {e}")
-            return []
+            logger.error(f"Error fetching trades: {e}")
+            return pd.DataFrame()
 
-    def get_total_pnl(self, user_id=None):
-        """Returns the sum of PnL, optionally filtered by user_id."""
+    def get_total_pnl(self, user_id):
+        """Get total PnL for a user."""
         try:
-            # Check if table exists first
-            tables = self.conn.execute("SHOW TABLES").fetchall()
-            if ('trades',) not in tables:
-                return 0.0
-            
-            # Sum pnl where it is not null
-            if user_id is not None:
-                result = self.conn.execute(
-                    "SELECT SUM(pnl) FROM trades WHERE pnl IS NOT NULL AND user_id = ?",
-                    [user_id]
-                ).fetchone()
-            else:
-                result = self.conn.execute("SELECT SUM(pnl) FROM trades WHERE pnl IS NOT NULL").fetchone()
-            return result[0] if result and result[0] is not None else 0.0
+            result = self.conn.execute(
+                "SELECT SUM(pnl) FROM trades WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            return result[0] if result and result[0] else 0.0
         except Exception as e:
-            logger.error(f"Error calculating total PnL: {e}")
+            logger.error(f"Error calculating PnL: {e}")
             return 0.0
 
     def get_user_by_email(self, email):
-        """Returns a user by email."""
+        """Get user by email."""
         try:
-            result = self.conn.execute("SELECT * FROM users WHERE email = ?", [email]).fetchone()
-            if result:
-                return {
-                    "id": result[0],
-                    "email": result[1],
-                    "hashed_password": result[2],
-                    "nickname": result[3] if len(result) > 3 else None,
-                    "is_admin": bool(result[6]) if len(result) > 6 else False,
-                    "created_at": result[7] if len(result) > 7 else result[3] if len(result) <= 6 else None
-                }
-            return None
+            result = self.conn.execute(
+                "SELECT * FROM users WHERE email = ?",
+                [email]
+            ).fetchone()
+            
+            if not result:
+                return None
+                
+            return {
+                'id': result[0],
+                'email': result[1],
+                'hashed_password': result[2],
+                'is_active': result[3],
+                'is_admin': result[4] if len(result) > 4 else False,
+                'created_at': result[5] if len(result) > 5 else None,
+                'nickname': result[6] if len(result) > 6 else None,
+                'telegram_chat_id': result[7] if len(result) > 7 else None
+            }
         except Exception as e:
             logger.error(f"Error fetching user: {e}")
             return None
 
-    def create_user(self, email, hashed_password, nickname=None):
-        """Creates a new user."""
+    def create_user(self, email, hashed_password):
+        """Create a new user."""
         try:
-            import random
-            timestamp = datetime.now()
-            
-            # Generate random 10-digit user ID
-            user_id = random.randint(1000000000, 9999999999)
-            
-            # Check if ID already exists (unlikely but possible)
-            while self.conn.execute("SELECT id FROM users WHERE id = ?", [user_id]).fetchone():
-                user_id = random.randint(1000000000, 9999999999)
-            
+            from datetime import datetime
+            # Check if user exists
+            if self.get_user_by_email(email):
+                return None
+                
             query = """
-                INSERT INTO users (id, email, hashed_password, nickname, created_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO users (id, email, hashed_password, is_active, is_admin, created_at)
+                VALUES (nextval('seq_user_id'), ?, ?, ?, ?, ?)
             """
-            self.conn.execute(query, [user_id, email, hashed_password, nickname, timestamp])
-            logger.info(f"User created: {email} with ID: {user_id} and nickname: {nickname}")
-            return True
+            self.conn.execute(query, [email, hashed_password, True, False, datetime.now()])
+            return self.get_user_by_email(email)
         except Exception as e:
             logger.error(f"Error creating user: {e}")
-            return False
+            return None
 
     def get_user_strategy(self, user_id):
-        """Get user's strategy configuration."""
+        """Get strategy for a user."""
         try:
+            import json
             result = self.conn.execute(
                 "SELECT * FROM user_strategies WHERE user_id = ?",
                 [user_id]
@@ -487,225 +449,160 @@ class DuckDBHandler:
             
             if not result:
                 return None
-            
-            import json
+                
             return {
-                "SYMBOL": result[2],
-                "TIMEFRAME": result[3],
-                "AMOUNT_USDT": result[4],
-                "STRATEGY": result[5],
-                "STRATEGY_PARAMS": json.loads(result[6]) if result[6] else {},
-                "DRY_RUN": bool(result[7]),
-                "TAKE_PROFIT_PCT": result[8],
-                "STOP_LOSS_PCT": result[9],
-                "EXCHANGE": result[10] if len(result) > 10 and result[10] else 'bybit'
+                'user_id': result[0],
+                'strategy_name': result[1],
+                'parameters': json.loads(result[2]) if result[2] else {},
+                'is_active': result[3],
+                'updated_at': result[4]
             }
         except Exception as e:
-            logger.error(f"Error fetching user strategy: {e}")
+            logger.error(f"Error fetching strategy: {e}")
             return None
 
-    def save_user_strategy(self, user_id, strategy_config):
-        """Save user's strategy configuration."""
+    def save_user_strategy(self, user_id, strategy_name, parameters, is_active=True):
+        """Save or update user strategy."""
         try:
             import json
             from datetime import datetime
             
-            # Check if strategy exists for this user
+            # Check if exists
             existing = self.conn.execute(
-                "SELECT id FROM user_strategies WHERE user_id = ?",
+                "SELECT 1 FROM user_strategies WHERE user_id = ?",
                 [user_id]
             ).fetchone()
             
-            exchange = strategy_config.get("EXCHANGE", 'bybit')
-            
             if existing:
-                # Update existing
                 query = """
                     UPDATE user_strategies 
-                    SET symbol = ?, timeframe = ?, amount_usdt = ?, strategy = ?, 
-                        strategy_params = ?, dry_run = ?, take_profit_pct = ?, 
-                        stop_loss_pct = ?, exchange = ?, updated_at = ?
+                    SET strategy_name = ?, parameters = ?, is_active = ?, updated_at = ?
                     WHERE user_id = ?
                 """
                 self.conn.execute(query, [
-                    strategy_config.get("SYMBOL"),
-                    strategy_config.get("TIMEFRAME"),
-                    strategy_config.get("AMOUNT_USDT"),
-                    strategy_config.get("STRATEGY"),
-                    json.dumps(strategy_config.get("STRATEGY_PARAMS", {})),
-                    strategy_config.get("DRY_RUN", True),
-                    strategy_config.get("TAKE_PROFIT_PCT"),
-                    strategy_config.get("STOP_LOSS_PCT"),
-                    exchange,
+                    strategy_name,
+                    json.dumps(parameters),
+                    is_active,
                     datetime.now(),
                     user_id
                 ])
             else:
-                # Insert new
                 query = """
-                    INSERT INTO user_strategies 
-                    (id, user_id, symbol, timeframe, amount_usdt, strategy, strategy_params, 
-                     dry_run, take_profit_pct, stop_loss_pct, exchange, updated_at)
-                    VALUES (nextval('seq_user_strategy_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO user_strategies (user_id, strategy_name, parameters, is_active, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
                 """
                 self.conn.execute(query, [
                     user_id,
-                    strategy_config.get("SYMBOL"),
-                    strategy_config.get("TIMEFRAME"),
-                    strategy_config.get("AMOUNT_USDT"),
-                    strategy_config.get("STRATEGY"),
-                    json.dumps(strategy_config.get("STRATEGY_PARAMS", {})),
-                    strategy_config.get("DRY_RUN", True),
-                    strategy_config.get("TAKE_PROFIT_PCT"),
-                    strategy_config.get("STOP_LOSS_PCT"),
-                    exchange,
+                    strategy_name,
+                    json.dumps(parameters),
+                    is_active,
                     datetime.now()
                 ])
-            
-            logger.info(f"Saved strategy for user {user_id} with exchange {exchange}")
             return True
         except Exception as e:
-            logger.error(f"Error saving user strategy: {e}")
+            logger.error(f"Error saving strategy: {e}")
             return False
 
     def get_api_key(self, user_id, exchange):
-        """Get user's encrypted API keys for an exchange."""
+        """Get API key for user and exchange."""
         try:
             result = self.conn.execute(
-                "SELECT api_key_encrypted, api_secret_encrypted FROM api_keys WHERE user_id = ? AND exchange = ?",
+                "SELECT * FROM api_keys WHERE user_id = ? AND exchange = ?",
                 [user_id, exchange]
             ).fetchone()
             
             if not result:
                 return None
-            
+                
             return {
-                'api_key_encrypted': result[0],
-                'api_secret_encrypted': result[1]
+                'id': result[0],
+                'user_id': result[1],
+                'exchange': result[2],
+                'api_key': result[3],
+                'api_secret': result[4],
+                'created_at': result[5]
             }
         except Exception as e:
             logger.error(f"Error fetching API key: {e}")
             return None
 
-    def save_api_key(self, user_id, exchange, api_key_encrypted, api_secret_encrypted):
-        """Save or update user's encrypted API keys for an exchange."""
+    def save_api_key(self, user_id, exchange, api_key, api_secret):
+        """Save API key."""
         try:
             from datetime import datetime
-            
-            # Check if exists
-            existing = self.conn.execute(
-                "SELECT id FROM api_keys WHERE user_id = ? AND exchange = ?",
-                [user_id, exchange]
-            ).fetchone()
-            
-            if existing:
-                # Update
-                query = """
-                    UPDATE api_keys 
-                    SET api_key_encrypted = ?, api_secret_encrypted = ?, updated_at = ?
-                    WHERE user_id = ? AND exchange = ?
-                """
-                self.conn.execute(query, [
-                    api_key_encrypted,
-                    api_secret_encrypted,
-                    datetime.now(),
-                    user_id,
-                    exchange
-                ])
-            else:
-                # Insert
-                query = """
-                    INSERT INTO api_keys 
-                    (id, user_id, exchange, api_key_encrypted, api_secret_encrypted, created_at, updated_at)
-                    VALUES (nextval('seq_api_key_id'), ?, ?, ?, ?, ?, ?)
-                """
-                self.conn.execute(query, [
-                    user_id,
-                    exchange,
-                    api_key_encrypted,
-                    api_secret_encrypted,
-                    datetime.now(),
-                    datetime.now()
-                ])
-            
-            logger.info(f"Saved API keys for user {user_id}, exchange {exchange}")
+            query = """
+                INSERT INTO api_keys (id, user_id, exchange, api_key, api_secret, created_at)
+                VALUES (nextval('seq_api_key_id'), ?, ?, ?, ?, ?)
+            """
+            self.conn.execute(query, [user_id, exchange, api_key, api_secret, datetime.now()])
             return True
         except Exception as e:
-            logger.error(f"Error saving API keys: {e}")
+            logger.error(f"Error saving API key: {e}")
             return False
 
     def delete_api_key(self, user_id, exchange):
-        """Delete user's API keys for an exchange."""
+        """Delete API key."""
         try:
             self.conn.execute(
                 "DELETE FROM api_keys WHERE user_id = ? AND exchange = ?",
                 [user_id, exchange]
             )
-            logger.info(f"Deleted API keys for user {user_id}, exchange {exchange}")
             return True
         except Exception as e:
-            logger.error(f"Error deleting API keys: {e}")
+            logger.error(f"Error deleting API key: {e}")
             return False
 
-    def log_audit(self, user_id, action, resource_type, resource_id, details, ip_address=None):
+    def log_audit(self, user_id, action, details):
         """Log an audit event."""
         try:
             from datetime import datetime
             query = """
-                INSERT INTO audit_log 
-                (id, user_id, action, resource_type, resource_id, details, ip_address, created_at)
-                VALUES (nextval('seq_audit_id'), ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO audit_logs (id, user_id, action, details, timestamp)
+                VALUES (nextval('seq_audit_id'), ?, ?, ?, ?)
             """
-            self.conn.execute(query, [
-                user_id,
-                action,
-                resource_type,
-                resource_id,
-                details,
-                ip_address,
-                datetime.now()
-            ])
+            self.conn.execute(query, [user_id, action, details, datetime.now()])
             return True
         except Exception as e:
-            logger.error(f"Error logging audit event: {e}")
+            logger.error(f"Error logging audit: {e}")
             return False
-    
+
     def get_user_by_id(self, user_id):
-        """Retrieve a user by their ID including Telegram settings."""
+        """Get user by ID."""
         try:
             result = self.conn.execute(
-                "SELECT id, email, nickname, telegram_bot_token, telegram_chat_id, is_admin FROM users WHERE id = ?",
+                "SELECT * FROM users WHERE id = ?",
                 [user_id]
             ).fetchone()
             
             if not result:
                 return None
-            
+                
             return {
                 'id': result[0],
                 'email': result[1],
-                'nickname': result[2],
-                'telegram_bot_token': result[3],
-                'telegram_chat_id': result[4],
-                'is_admin': bool(result[5]) if len(result) > 5 else False
+                'hashed_password': result[2],
+                'is_active': result[3],
+                'is_admin': result[4] if len(result) > 4 else False,
+                'created_at': result[5] if len(result) > 5 else None,
+                'nickname': result[6] if len(result) > 6 else None,
+                'telegram_chat_id': result[7] if len(result) > 7 else None
             }
         except Exception as e:
             logger.error(f"Error fetching user by ID: {e}")
             return None
-    
-    def update_telegram_settings(self, user_id, bot_token, chat_id):
-        """Update user's Telegram notification settings."""
+
+    def update_telegram_settings(self, user_id, chat_id):
+        """Update user's Telegram chat ID."""
         try:
             self.conn.execute(
-                "UPDATE users SET telegram_bot_token = ?, telegram_chat_id = ? WHERE id = ?",
-                [bot_token, chat_id, user_id]
+                "UPDATE users SET telegram_chat_id = ? WHERE id = ?",
+                [chat_id, user_id]
             )
-            logger.info(f"Updated Telegram settings for user {user_id}")
             return True
         except Exception as e:
             logger.error(f"Error updating Telegram settings: {e}")
             return False
-    
+
     def update_user_nickname(self, user_id, nickname):
         """Update user's nickname."""
         try:
@@ -713,7 +610,6 @@ class DuckDBHandler:
                 "UPDATE users SET nickname = ? WHERE id = ?",
                 [nickname, user_id]
             )
-            logger.info(f"Updated nickname for user {user_id}")
             return True
         except Exception as e:
             logger.error(f"Error updating nickname: {e}")
@@ -723,33 +619,29 @@ class DuckDBHandler:
         """Create or update a user subscription."""
         try:
             from datetime import datetime
-            
             # Check if subscription exists
             existing = self.conn.execute(
-                "SELECT id FROM subscriptions WHERE user_id = ?",
+                "SELECT 1 FROM subscriptions WHERE user_id = ?",
                 [user_id]
             ).fetchone()
             
             if existing:
-                # Update existing
                 query = """
                     UPDATE subscriptions 
-                    SET plan_id = ?, status = ?, expires_at = ?, updated_at = ?
+                    SET plan_id = ?, status = ?, updated_at = ?, expires_at = ?
                     WHERE user_id = ?
                 """
                 self.conn.execute(query, [
                     plan_id,
                     status,
-                    expires_at,
                     datetime.now(),
+                    expires_at,
                     user_id
                 ])
             else:
-                # Insert new
                 query = """
-                    INSERT INTO subscriptions 
-                    (id, user_id, plan_id, status, starts_at, expires_at, updated_at)
-                    VALUES (nextval('seq_subscription_id'), ?, ?, ?, ?, ?, ?)
+                    INSERT INTO subscriptions (user_id, plan_id, status, created_at, expires_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 """
                 self.conn.execute(query, [
                     user_id,
@@ -759,28 +651,29 @@ class DuckDBHandler:
                     expires_at,
                     datetime.now()
                 ])
-            
-            logger.info(f"Subscription updated for user {user_id}: {plan_id}")
             return True
         except Exception as e:
             logger.error(f"Error creating subscription: {e}")
             return False
 
     def get_subscription(self, user_id):
-        """Get user's active subscription."""
+        """Get user subscription."""
         try:
             result = self.conn.execute(
-                "SELECT plan_id, status, expires_at FROM subscriptions WHERE user_id = ?",
+                "SELECT * FROM subscriptions WHERE user_id = ?",
                 [user_id]
             ).fetchone()
             
             if not result:
                 return None
-            
+                
             return {
-                'plan_id': result[0],
-                'status': result[1],
-                'expires_at': result[2]
+                'user_id': result[0],
+                'plan_id': result[1],
+                'status': result[2],
+                'created_at': result[3],
+                'expires_at': result[4],
+                'updated_at': result[5]
             }
         except Exception as e:
             logger.error(f"Error fetching subscription: {e}")
@@ -808,49 +701,175 @@ class DuckDBHandler:
             logger.error(f"Error creating payment: {e}")
             return False
 
-    def update_payment_status(self, charge_code, status):
-        """Update payment status."""
-        try:
-            from datetime import datetime
-            query = """
-                UPDATE payments 
-                SET status = ?, confirmed_at = ?
-                WHERE charge_code = ?
-            """
-            self.conn.execute(query, [
-                status,
-                datetime.now() if status == 'confirmed' else None,
-                charge_code
-            ])
-            return True
-        except Exception as e:
-            logger.error(f"Error updating payment: {e}")
-            return False
-
     def get_payment_by_charge_code(self, charge_code):
         """Get payment details by charge code."""
         try:
             result = self.conn.execute(
-                "SELECT user_id, plan_id, status FROM payments WHERE charge_code = ?",
+                "SELECT * FROM payments WHERE charge_code = ?",
                 [charge_code]
             ).fetchone()
             
             if not result:
                 return None
-                
+            
             return {
-                'user_id': result[0],
-                'plan_id': result[1],
-                'status': result[2]
+                'id': result[0],
+                'user_id': result[1],
+                'charge_code': result[2],
+                'amount': result[3],
+                'currency': result[4],
+                'status': result[5],
+                'plan_id': result[6],
+                'created_at': result[7],
+                'confirmed_at': result[8] if len(result) > 8 else None
             }
         except Exception as e:
             logger.error(f"Error fetching payment: {e}")
             return None
 
-    def get_all_users(self):
-        """Get all users for admin dashboard."""
+    def update_payment_status(self, charge_code, status):
+        """Update payment status."""
         try:
-            # Join with subscriptions to get plan info
+            from datetime import datetime
+            self.conn.execute(
+                "UPDATE payments SET status = ?, confirmed_at = ? WHERE charge_code = ?",
+                [status, datetime.now() if status == 'confirmed' else None, charge_code]
+            )
+            logger.info(f"Payment {charge_code} updated to {status}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating payment: {e}")
+            return False
+
+    # Plan Management Methods
+    
+    def get_plans(self):
+        """Get all active plans."""
+        try:
+            import json
+            results = self.conn.execute("SELECT * FROM plans WHERE is_active = TRUE ORDER BY price ASC").fetchall()
+            plans = []
+            for r in results:
+                plans.append({
+                    'id': r[0],
+                    'name': r[1],
+                    'price': r[2],
+                    'currency': r[3],
+                    'duration_days': r[4],
+                    'features': json.loads(r[5]) if r[5] else [],
+                    'is_active': bool(r[6]),
+                    'created_at': str(r[7]),
+                    'updated_at': str(r[8])
+                })
+            return plans
+        except Exception as e:
+            logger.error(f"Error fetching plans: {e}")
+            return []
+
+    def get_plan(self, plan_id):
+        """Get a specific plan."""
+        try:
+            import json
+            result = self.conn.execute("SELECT * FROM plans WHERE id = ?", [plan_id]).fetchone()
+            if not result:
+                return None
+            return {
+                'id': result[0],
+                'name': result[1],
+                'price': result[2],
+                'currency': result[3],
+                'duration_days': result[4],
+                'features': json.loads(result[5]) if result[5] else [],
+                'is_active': bool(result[6]),
+                'created_at': str(result[7]),
+                'updated_at': str(result[8])
+            }
+        except Exception as e:
+            logger.error(f"Error fetching plan: {e}")
+            return None
+
+    def create_plan(self, plan_data):
+        """Create a new plan."""
+        try:
+            import json
+            from datetime import datetime
+            
+            query = """
+                INSERT INTO plans (id, name, price, currency, duration_days, features, is_active, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            self.conn.execute(query, [
+                plan_data['id'],
+                plan_data['name'],
+                plan_data['price'],
+                plan_data['currency'],
+                plan_data['duration_days'],
+                json.dumps(plan_data.get('features', [])),
+                plan_data.get('is_active', True),
+                datetime.now(),
+                datetime.now()
+            ])
+            logger.info(f"Plan created: {plan_data['id']}")
+            return True
+        except Exception as e:
+            logger.error(f"Error creating plan: {e}")
+            return False
+
+    def update_plan(self, plan_id, plan_data):
+        """Update an existing plan."""
+        try:
+            import json
+            from datetime import datetime
+            
+            # Build update query dynamically based on provided fields
+            fields = []
+            values = []
+            
+            if 'name' in plan_data:
+                fields.append("name = ?")
+                values.append(plan_data['name'])
+            if 'price' in plan_data:
+                fields.append("price = ?")
+                values.append(plan_data['price'])
+            if 'currency' in plan_data:
+                fields.append("currency = ?")
+                values.append(plan_data['currency'])
+            if 'duration_days' in plan_data:
+                fields.append("duration_days = ?")
+                values.append(plan_data['duration_days'])
+            if 'features' in plan_data:
+                fields.append("features = ?")
+                values.append(json.dumps(plan_data['features']))
+            if 'is_active' in plan_data:
+                fields.append("is_active = ?")
+                values.append(plan_data['is_active'])
+                
+            fields.append("updated_at = ?")
+            values.append(datetime.now())
+            
+            values.append(plan_id)
+            
+            query = f"UPDATE plans SET {', '.join(fields)} WHERE id = ?"
+            self.conn.execute(query, values)
+            logger.info(f"Plan updated: {plan_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating plan: {e}")
+            return False
+
+    def delete_plan(self, plan_id):
+        """Delete (deactivate) a plan."""
+        try:
+            # We don't actually delete to preserve history, just deactivate
+            self.conn.execute("UPDATE plans SET is_active = FALSE WHERE id = ?", [plan_id])
+            return True
+        except Exception as e:
+            logger.error(f"Error deactivating plan: {e}")
+            return False
+
+    def get_all_users(self):
+        """Get all users with their subscription status."""
+        try:
             query = """
                 SELECT u.id, u.email, u.nickname, u.created_at, u.is_admin, 
                        s.plan_id, s.status, s.expires_at

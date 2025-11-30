@@ -4,85 +4,76 @@ import api from '../lib/api';
 import styles from './Pricing.module.css';
 import { CheckCircle, Zap, Shield, TrendingUp, Crown, Star } from 'lucide-react';
 
-const PLANS = [
-    {
-        id: 'free',
-        name: 'Free',
-        price: { monthly: 0, yearly: 0 },
-        features: [
-            '1 Active Bot',
-            'Basic Strategies',
-            'Paper Trading Only',
-            'Community Support'
-        ],
-        cta: 'Current Plan',
-        color: 'gray'
-    },
-    {
-        id: 'basic',
-        name: 'Basic',
-        price: { monthly: 19, yearly: 190 },
-        features: [
-            '3 Active Bots',
-            'Standard Strategies',
-            'Live Trading',
-            'Email Support'
-        ],
-        cta: 'Start Basic',
-        color: 'blue'
-    },
-    {
-        id: 'pro',
-        name: 'Pro',
-        price: { monthly: 49, yearly: 490 },
-        features: [
-            'Unlimited Bots',
-            'All Strategies',
-            'Priority Support',
-            'Advanced Analytics',
-            'API Access'
-        ],
-        cta: 'Go Pro',
-        featured: true,
-        color: 'purple'
-    },
-    {
-        id: 'elite',
-        name: 'Elite',
-        price: { monthly: 99, yearly: 990 },
-        features: [
-            'Everything in Pro',
-            '1-on-1 Mentoring',
-            'Custom Strategy Dev',
-            'White Glove Support'
-        ],
-        cta: 'Get Elite',
-        color: 'gold'
-    }
-];
+const PLAN_METADATA = {
+    free: { color: 'gray', icon: Shield, cta: 'Current Plan', order: 0 },
+    basic: { color: 'blue', icon: Zap, cta: 'Start Basic', order: 1 },
+    pro: { color: 'purple', icon: TrendingUp, cta: 'Go Pro', order: 2, featured: true },
+    elite: { color: 'gold', icon: Crown, cta: 'Get Elite', order: 3 }
+};
 
 export default function Pricing() {
     const navigate = useNavigate();
     const { openSignupModal } = useOutletContext();
+    const [plans, setPlans] = useState([]);
     const [currentPlan, setCurrentPlan] = useState('free');
     const [billingCycle, setBillingCycle] = useState('monthly');
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState(null);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            fetchBillingStatus();
-        }
+        fetchData();
     }, []);
 
-    const fetchBillingStatus = async () => {
+    const fetchData = async () => {
         try {
-            const response = await api.get('/billing/status');
-            setCurrentPlan(response.data.plan);
+            const [plansRes, statusRes] = await Promise.allSettled([
+                api.get('/billing/plans'),
+                api.get('/billing/status')
+            ]);
+
+            if (plansRes.status === 'fulfilled') {
+                processPlans(plansRes.value.data);
+            }
+
+            if (statusRes.status === 'fulfilled') {
+                setCurrentPlan(statusRes.value.data.plan);
+            }
         } catch (error) {
-            console.error('Error fetching billing status:', error);
+            console.error('Error fetching data:', error);
+            setMessage({ type: 'error', text: 'Failed to load pricing plans.' });
+        } finally {
+            setLoading(false);
         }
+    };
+
+    const processPlans = (apiPlans) => {
+        const grouped = {};
+
+        apiPlans.forEach(plan => {
+            // Assumes id format: tier_cycle (e.g., basic_monthly)
+            const parts = plan.id.split('_');
+            const tier = parts[0];
+            const cycle = parts[1];
+
+            if (!grouped[tier]) {
+                grouped[tier] = {
+                    id: tier,
+                    name: plan.name.replace(' Monthly', '').replace(' Yearly', ''),
+                    price: {},
+                    features: plan.features,
+                    ...PLAN_METADATA[tier]
+                };
+            }
+
+            grouped[tier].price[cycle] = plan.price;
+            // Prefer monthly features if available, or just take the last one
+            if (cycle === 'monthly') {
+                grouped[tier].features = plan.features;
+            }
+        });
+
+        const sortedPlans = Object.values(grouped).sort((a, b) => (a.order || 0) - (b.order || 0));
+        setPlans(sortedPlans);
     };
 
     const handleUpgrade = async (basePlanId) => {
@@ -96,7 +87,8 @@ export default function Pricing() {
 
         const planId = `${basePlanId}_${billingCycle}`;
 
-        if (planId === currentPlan) return;
+        // Check if already on this plan (ignoring cycle for simplicity in check, but backend handles it)
+        if (currentPlan && currentPlan.startsWith(basePlanId) && currentPlan.includes(billingCycle)) return;
 
         setLoading(true);
         setMessage(null);
@@ -112,6 +104,10 @@ export default function Pricing() {
             setLoading(false);
         }
     };
+
+    if (loading && plans.length === 0) {
+        return <div className={styles.loading}>Loading plans...</div>;
+    }
 
     return (
         <div className={styles.container}>
@@ -142,13 +138,9 @@ export default function Pricing() {
             )}
 
             <div className={styles.plansGrid}>
-                {PLANS.map((plan) => {
+                {plans.map((plan) => {
                     const isCurrent = currentPlan && currentPlan.startsWith(plan.id);
-
-                    let Icon = Shield;
-                    if (plan.id === 'basic') Icon = Zap;
-                    if (plan.id === 'pro') Icon = TrendingUp;
-                    if (plan.id === 'elite') Icon = Crown;
+                    const Icon = plan.icon || Shield;
 
                     return (
                         <div
@@ -179,7 +171,7 @@ export default function Pricing() {
                             </div>
 
                             <ul className={styles.features}>
-                                {plan.features.map((feature, idx) => (
+                                {plan.features && plan.features.map((feature, idx) => (
                                     <li key={idx} className={styles.feature}>
                                         <CheckCircle size={18} className={`${styles.checkIcon} ${styles[plan.color]}`} />
                                         <span>{feature}</span>
