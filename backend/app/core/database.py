@@ -413,11 +413,11 @@ class DuckDBHandler:
                 'id': result[0],
                 'email': result[1],
                 'hashed_password': result[2],
-                'is_active': result[3],
-                'is_admin': result[4] if len(result) > 4 else False,
-                'created_at': result[5] if len(result) > 5 else None,
-                'nickname': result[6] if len(result) > 6 else None,
-                'telegram_chat_id': result[7] if len(result) > 7 else None
+                'nickname': result[3] if len(result) > 3 else None,
+                'telegram_bot_token': result[4] if len(result) > 4 else None,
+                'telegram_chat_id': result[5] if len(result) > 5 else None,
+                'is_admin': result[6] if len(result) > 6 else False,
+                'created_at': result[7] if len(result) > 7 else None
             }
         except Exception as e:
             logger.error(f"Error fetching user: {e}")
@@ -584,11 +584,11 @@ class DuckDBHandler:
                 'id': result[0],
                 'email': result[1],
                 'hashed_password': result[2],
-                'is_active': result[3],
-                'is_admin': result[4] if len(result) > 4 else False,
-                'created_at': result[5] if len(result) > 5 else None,
-                'nickname': result[6] if len(result) > 6 else None,
-                'telegram_chat_id': result[7] if len(result) > 7 else None
+                'nickname': result[3] if len(result) > 3 else None,
+                'telegram_bot_token': result[4] if len(result) > 4 else None,
+                'telegram_chat_id': result[5] if len(result) > 5 else None,
+                'is_admin': result[6] if len(result) > 6 else False,
+                'created_at': result[7] if len(result) > 7 else None
             }
         except Exception as e:
             logger.error(f"Error fetching user by ID: {e}")
