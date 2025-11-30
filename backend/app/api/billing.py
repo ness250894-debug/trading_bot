@@ -114,9 +114,23 @@ async def handle_webhook(
     request: Request,
     x_cc_webhook_signature: Optional[str] = Header(None)
 ):
-    """Handle Coinbase Commerce webhook events."""
+    """
+    Handle Coinbase Commerce webhook events.
+    
+    Security improvements:
+    - Validates webhook signature is present
+    - Implements timing attack protection
+    - Adds timestamp validation to prevent replay attacks
+    - Proper error handling
+    """
     if not COINBASE_WEBHOOK_SECRET:
+        logger.error("Webhook secret not configured")
         raise HTTPException(status_code=500, detail="Webhook not configured")
+    
+    # Check signature header is present
+    if not x_cc_webhook_signature:
+        logger.warning("Webhook request missing signature header")
+        raise HTTPException(status_code=401, detail="Missing signature header")
     
     try:
         # Get raw body
@@ -129,19 +143,40 @@ async def handle_webhook(
             hashlib.sha256
         ).hexdigest()
         
-        if not hmac.compare_digest(expected_sig, x_cc_webhook_signature or ''):
+        if not hmac.compare_digest(expected_sig, x_cc_webhook_signature):
             logger.warning("Invalid webhook signature")
             raise HTTPException(status_code=401, detail="Invalid signature")
         
         # Parse event
         import json
+        from datetime import datetime, timedelta
+        
         event = json.loads(body)
+        
+        # Validate timestamp to prevent replay attacks (5 minute window)
+        event_created_at = event.get('event', {}).get('created_at')
+        if event_created_at:
+            # Parse ISO format timestamp
+            try:
+                event_time = datetime.fromisoformat(event_created_at.replace('Z', '+00:00'))
+                current_time = datetime.utcnow()
+                time_diff = abs((current_time - event_time.replace(tzinfo=None)).total_seconds())
+                
+                # Reject events older than 5 minutes
+                if time_diff > 300:
+                    logger.warning(f"Webhook event too old: {time_diff}s")
+                    raise HTTPException(status_code=400, detail="Event timestamp too old")
+            except (ValueError, AttributeError) as e:
+                logger.warning(f"Invalid timestamp format: {e}")
+                # Continue processing despite timestamp validation failure
+                # (Coinbase may have different timestamp formats)
         
         event_type = event.get('event', {}).get('type')
         charge_data = event.get('event', {}).get('data', {})
         charge_code = charge_data.get('code')
         
         if not charge_code:
+            logger.info("Webhook event has no charge code, ignoring")
             return {"status": "ignored"}
         
         # Get payment from database
@@ -177,6 +212,8 @@ async def handle_webhook(
         
         return {"status": "success"}
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Webhook error: {e}")
         raise HTTPException(status_code=500, detail="Webhook processing failed")

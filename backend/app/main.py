@@ -6,6 +6,8 @@ import threading
 from .core import bot as trading_bot
 from .core.logging_utils import manager, AsyncWebSocketLogHandler
 from .api import backtest, bot, trades, auth, api_keys, health, user, billing, exchanges
+from .core.rate_limit import limiter, rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 # Configure logging
 # We need to get the root logger
@@ -13,6 +15,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("API")
 
 app = FastAPI(title="Trading Bot API", version="1.0.0")
+
+# Add rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # CORS configuration - restrict in production
 import os

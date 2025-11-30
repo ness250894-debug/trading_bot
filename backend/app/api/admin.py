@@ -53,12 +53,54 @@ async def make_admin(
         raise HTTPException(status_code=500, detail="Failed to update admin status")
     return {"status": "success"}
 
+class AdminSetupRequest(BaseModel):
+    """Request model for admin setup."""
+    email: str
+    password: str
+
+def validate_password_strength(password: str) -> None:
+    """
+    Validate password meets security requirements.
+    Raises HTTPException if password is weak.
+    """
+    if len(password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long"
+        )
+    
+    if not any(c.isupper() for c in password):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain at least one uppercase letter"
+        )
+    
+    if not any(c.islower() for c in password):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain at least one lowercase letter"
+        )
+    
+    if not any(c.isdigit() for c in password):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must contain at least one digit"
+        )
+
 @router.post("/admin/setup")
-async def setup_initial_admin(email: str, password: str):
+async def setup_initial_admin(request: AdminSetupRequest):
     """
     Create the first admin user. 
     Only works if no admin users exist yet.
+    
+    Security improvements:
+    - Uses request body instead of query parameters
+    - Validates password strength
+    - Checks admin doesn't already exist
     """
+    # Validate password strength
+    validate_password_strength(request.password)
+    
     # Check if any admin exists
     all_users = db.get_all_users()
     has_admin = any(user.get('is_admin') for user in all_users)
@@ -69,17 +111,24 @@ async def setup_initial_admin(email: str, password: str):
             detail="Admin already exists. Use the admin panel to manage users."
         )
     
+    # Validate email format (basic check)
+    if '@' not in request.email or '.' not in request.email:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid email format"
+        )
+    
     # Check if user exists
-    user = db.get_user_by_email(email)
+    user = db.get_user_by_email(request.email)
     
     if not user:
         # Create user
         from ..core.auth import get_password_hash
-        hashed_password = get_password_hash(password)
-        success = db.create_user(email, hashed_password)
+        hashed_password = get_password_hash(request.password)
+        success = db.create_user(request.email, hashed_password)
         if not success:
             raise HTTPException(status_code=500, detail="Failed to create user")
-        user = db.get_user_by_email(email)
+        user = db.get_user_by_email(request.email)
     
     # Make admin
     success = db.set_admin_status(user['id'], True)
@@ -88,7 +137,7 @@ async def setup_initial_admin(email: str, password: str):
     
     return {
         "status": "success",
-        "message": f"Admin user {email} created successfully"
+        "message": f"Admin user {request.email} created successfully"
     }
 
 @router.delete("/admin/clear-users")

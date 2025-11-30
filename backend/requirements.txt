@@ -13,3 +13,5 @@ cryptography
 google-generativeai
 schedule
 requests
+slowapi
+pydantic[email]

@@ -6,8 +6,15 @@ __pycache__/
 .venv
 venv
 env
+
+# Environment & Secrets
 .env
+.env.local
+.env.*.local
 backend/app/core/config.json
+*.pem
+*.key
+*.crt
 
 # Node
 node_modules/
@@ -35,3 +42,10 @@ Thumbs.db
 
 # Documentation
 docs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~

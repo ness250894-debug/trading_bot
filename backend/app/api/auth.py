@@ -1,20 +1,54 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from ..core import auth
 from ..core.database import DuckDBHandler
 from pydantic import BaseModel
+from ..core.rate_limit import limiter
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 db = DuckDBHandler()
 
+from pydantic import BaseModel, EmailStr, validator, Field
+from typing import Optional
+
 class UserCreate(BaseModel):
-    email: str
-    password: str
-    nickname: str = None
+    """User creation model with comprehensive validation."""
+    email: EmailStr  # Validates email format
+    password: str = Field(..., min_length=8)
+    nickname: Optional[str] = Field(None, max_length=50)
+    
+    @validator('password')
+    def password_strength(cls, v):
+        """Validate password strength."""
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if not any(c.isupper() for c in v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not any(c.islower() for c in v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            raise ValueError('Password must contain at least one digit')
+        return v
+    
+    @validator('nickname')
+    def nickname_validation(cls, v):
+        """Validate nickname."""
+        if v is not None:
+            # Remove leading/trailing whitespace
+            v = v.strip()
+            if len(v) == 0:
+                return None
+            if len(v) > 50:
+                raise ValueError('Nickname must be 50 characters or less')
+            # Basic XSS prevention - reject HTML-like content
+            if '<' in v or '>' in v:
+                raise ValueError('Nickname contains invalid characters')
+        return v
 
 @router.post("/signup", response_model=auth.Token)
-async def signup(user: UserCreate):
+@limiter.limit("5/minute")  # Max 5 signups per minute per IP
+async def signup(request: Request, user: UserCreate):
     db_user = db.get_user_by_email(user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -30,7 +64,8 @@ async def signup(user: UserCreate):
         raise HTTPException(status_code=500, detail="Failed to create user")
 
 @router.post("/login", response_model=auth.Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("10/minute")  # Max 10 login attempts per minute per IP
+async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     user = db.get_user_by_email(form_data.username)
     if not user or not auth.verify_password(form_data.password, user['hashed_password']):
         raise HTTPException(
