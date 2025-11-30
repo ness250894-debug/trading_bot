@@ -31,7 +31,9 @@ class DuckDBHandler:
                     win_rate_pct DOUBLE,
                     trades INTEGER,
                     final_balance DOUBLE,
-                    user_id BIGINT
+                    user_id BIGINT,
+                    timeframe VARCHAR DEFAULT '1m',
+                    symbol VARCHAR DEFAULT 'BTC/USDT'
                 );
                 CREATE SEQUENCE IF NOT EXISTS seq_backtest_id START 1;
                 CREATE TABLE IF NOT EXISTS users (
@@ -291,18 +293,20 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error creating tables: {e}")
 
-    def save_result(self, result, user_id=None):
+    def save_result(self, result, user_id=None, timeframe='1m', symbol='BTC/USDT'):
         """
         Saves a backtest result to the database.
         result: dict containing strategy, params, return, win_rate, trades, final_balance
         user_id: ID of the user who ran this backtest
+        timeframe: Timeframe used for the backtest (e.g., '1m', '5m', '1h')
+        symbol: Symbol used for the backtest (e.g., 'BTC/USDT')
         """
         try:
             timestamp = datetime.now()
             query = """
                 INSERT INTO backtest_results 
-                (id, timestamp, strategy, parameters, return_pct, win_rate_pct, trades, final_balance, user_id)
-                VALUES (nextval('seq_backtest_id'), ?, ?, ?, ?, ?, ?, ?, ?)
+                (id, timestamp, strategy, parameters, return_pct, win_rate_pct, trades, final_balance, user_id, timeframe, symbol)
+                VALUES (nextval('seq_backtest_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             self.conn.execute(query, [
                 timestamp,
@@ -312,7 +316,9 @@ class DuckDBHandler:
                 result['win_rate'],
                 result['trades'],
                 result['final_balance'],
-                user_id
+                user_id,
+                timeframe,
+                symbol
             ])
             logger.info(f"Backtest result saved for user {user_id}")
         except Exception as e:

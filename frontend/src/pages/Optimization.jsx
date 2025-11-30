@@ -91,21 +91,21 @@ const paramLimits = {
 
 const presets = {
     'SMA Crossover': [
-        { name: 'Conservative', ranges: { fast_period: { start: 10, end: 20, step: 2 }, slow_period: { start: 50, end: 100, step: 10 } } },
-        { name: 'Aggressive', ranges: { fast_period: { start: 3, end: 10, step: 1 }, slow_period: { start: 15, end: 40, step: 5 } } },
-        { name: 'Wide Search', ranges: { fast_period: { start: 2, end: 30, step: 2 }, slow_period: { start: 20, end: 150, step: 10 } } }
+        { name: 'Conservative', timeframe: '1h', ranges: { fast_period: { start: 10, end: 20, step: 2 }, slow_period: { start: 50, end: 100, step: 10 } } },
+        { name: 'Aggressive', timeframe: '5m', ranges: { fast_period: { start: 3, end: 10, step: 1 }, slow_period: { start: 15, end: 40, step: 5 } } },
+        { name: 'Wide Search', timeframe: '15m', ranges: { fast_period: { start: 2, end: 30, step: 2 }, slow_period: { start: 20, end: 150, step: 10 } } }
     ],
     'Mean Reversion': [
-        { name: 'Standard', ranges: { bb_period: { start: 20, end: 20, step: 1 }, bb_std: { start: 2.0, end: 2.0, step: 0.1 }, rsi_period: { start: 14, end: 14, step: 1 }, rsi_oversold: { start: 30, end: 30, step: 1 }, rsi_overbought: { start: 70, end: 70, step: 1 } } },
-        { name: 'Volatile Market', ranges: { bb_period: { start: 10, end: 30, step: 5 }, bb_std: { start: 2.0, end: 3.0, step: 0.2 }, rsi_period: { start: 10, end: 20, step: 2 }, rsi_oversold: { start: 20, end: 40, step: 5 }, rsi_overbought: { start: 60, end: 80, step: 5 } } }
+        { name: 'Standard', timeframe: '1h', ranges: { bb_period: { start: 20, end: 20, step: 1 }, bb_std: { start: 2.0, end: 2.0, step: 0.1 }, rsi_period: { start: 14, end: 14, step: 1 }, rsi_oversold: { start: 30, end: 30, step: 1 }, rsi_overbought: { start: 70, end: 70, step: 1 } } },
+        { name: 'Volatile Market', timeframe: '15m', ranges: { bb_period: { start: 10, end: 30, step: 5 }, bb_std: { start: 2.0, end: 3.0, step: 0.2 }, rsi_period: { start: 10, end: 20, step: 2 }, rsi_oversold: { start: 20, end: 40, step: 5 }, rsi_overbought: { start: 60, end: 80, step: 5 } } }
     ],
     'RSI': [
-        { name: 'Scalping', ranges: { period: { start: 5, end: 10, step: 1 }, oversold: { start: 20, end: 30, step: 2 }, overbought: { start: 70, end: 80, step: 2 } } },
-        { name: 'Swing', ranges: { period: { start: 14, end: 28, step: 2 }, oversold: { start: 30, end: 40, step: 2 }, overbought: { start: 60, end: 70, step: 2 } } }
+        { name: 'Scalping', timeframe: '1m', ranges: { period: { start: 5, end: 10, step: 1 }, oversold: { start: 20, end: 30, step: 2 }, overbought: { start: 70, end: 80, step: 2 } } },
+        { name: 'Swing', timeframe: '4h', ranges: { period: { start: 14, end: 28, step: 2 }, oversold: { start: 30, end: 40, step: 2 }, overbought: { start: 60, end: 70, step: 2 } } }
     ],
     'MACD': [
-        { name: 'Standard', ranges: { fast_period: { start: 12, end: 12, step: 1 }, slow_period: { start: 26, end: 26, step: 1 }, signal_period: { start: 9, end: 9, step: 1 } } },
-        { name: 'Fast', ranges: { fast_period: { start: 5, end: 15, step: 1 }, slow_period: { start: 15, end: 30, step: 2 }, signal_period: { start: 5, end: 10, step: 1 } } }
+        { name: 'Standard', timeframe: '1h', ranges: { fast_period: { start: 12, end: 12, step: 1 }, slow_period: { start: 26, end: 26, step: 1 }, signal_period: { start: 9, end: 9, step: 1 } } },
+        { name: 'Fast', timeframe: '15m', ranges: { fast_period: { start: 5, end: 15, step: 1 }, slow_period: { start: 15, end: 30, step: 2 }, signal_period: { start: 5, end: 10, step: 1 } } }
     ]
 };
 
@@ -116,10 +116,13 @@ const STRATEGY_NAME_MAP = {
     'MACD': 'macd'
 };
 
+const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];
+
 export default function Optimization() {
     const toast = useToast();
     const modal = useModal();
     const [strategy, setStrategy] = useState(() => localStorage.getItem('optimization_strategy') || 'SMA Crossover');
+    const [timeframe, setTimeframe] = useState(() => localStorage.getItem('optimization_timeframe') || '1m');
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(() => {
         const saved = localStorage.getItem('optimization_results');
@@ -162,6 +165,9 @@ export default function Optimization() {
 
     const applyPreset = (preset) => {
         setRanges(preset.ranges);
+        if (preset.timeframe) {
+            setTimeframe(preset.timeframe);
+        }
     };
 
     const handleRangeChange = (param, field, value) => {
@@ -207,6 +213,10 @@ export default function Optimization() {
     useEffect(() => {
         localStorage.setItem('optimization_strategy', strategy);
     }, [strategy]);
+
+    useEffect(() => {
+        localStorage.setItem('optimization_timeframe', timeframe);
+    }, [timeframe]);
 
     useEffect(() => {
         localStorage.setItem('optimization_results', JSON.stringify(results));
@@ -341,7 +351,7 @@ export default function Optimization() {
 
         ws.send(JSON.stringify({
             symbol: 'BTC/USDT',
-            timeframe: '1m',
+            timeframe: timeframe,
             days: 3,
             strategy: strategy,
             param_ranges: param_ranges,
@@ -413,6 +423,16 @@ export default function Optimization() {
                         Configuration
                     </h3>
                     <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-foreground">Timeframe:</label>
+                            <select
+                                className="bg-black/20 border border-white/10 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm [&>option]:bg-zinc-900 [&>option]:text-white"
+                                value={timeframe}
+                                onChange={(e) => setTimeframe(e.target.value)}
+                            >
+                                {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+                            </select>
+                        </div>
 
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-foreground">Strategy:</label>

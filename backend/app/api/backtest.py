@@ -182,7 +182,7 @@ async def run_optimization(request: OptimizeRequest, current_user: dict = Depend
                 result['trades'] = 0
                 result['final_balance'] = 0
                 
-                db.save_result(result, user_id=current_user['id'])
+                db.save_result(result, user_id=current_user['id'], timeframe=request.timeframe, symbol=request.symbol)
                 saved_count += 1
         
         if saved_count > 0:
@@ -277,7 +277,7 @@ async def websocket_optimize(websocket: WebSocket):
 
                         if result.get('return', 0) > 0:
                             result['strategy'] = request.strategy
-                            db.save_result(result, user_id=current_user['id'])
+                            db.save_result(result, user_id=current_user['id'], timeframe=request.timeframe, symbol=request.symbol)
                             saved_count += 1
                     
                     if saved_count > 0:

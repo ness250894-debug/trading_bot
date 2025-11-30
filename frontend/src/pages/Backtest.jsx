@@ -12,10 +12,13 @@ const STRATEGIES = [
     { name: 'RSI', params: { period: 14, overbought: 70, oversold: 30 } },
 ];
 
+const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];
+
 export default function Backtest() {
     const toast = useToast();
     const [selectedStrategy, setSelectedStrategy] = useState(STRATEGIES[0]);
     const [params, setParams] = useState(STRATEGIES[0].params);
+    const [timeframe, setTimeframe] = useState('1m');
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(null);
 
@@ -34,7 +37,7 @@ export default function Backtest() {
         try {
             const response = await api.post('/backtest', {
                 symbol: 'BTC/USDT',
-                timeframe: '1m',
+                timeframe: timeframe,
                 days: 5,
                 strategy: selectedStrategy.name,
                 params: params
@@ -71,6 +74,17 @@ export default function Backtest() {
                                     onChange={handleStrategyChange}
                                 >
                                     {STRATEGIES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-muted-foreground mb-1">Timeframe</label>
+                                <select
+                                    className="w-full bg-background border border-border rounded-md p-2 text-sm"
+                                    value={timeframe}
+                                    onChange={(e) => setTimeframe(e.target.value)}
+                                >
+                                    {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
                                 </select>
                             </div>
 
