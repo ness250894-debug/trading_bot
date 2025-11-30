@@ -47,7 +47,7 @@ export default function UserDropdown({ user }) {
         menuItems.push({ icon: Shield, label: 'Admin Panel', path: '/admin' });
     }
 
-    const displayName = user?.nickname || user?.email?.split('@')[0] || 'User';
+    const displayName = String(user?.nickname || user?.email?.split('@')[0] || 'User');
     const initials = displayName.substring(0, 2).toUpperCase();
 
     return (
