@@ -157,12 +157,11 @@ class DuckDBHandler:
                 self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS exchange VARCHAR DEFAULT 'bybit'")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_user_strategies_exchange ON user_strategies(exchange)")
 
-                # Migration: Force convert INTEGER user_id columns to BIGINT by recreating tables
-                # This is necessary because simple ALTER COLUMN might fail or not be supported for all cases
+                # Migration: Force convert INTEGER user_id columns to BIGINT
+                # Simplified approach: just use ALTER COLUMN directly since DuckDB supports it
                 tables_to_migrate = [
                     'user_strategies', 'api_keys', 'audit_log', 'subscriptions', 
-                    'payments', 'trades', 'backtest_results', 'visual_strategies',
-                    'public_strategies', 'strategy_clones'
+                    'payments', 'trades', 'backtest_results'
                 ]
                 
                 for table in tables_to_migrate:
@@ -174,39 +173,21 @@ class DuckDBHandler:
                         ).fetchone()[0] > 0
                         
                         if table_exists:
-                            # Check column type - FIXED: Use parameterized query instead of f-string
+                            # Check column type
                             col_type = self.conn.execute(
                                 "SELECT data_type FROM information_schema.columns WHERE table_name = ? AND column_name = ?",
                                 [table, 'user_id']
                             ).fetchone()
                             
                             if col_type and col_type[0] != 'BIGINT':
-                                logger.info(f"Migrating {table} to BIGINT...")
-                                # 1. Rename old table
-                                # NOTE: Table names cannot be parameterized in DuckDB, but we control the table list
-                                self.conn.execute(f"ALTER TABLE {table} RENAME TO {table}_old")
-                                
-                                # 2. Create new table with correct schema (we rely on the CREATE TABLE IF NOT EXISTS above, 
-                                # but since we renamed the old one, we need to run the specific CREATE statement for this table)
-                                # For simplicity, we'll just copy the structure with BIGINT
-                                self.conn.execute(f"CREATE TABLE {table} AS SELECT * FROM {table}_old WHERE 1=0")
+                                logger.info(f"Migrating {table}.user_id to BIGINT...")
+                                # Simply alter the column type - DuckDB will handle the conversion
                                 self.conn.execute(f"ALTER TABLE {table} ALTER COLUMN user_id TYPE BIGINT")
-                                
-                                # 3. Copy data
-                                self.conn.execute(f"INSERT INTO {table} SELECT * FROM {table}_old")
-                                
-                                # 4. Drop old table
-                                self.conn.execute(f"DROP TABLE {table}_old")
-                                logger.info(f"Successfully migrated {table} to BIGINT")
+                                logger.info(f"Successfully migrated {table}.user_id to BIGINT")
                                 
                     except Exception as e:
-                        logger.error(f"Migration failed for {table}: {e}")
-                        # Attempt to restore if stuck
-                        try:
-                            # NOTE: Table names cannot be parameterized, but we control the table name
-                            self.conn.execute(f"ALTER TABLE {table}_old RENAME TO {table}")
-                        except Exception as restore_error:
-                            logger.error(f"Failed to restore table after migration: {restore_error}")
+                        logger.warning(f"Migration skipped for {table}: {e}")
+
 
                 # Create visual_strategies table for JSON-based strategies
                 self.conn.execute("""
