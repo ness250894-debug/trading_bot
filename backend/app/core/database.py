@@ -423,7 +423,7 @@ class DuckDBHandler:
             logger.error(f"Error fetching user: {e}")
             return None
 
-    def create_user(self, email, hashed_password):
+    def create_user(self, email, hashed_password, nickname=None):
         """Create a new user."""
         try:
             from datetime import datetime
@@ -432,10 +432,10 @@ class DuckDBHandler:
                 return None
                 
             query = """
-                INSERT INTO users (id, email, hashed_password, is_admin, created_at)
-                VALUES (nextval('seq_user_id'), ?, ?, ?, ?)
+                INSERT INTO users (id, email, hashed_password, nickname, is_admin, created_at)
+                VALUES (nextval('seq_user_id'), ?, ?, ?, ?, ?)
             """
-            self.conn.execute(query, [email, hashed_password, False, datetime.now()])
+            self.conn.execute(query, [email, hashed_password, nickname, False, datetime.now()])
             return self.get_user_by_email(email)
         except Exception as e:
             logger.error(f"Error creating user: {e}")
