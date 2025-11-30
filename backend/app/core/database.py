@@ -401,13 +401,22 @@ class DuckDBHandler:
     def create_user(self, email, hashed_password, nickname=None):
         """Creates a new user."""
         try:
+            import random
             timestamp = datetime.now()
+            
+            # Generate random 10-digit user ID
+            user_id = random.randint(1000000000, 9999999999)
+            
+            # Check if ID already exists (unlikely but possible)
+            while self.conn.execute("SELECT id FROM users WHERE id = ?", [user_id]).fetchone():
+                user_id = random.randint(1000000000, 9999999999)
+            
             query = """
                 INSERT INTO users (id, email, hashed_password, nickname, created_at)
-                VALUES (nextval('seq_user_id'), ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
             """
-            self.conn.execute(query, [email, hashed_password, nickname, timestamp])
-            logger.info(f"User created: {email} with nickname: {nickname}")
+            self.conn.execute(query, [user_id, email, hashed_password, nickname, timestamp])
+            logger.info(f"User created: {email} with ID: {user_id} and nickname: {nickname}")
             return True
         except Exception as e:
             logger.error(f"Error creating user: {e}")

@@ -42,6 +42,7 @@ export default function UserDropdown({ user }) {
         { icon: Settings, label: 'Settings', path: '/settings' },
     ];
 
+    // Only add Admin Panel for actual admins
     if (user?.is_admin) {
         menuItems.push({ icon: Shield, label: 'Admin Panel', path: '/admin' });
     }
