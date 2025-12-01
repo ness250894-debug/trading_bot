@@ -62,6 +62,10 @@ SMART_ROI = {
     60: 0.005
 }
 
+# Time-Based Exit (for stagnant positions)
+MAX_POSITION_DURATION_MINUTES = 60  # Force close if position hasn't moved significantly after 60 mins
+MIN_MOVEMENT_PCT = 0.005  # Minimum 0.5% movement to keep position open past timeout
+
 # Order Execution Settings
 ORDER_TYPE = 'limit' # 'market' or 'limit'
 ORDER_TIMEOUT_SECONDS = 30 # Timeout for limit orders before converting to market

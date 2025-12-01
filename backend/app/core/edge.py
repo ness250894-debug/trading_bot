@@ -39,7 +39,7 @@ class Edge:
         logger.info(f"Edge Calc: WinRate: {win_rate:.2f}, AvgWin: {avg_win:.4f}, AvgLoss: {avg_loss:.4f} => Exp: {expectancy:.4f}")
         return expectancy
 
-    def check_edge(self, db_handler):
+    def check_edge(self, db_handler, user_id=None):
         """
         Checks if the current strategy expectancy is positive.
         Returns: True (Safe to trade) or False (Stop trading)
@@ -58,7 +58,7 @@ class Edge:
             # We'll assume get_recent_trades exists or we'll add it to database.py next.
             # If not, we can use get_trades() and slice.
             if hasattr(db_handler, 'get_recent_trades'):
-                trades = db_handler.get_recent_trades(self.window)
+                trades = db_handler.get_recent_trades(limit=self.window, user_id=user_id)
             else:
                 # Fallback if method doesn't exist yet (we should add it)
                 all_trades = db_handler.get_trades()

@@ -49,3 +49,6 @@ docs/
 *.swp
 *.swo
 *~
+
+# Tests
+tests/

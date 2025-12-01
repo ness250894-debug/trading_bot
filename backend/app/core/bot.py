@@ -2,6 +2,7 @@ import time
 import logging
 import sys
 import threading
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 from .exchange import ExchangeClient
@@ -42,6 +43,27 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     strategy_params = strategy_config.get('STRATEGY_PARAMS', {})
     dry_run = strategy_config.get('DRY_RUN', True)
     exchange = strategy_config.get('EXCHANGE', 'bybit')
+    
+    # Load Persistent State
+    position_start_time = strategy_config.get('position_start_time')
+    if position_start_time:
+        # Convert string to timestamp if needed (DuckDB might return datetime object)
+        if isinstance(position_start_time, str):
+             # Parse if string (simplified)
+             pass
+        logger.info(f"Loaded persisted position start time: {position_start_time}")
+        # Convert to float timestamp for logic
+        try:
+            position_start_time = position_start_time.timestamp()
+        except:
+            pass # Already float or None
+
+    active_order_id = strategy_config.get('active_order_id')
+    open_order = None
+    if active_order_id:
+        logger.info(f"Loaded persisted active order: {active_order_id}")
+        # We will verify this order exists in the startup check below
+
     
     logger.info(f"Loading exchange: {exchange} for user {user_id}")
     
@@ -105,6 +127,51 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     
     # Set Leverage
     client.set_leverage(symbol, config.LEVERAGE)
+
+    # --- Startup State Reconciliation ---
+    try:
+        # Fetch open orders from exchange
+        # Note: We need to ensure client has fetch_open_orders. 
+        # CCXT has it. PaperExchange now has it.
+        if hasattr(client, 'fetch_open_orders'):
+            open_orders = client.fetch_open_orders(symbol)
+            
+            # 1. Reconcile Active Order
+            if active_order_id:
+                found = False
+                for order in open_orders:
+                    if str(order['id']) == str(active_order_id):
+                        found = True
+                        open_order = {
+                            'id': order['id'],
+                            'time': time.time(), # We don't know exact start, reset timeout clock? Or fetch?
+                            # Fetching exact time is better but for now reset clock to give it a chance
+                            'side': order['side'],
+                            'type': order['type']
+                        }
+                        logger.info(f"✅ Resumed tracking Limit Order {active_order_id}")
+                        break
+                
+                if not found:
+                    logger.warning(f"⚠️ Persisted order {active_order_id} not found on exchange. Clearing state.")
+                    active_order_id = None
+                    db.update_bot_state(user_id, active_order_id=None)
+            
+            # 2. Orphan Cleanup
+            # Cancel any open orders that we are NOT tracking
+            for order in open_orders:
+                if active_order_id and str(order['id']) == str(active_order_id):
+                    continue
+                
+                logger.warning(f"🧹 Cancelling orphaned order {order['id']} on {symbol}")
+                try:
+                    client.cancel_order(order['id'], symbol)
+                except Exception as e:
+                    logger.error(f"Failed to cancel orphan: {e}")
+                    
+    except Exception as e:
+        logger.error(f"Startup reconciliation failed: {e}")
+    # ------------------------------------
     
     # Initialize Strategy
     logger.info(f"Initializing strategy '{strategy_name}' for user {user_id}")
@@ -193,19 +260,33 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 
                 
                 try:
-                    client.create_order(symbol=symbol, type='market', side=side, amount=amount)
+                    order = client.create_order(symbol=symbol, type='market', side=side, amount=amount)
+                    
+                    # Verify Fill
+                    time.sleep(1) # Wait for fill
+                    exec_price = current_price
+                    if order and 'id' in order:
+                        fetched = client.fetch_order(order['id'], symbol)
+                        if fetched and fetched.get('average'):
+                            exec_price = fetched.get('average')
+                            logger.info(f"Verified Fill Price: {exec_price}")
+
                     # Log trade to database
                     trade_data = {
                         'symbol': symbol,
                         'side': side,
-                        'price': current_price,
+                        'price': exec_price,
                         'amount': amount,
                         'type': 'OPEN',
                         'pnl': 0.0,
                         'strategy': strategy_name
                     }
                     db.save_trade(trade_data, user_id=user_id)
-                    logger.info(f"✓ User {user_id}: {signal} entry at {current_price}")
+                    
+                    # Persist State
+                    db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(time.time()), active_order_id='NO_CHANGE')
+                    
+                    logger.info(f"✓ User {user_id}: {signal} entry at {exec_price}")
                 except Exception as e:
                     logger.error(f"User {user_id} order failed: {e}")
 
@@ -218,6 +299,19 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     try:
                         client.create_order(symbol=symbol, type='market', side=side, amount=position_size)
                         logger.info(f"✓ User {user_id}: Closed position")
+                        
+                        # Fetch Realized PnL
+                        time.sleep(2)
+                        trades = client.fetch_my_trades(symbol, limit=1)
+                        if trades:
+                            last_trade = trades[0]
+                            # Note: This is a simplification. Real PnL might need matching open/close.
+                            # But for now, getting the fee is a good start.
+                            logger.info(f"Trade Info: {last_trade}")
+                            
+                        # Clear State
+                        db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
+                        
                     except Exception as e:
                         logger.error(f"User {user_id} close failed: {e}")
 
@@ -341,6 +435,21 @@ def main():
                 # In a real bot, we'd fetch order status from exchange. 
                 # For simplicity/Paper, we assume it fills if price crosses, or we check timeout.
                 
+                # Check Order Status
+                try:
+                    fetched_order = client.fetch_order(open_order['id'], config.SYMBOL)
+                    if fetched_order and fetched_order['status'] in ['closed', 'filled']:
+                        logger.info(f"✅ Limit Order {open_order['id']} FILLED at {fetched_order.get('average')}")
+                        open_order = None # Stop tracking
+                        
+                        # Update State: Order Filled -> Position Open
+                        position_start_time = time.time()
+                        db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(position_start_time), active_order_id=None)
+                        
+                        continue
+                except Exception as e:
+                    logger.error(f"Failed to check order status: {e}")
+
                 # Check Timeout
                 if time.time() - open_order['time'] > config.ORDER_TIMEOUT_SECONDS:
                     logger.warning(f"⏳ Order {open_order['id']} timed out! Cancelling and forcing Market Order.")
@@ -454,7 +563,7 @@ def main():
                 # --- Edge Positioning Check ---
                 # Only check if we are looking to open a new position (size == 0)
                 if current_pos_size == 0 and edge.enabled:
-                    if not edge.check_edge(db):
+                    if not edge.check_edge(db, user_id=user_id):
                         logger.info("⛔ Edge is negative. Skipping new trade entries.")
                         # We continue the loop but we must ensure we don't enter new trades.
                         # We can set signal to HOLD to prevent entry.
@@ -479,6 +588,17 @@ def main():
                                 signal = 'SELL' if current_pos_side == 'Buy' else 'BUY'
                                 details['reason'] = 'Smart ROI'
                                 break
+                    
+                    # --- Time-Based Exit (Stagnant Position) ---
+                    # If position has been open too long with minimal movement, force close
+                    max_duration = getattr(config, 'MAX_POSITION_DURATION_MINUTES', 60)
+                    min_movement = getattr(config, 'MIN_MOVEMENT_PCT', 0.005)
+                    
+                    if duration_minutes >= max_duration and abs(pnl_pct) < min_movement:
+                        logger.info(f"⏰ Time-Based Exit Triggered! Duration: {duration_minutes:.1f}m, PnL: {pnl_pct*100:.2f}% (stagnant)")
+                        signal = 'SELL' if current_pos_side == 'Buy' else 'BUY'
+                        details['reason'] = 'Stagnant Position Timeout'
+                    # -------------------------------------------
                 # -----------------------
 
                 # --- Trailing Stop Logic ---
@@ -523,8 +643,21 @@ def main():
                         logger.info("Closing SHORT position before opening LONG")
                         client.close_position(config.SYMBOL)
                         
-                        # Calculate Fee
+                        # Calculate Fee & PnL
+                        realized_pnl = 0.0
                         fee = current_pos_size * current_price * config.TAKER_FEE_PCT
+                        
+                        # Try to fetch actual data
+                        time.sleep(2)
+                        try:
+                            trades = client.fetch_my_trades(config.SYMBOL, limit=1)
+                            if trades:
+                                last_trade = trades[0]
+                                fee = last_trade.get('fee', fee)
+                                # PnL is tricky without full history, but we can try
+                                # For now, we stick to estimated PnL but actual Fee
+                        except Exception as e:
+                            logger.error(f"Failed to fetch trade info: {e}")
                         
                         # Log trade to database
                         trade_data = {
@@ -533,12 +666,16 @@ def main():
                             'price': current_price,
                             'amount': current_pos_size,
                             'type': 'CLOSE',
-                            'pnl': 0.0 - fee,  # Exchange PnL + Fee deduction (simplified)
+                            'pnl': realized_pnl - fee, 
                             'strategy': strategy_name,
                             'fee': fee,
                             'leverage': config.LEVERAGE
                         }
                         db.save_trade(trade_data, user_id=user_id)
+                        
+                        # Clear State
+                        db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
+                        
                         notifier.send_trade_alert(trade_data)
                     
                     # Open new LONG position
@@ -572,21 +709,31 @@ def main():
                                 'side': 'Buy',
                                 'type': 'limit'
                             }
+                            # Persist Order ID
+                            db.update_bot_state(user_id, active_order_id=order['id'], position_start_time='NO_CHANGE')
                         else:
                             # Market Order filled immediately (conceptually)
                             # Initialize Trailing Stop
                             strategy.highest_price = current_price
                             position_start_time = time.time()
                             
+                            # Verify Fill
+                            time.sleep(1)
+                            exec_price = current_price
+                            if order and 'id' in order:
+                                fetched = client.fetch_order(order['id'], config.SYMBOL)
+                                if fetched and fetched.get('average'):
+                                    exec_price = fetched.get('average')
+                            
                             # Calculate Fee
-                            trade_amount = config.AMOUNT_USDT / current_price
-                            fee = trade_amount * current_price * config.TAKER_FEE_PCT
+                            trade_amount = config.AMOUNT_USDT / exec_price
+                            fee = trade_amount * exec_price * config.TAKER_FEE_PCT
                             
                             # Log trade to database
                             trade_data = {
                                 'symbol': config.SYMBOL,
                                 'side': 'Buy',
-                                'price': current_price,
+                                'price': exec_price,
                                 'amount': trade_amount,
                                 'type': 'OPEN',
                                 'pnl': -fee,
@@ -595,6 +742,10 @@ def main():
                                 'leverage': config.LEVERAGE
                             }
                             db.save_trade(trade_data, user_id=user_id)
+                            
+                            # Persist State
+                            db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(time.time()), active_order_id='NO_CHANGE')
+                            
                             notifier.send_trade_alert(trade_data)
 
                     except Exception as e:
@@ -607,8 +758,19 @@ def main():
                         logger.info("Closing LONG position before opening SHORT")
                         client.close_position(config.SYMBOL)
                         
-                        # Calculate Fee
+                        # Calculate Fee & PnL
+                        realized_pnl = 0.0
                         fee = current_pos_size * current_price * config.TAKER_FEE_PCT
+                        
+                        # Try to fetch actual data
+                        time.sleep(2)
+                        try:
+                            trades = client.fetch_my_trades(config.SYMBOL, limit=1)
+                            if trades:
+                                last_trade = trades[0]
+                                fee = last_trade.get('fee', fee)
+                        except Exception as e:
+                            logger.error(f"Failed to fetch trade info: {e}")
                         
                         # Log trade to database
                         trade_data = {
@@ -617,12 +779,16 @@ def main():
                             'price': current_price,
                             'amount': current_pos_size,
                             'type': 'CLOSE',
-                            'pnl': 0.0 - fee, # Exchange PnL + Fee deduction
+                            'pnl': realized_pnl - fee, # Exchange PnL + Fee deduction
                             'strategy': strategy_name,
                             'fee': fee,
                             'leverage': config.LEVERAGE
                         }
                         db.save_trade(trade_data, user_id=user_id)
+                        
+                        # Clear State
+                        db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
+                        
                         notifier.send_trade_alert(trade_data)
                     
                     # Open new SHORT position
@@ -656,20 +822,30 @@ def main():
                                 'side': 'Sell',
                                 'type': 'limit'
                             }
+                            # Persist Order ID
+                            db.update_bot_state(user_id, active_order_id=order['id'], position_start_time='NO_CHANGE')
                         else:
                             # Initialize Trailing Stop
                             strategy.lowest_price = current_price
                             position_start_time = time.time()
                             
+                            # Verify Fill
+                            time.sleep(1)
+                            exec_price = current_price
+                            if order and 'id' in order:
+                                fetched = client.fetch_order(order['id'], config.SYMBOL)
+                                if fetched and fetched.get('average'):
+                                    exec_price = fetched.get('average')
+                            
                             # Calculate Fee
-                            trade_amount = config.AMOUNT_USDT / current_price
-                            fee = trade_amount * current_price * config.TAKER_FEE_PCT
+                            trade_amount = config.AMOUNT_USDT / exec_price
+                            fee = trade_amount * exec_price * config.TAKER_FEE_PCT
                             
                             # Log trade to database
                             trade_data = {
                                 'symbol': config.SYMBOL,
                                 'side': 'Sell',
-                                'price': current_price,
+                                'price': exec_price,
                                 'amount': trade_amount,
                                 'type': 'OPEN',
                                 'pnl': -fee,
@@ -678,6 +854,10 @@ def main():
                                 'leverage': config.LEVERAGE
                             }
                             db.save_trade(trade_data, user_id=user_id)
+                            
+                            # Persist State
+                            db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(time.time()), active_order_id='NO_CHANGE')
+                            
                             notifier.send_trade_alert(trade_data)
 
                     except Exception as e:

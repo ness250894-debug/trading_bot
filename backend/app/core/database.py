@@ -59,6 +59,8 @@ class DuckDBHandler:
                     take_profit_pct DOUBLE,
                     stop_loss_pct DOUBLE,
                     exchange VARCHAR DEFAULT 'bybit',
+                    position_start_time TIMESTAMP,
+                    active_order_id VARCHAR,
                     updated_at TIMESTAMP,
                     UNIQUE(user_id)
                 );
@@ -158,6 +160,10 @@ class DuckDBHandler:
                 # Add exchange column to user_strategies table if it doesn't exist
                 self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS exchange VARCHAR DEFAULT 'bybit'")
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_user_strategies_exchange ON user_strategies(exchange)")
+
+                # Add state persistence columns to user_strategies
+                self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS position_start_time TIMESTAMP")
+                self.conn.execute("ALTER TABLE user_strategies ADD COLUMN IF NOT EXISTS active_order_id VARCHAR")
 
                 # Migration: Force convert INTEGER user_id columns to BIGINT
                 # Simplified approach: just use ALTER COLUMN directly since DuckDB supports it
@@ -455,7 +461,7 @@ class DuckDBHandler:
         try:
             import json
             result = self.conn.execute(
-                "SELECT symbol, timeframe, amount_usdt, strategy, strategy_params, dry_run, take_profit_pct, stop_loss_pct, exchange, updated_at FROM user_strategies WHERE user_id = ?",
+                "SELECT symbol, timeframe, amount_usdt, strategy, strategy_params, dry_run, take_profit_pct, stop_loss_pct, exchange, updated_at, position_start_time, active_order_id FROM user_strategies WHERE user_id = ?",
                 [user_id]
             ).fetchone()
             
@@ -472,7 +478,9 @@ class DuckDBHandler:
                 'TAKE_PROFIT_PCT': result[6],
                 'STOP_LOSS_PCT': result[7],
                 'EXCHANGE': result[8] if result[8] else 'bybit',
-                'updated_at': result[9]
+                'updated_at': result[9],
+                'position_start_time': result[10] if len(result) > 10 else None,
+                'active_order_id': result[11] if len(result) > 11 else None
             }
         except Exception as e:
             logger.error(f"Error fetching strategy: {e}")
@@ -538,6 +546,91 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error saving strategy: {e}")
             return False
+
+    def update_bot_state(self, user_id, position_start_time=None, active_order_id=None):
+        """Update bot state (start time, active order)."""
+        try:
+            from datetime import datetime
+            # We need to handle None explicitly for SQL NULL
+            # If argument is NOT passed (None), do we want to set it to NULL or keep existing?
+            # For this helper, let's assume we pass what we want to set. 
+            # But usually we might want to update one without changing the other.
+            # Let's make it flexible: only update provided non-None values? 
+            # No, we often want to set them to None (NULL) to clear them.
+            # So we will use a specific sentinel or just assume the caller knows what they are doing.
+            # Let's assume the caller provides the exact value to set (including None).
+            
+            # However, to avoid overwriting one when updating the other, we might need dynamic query.
+            # Or simpler: just always update both? No, that requires knowing both.
+            
+            # Better approach: update specific fields if provided.
+            # But how to distinguish "Don't Change" vs "Set to None"?
+            # Let's use kwargs approach or separate methods?
+            # Let's just use a single query that updates both, assuming the caller has the current state?
+            # No, the bot might only know "I just placed an order".
+            
+            # Let's do this:
+            updates = []
+            params = []
+            
+            # We use a special string 'NO_CHANGE' to indicate no update
+            if position_start_time != 'NO_CHANGE':
+                updates.append("position_start_time = ?")
+                params.append(position_start_time)
+            
+            if active_order_id != 'NO_CHANGE':
+                updates.append("active_order_id = ?")
+                params.append(active_order_id)
+                
+            if not updates:
+                return True
+                
+            updates.append("updated_at = ?")
+            params.append(datetime.now())
+            
+            params.append(user_id)
+            
+            query = f"UPDATE user_strategies SET {', '.join(updates)} WHERE user_id = ?"
+            self.conn.execute(query, params)
+            return True
+        except Exception as e:
+            logger.error(f"Error updating bot state: {e}")
+            return False
+
+    def get_recent_trades(self, limit=10, user_id=None):
+        """
+        Fetch the most recent trades.
+        Args:
+            limit: Number of trades to return
+            user_id: Optional user_id to filter by
+        """
+        try:
+            query = "SELECT * FROM trades"
+            params = []
+            
+            if user_id is not None:
+                query += " WHERE user_id = ?"
+                params.append(user_id)
+                
+            query += " ORDER BY timestamp DESC LIMIT ?"
+            params.append(limit)
+            
+            # Fetch as dictionary
+            # Columns from trades table: id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp
+            columns = ['id', 'user_id', 'symbol', 'side', 'price', 'amount', 'type', 'pnl', 'strategy', 'timestamp']
+            
+            rows = self.conn.execute(query, params).fetchall()
+            
+            trades = []
+            for row in rows:
+                trade = dict(zip(columns, row))
+                trades.append(trade)
+                
+            return trades
+            
+        except Exception as e:
+            logger.error(f"Error fetching recent trades: {e}")
+            return []
 
     def get_api_key(self, user_id, exchange):
         """Get API key for user and exchange."""

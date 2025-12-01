@@ -1,4 +1,5 @@
 import logging
+import time
 from .base_client import BaseExchangeClient
 from .exchange_factory import ExchangeFactory
 from .. import config
@@ -27,7 +28,8 @@ class PaperExchange(BaseExchangeClient):
         # Virtual State
         self.paper_balance = initial_balance
         self.paper_positions = {} # {symbol: {'size': 0.0, 'entry_price': 0.0, 'side': 'None'}}
-        self.orders = []
+        self.orders = {} # {order_id: order_dict}
+        self.trades = [] # List of trade dicts
         
         logger.info(f"Paper Exchange initialized with ${self.paper_balance:.2f} using {exchange_type}")
 
@@ -127,7 +129,41 @@ class PaperExchange(BaseExchangeClient):
             
             # Return fake order ID
             import uuid
-            return {'id': str(uuid.uuid4()), 'info': {'paper': True}}
+            order_id = str(uuid.uuid4())
+            
+            # Store Order
+            order = {
+                'id': order_id,
+                'symbol': symbol,
+                'type': order_type,
+                'side': side,
+                'amount': amount,
+                'price': current_price,
+                'average': current_price,
+                'status': 'closed', # Paper orders fill instantly
+                'filled': amount,
+                'remaining': 0.0,
+                'timestamp': int(time.time() * 1000),
+                'info': {'paper': True}
+            }
+            self.orders[order_id] = order
+            
+            # Store Trade
+            trade = {
+                'id': str(uuid.uuid4()),
+                'order': order_id,
+                'symbol': symbol,
+                'side': side,
+                'price': current_price,
+                'amount': amount,
+                'cost': value,
+                'fee': fee,
+                'timestamp': int(time.time() * 1000),
+                'info': {'paper': True}
+            }
+            self.trades.insert(0, trade) # Newest first
+            
+            return order
             
         except Exception as e:
             logger.error(f"Error creating paper order: {e}")
@@ -165,4 +201,27 @@ class PaperExchange(BaseExchangeClient):
         else:
             logger.info(f"PAPER: No position to close for {symbol}")
             return True
+
+    def fetch_order(self, order_id, symbol=None):
+        """Fetch virtual order."""
+        return self.orders.get(order_id)
+
+    def fetch_my_trades(self, symbol=None, since=None, limit=None, params={}):
+        """Fetch virtual trades."""
+        trades = self.trades
+        if symbol:
+            trades = [t for t in trades if t['symbol'] == symbol]
+        if limit:
+            trades = trades[:limit]
+        return trades
+
+    def fetch_open_orders(self, symbol=None, since=None, limit=None, params={}):
+        """Fetch open virtual orders."""
+        # In our simple paper model, orders fill instantly so there are no open orders usually.
+        # But if we add limit order support later, this will be needed.
+        # For now, return empty list or filter orders by status 'open' if we had them.
+        open_orders = [o for o in self.orders.values() if o['status'] == 'open']
+        if symbol:
+            open_orders = [o for o in open_orders if o['symbol'] == symbol]
+        return open_orders
 

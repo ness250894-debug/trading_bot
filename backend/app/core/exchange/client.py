@@ -498,3 +498,75 @@ class ByBitClient(BaseExchangeClient):
         except Exception as e:
             self.logger.error(f"Error closing position: {e}")
             return False
+
+    def fetch_order(self, order_id, symbol=None):
+        """Fetches a specific order by ID."""
+        try:
+            if self.demo:
+                # Workaround for ByBit Demo error 10032
+                params = {
+                    'category': 'linear',
+                    'orderId': order_id
+                }
+                if symbol:
+                    params['symbol'] = symbol.replace('/', '')
+                
+                response = self.exchange.private_get_v5_order_history(params)
+                
+                if str(response.get('retCode')) == '0':
+                    list_data = response.get('result', {}).get('list', [])
+                    if list_data:
+                        order = list_data[0]
+                        # Map to CCXT structure
+                        return {
+                            'id': order.get('orderId'),
+                            'status': order.get('orderStatus').lower(), # 'filled', 'cancelled', etc.
+                            'filled': float(order.get('cumExecQty', 0)),
+                            'average': float(order.get('avgPrice', 0)) if order.get('avgPrice') else None,
+                            'price': float(order.get('price', 0)) if order.get('price') else None,
+                            'info': order
+                        }
+                return None
+            else:
+                return self.exchange.fetch_order(order_id, symbol)
+        except Exception as e:
+            self.logger.error(f"Error fetching order {order_id}: {e}")
+            return None
+
+    def fetch_my_trades(self, symbol, limit=1):
+        """Fetches recent trades for a symbol."""
+        try:
+            if self.demo:
+                # Workaround for ByBit Demo
+                market_symbol = symbol.replace('/', '')
+                params = {
+                    'category': 'linear',
+                    'symbol': market_symbol,
+                    'limit': limit
+                }
+                response = self.exchange.private_get_v5_execution_list(params)
+                
+                if str(response.get('retCode')) == '0':
+                    list_data = response.get('result', {}).get('list', [])
+                    trades = []
+                    for trade in list_data:
+                        trades.append({
+                            'id': trade.get('execId'),
+                            'order': trade.get('orderId'),
+                            'symbol': symbol,
+                            'side': trade.get('side').lower(),
+                            'price': float(trade.get('execPrice', 0)),
+                            'amount': float(trade.get('execQty', 0)),
+                            'cost': float(trade.get('execValue', 0)),
+                            'fee': float(trade.get('execFee', 0)),
+                            'timestamp': int(trade.get('execTime', 0)),
+                            'info': trade
+                        })
+                    return trades
+                return []
+            else:
+                return self.exchange.fetch_my_trades(symbol, limit=limit)
+        except Exception as e:
+            self.logger.error(f"Error fetching trades for {symbol}: {e}")
+            return []
+
