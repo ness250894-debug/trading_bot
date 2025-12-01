@@ -184,7 +184,7 @@ export default function Settings() {
             <div className={styles.section}>
                 <h2>👤 Account Information</h2>
                 <p className={styles.description}>
-                    Your account details and user ID.
+                    Your account details and information.
                 </p>
 
                 {userInfoLoading ? (
@@ -199,7 +199,7 @@ export default function Settings() {
                                 borderRadius: '12px'
                             }}>
                                 <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '0.5rem', fontWeight: '600' }}>
-                                    USER ID
+                                    ACCOUNT NUMBER
                                 </div>
                                 <div style={{
                                     fontFamily: 'monospace',
@@ -211,7 +211,7 @@ export default function Settings() {
                                     {userInfo.id}
                                 </div>
                                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '0.5rem' }}>
-                                    Copy this ID for support requests
+                                    Use this number for support requests
                                 </div>
                             </div>
 
@@ -222,7 +222,7 @@ export default function Settings() {
                                 borderRadius: '12px'
                             }}>
                                 <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '0.5rem', fontWeight: '600' }}>
-                                    EMAIL
+                                    Email Address
                                 </div>
                                 <div style={{ fontSize: '16px', color: '#fff' }}>
                                     {userInfo.email}
@@ -245,7 +245,7 @@ export default function Settings() {
                 <div className={styles.form}>
                     {/* Modern Exchange Selector */}
                     <div className={styles.formGroup} style={{ marginBottom: '2rem' }}>
-                        <label style={{ marginBottom: '1rem', display: 'block', fontSize: '14px', fontWeight: '600', color: '#9ca3af' }}>SELECT EXCHANGE</label>
+                        <label style={{ marginBottom: '1rem', display: 'block', fontSize: '14px', fontWeight: '600', color: '#9ca3af' }}>Select Exchange</label>
 
                         {exchangesLoading ? (
                             <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>Loading exchanges...</div>

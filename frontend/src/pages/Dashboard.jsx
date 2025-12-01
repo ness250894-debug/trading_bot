@@ -7,6 +7,7 @@ import { Play, Square, Activity, DollarSign, TrendingUp, Terminal, Clock, AlertC
 import TradeHistory from '../components/TradeHistory';
 import BotInstancesTable from '../components/BotInstancesTable';
 import Disclaimer from '../components/Disclaimer';
+import { formatStrategyName } from '../lib/utils';
 
 const StatCard = ({ title, value, subtext, icon: Icon, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group">
@@ -212,19 +213,19 @@ export default function Dashboard() {
                     subtext={status?.total_pnl >= 0 ? 'Profitable' : 'Loss'}
                 />
                 <StatCard
-                    title="Active Trades"
+                    title="Active Positions"
                     value={status?.active_trades || 0}
                     icon={Activity}
-                    subtext="Currently open positions"
+                    subtext="Currently open"
                 />
                 <StatCard
                     title="Active Strategy"
-                    value={status?.config?.strategy?.replace('_', ' ').toUpperCase() || 'N/A'}
+                    value={formatStrategyName(status?.config?.strategy) || 'N/A'}
                     icon={Activity}
                     subtext={
                         <span className="flex flex-col gap-1">
                             <span className={status?.config?.dry_run ? 'text-yellow-400' : 'text-green-400'}>
-                                {status?.config?.dry_run ? '⚠️ Dry Run Mode' : '🚀 Live Trading'}
+                                {status?.config?.dry_run ? '⚠️ Practice Mode' : '🚀 Live Trading'}
                             </span>
                             <span className="text-[10px] opacity-70">
                                 {status?.config?.parameters ? Object.entries(status.config.parameters).map(([k, v]) => `${k}: ${v}`).join(', ') : ''}

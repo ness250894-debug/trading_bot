@@ -539,7 +539,7 @@ export default function Strategies() {
                                 `} />
                             </div>
                             <div>
-                                <span className="block font-medium text-foreground">Dry Run Mode</span>
+                                <span className="block font-medium text-foreground">Practice Mode</span>
                                 <span className="text-xs text-muted-foreground">Simulate trades without real money</span>
                             </div>
                         </label>

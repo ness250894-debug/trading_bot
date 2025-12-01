@@ -8,6 +8,7 @@ import {
 import SentimentWidget from '../components/SentimentWidget';
 import BotInstancesTable from '../components/BotInstancesTable';
 import Disclaimer from '../components/Disclaimer';
+import { formatPlanName, formatStrategyName } from '../lib/utils';
 
 const InfoCard = ({ title, value, icon: Icon, subtext, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group hover:border-primary/20 transition-all">
@@ -185,17 +186,12 @@ export default function Main() {
                 <Disclaimer compact />
             </div>
 
-            {/* User Info & Subscription Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <InfoCard
-                    title="User ID"
-                    value={`#${user?.id || 'N/A'}`}
-                    icon={User}
-                    subtext={user?.email || 'No email'}
-                />
+            {/* Subscription & Bot Status Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
                 <InfoCard
                     title="Subscription Plan"
-                    value={subscription?.plan?.toUpperCase() || 'FREE'}
+                    value={formatPlanName(subscription?.plan) || 'Free'}
                     icon={CreditCard}
                     subtext={subscription?.status === 'active' ? '✓ Active' : subscription?.status === 'expired' ? '✗ Expired' : 'No subscription'}
                     trend={subscription?.status === 'active' ? 'up' : 'down'}
@@ -208,10 +204,10 @@ export default function Main() {
                     trend={botStatus?.is_running ? 'up' : 'down'}
                 />
                 <InfoCard
-                    title="Active Trades"
+                    title="Active Positions"
                     value={botStatus?.active_trades || 0}
                     icon={Activity}
-                    subtext="Open positions"
+                    subtext="Currently open"
                 />
             </div>
 
@@ -225,7 +221,7 @@ export default function Main() {
                     <div>
                         <p className="text-sm text-muted-foreground mb-1">Current Plan</p>
                         <p className="text-lg font-semibold text-foreground">
-                            {subscription?.plan?.replace(/_/g, ' ').toUpperCase() || 'Free Plan'}
+                            {formatPlanName(subscription?.plan) || 'Free Plan'}
                         </p>
                     </div>
                     <div>
@@ -287,7 +283,7 @@ export default function Main() {
                     <div>
                         <p className="text-sm text-muted-foreground mb-1">Strategy Type</p>
                         <p className="text-lg font-semibold text-foreground">
-                            {botStatus?.config?.strategy?.replace(/_/g, ' ').toUpperCase() || 'None'}
+                            {formatStrategyName(botStatus?.config?.strategy) || 'None'}
                         </p>
                     </div>
                     <div>

@@ -5,6 +5,7 @@ import { Shield, Trash2, Edit, Check, X, Search, Users, CreditCard } from 'lucid
 import Disclaimer from '../components/Disclaimer';
 import { useModal } from '../components/Modal';
 import AdminPlans from '../components/AdminPlans';
+import { formatPlanName, formatLabel } from '../lib/utils';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -350,8 +351,8 @@ const AdminDashboard = () => {
                                                                         type="button"
                                                                         onClick={() => setBillingCycle(prev => ({ ...prev, [user.id]: 'monthly' }))}
                                                                         className={`px-3 py-1 text-xs font-medium rounded transition-all ${(billingCycle[user.id] || 'monthly') === 'monthly'
-                                                                                ? 'bg-primary text-white shadow-sm'
-                                                                                : 'text-muted-foreground hover:text-foreground'
+                                                                            ? 'bg-primary text-white shadow-sm'
+                                                                            : 'text-muted-foreground hover:text-foreground'
                                                                             }`}
                                                                     >
                                                                         Monthly
@@ -360,8 +361,8 @@ const AdminDashboard = () => {
                                                                         type="button"
                                                                         onClick={() => setBillingCycle(prev => ({ ...prev, [user.id]: 'yearly' }))}
                                                                         className={`px-3 py-1 text-xs font-medium rounded transition-all ${(billingCycle[user.id] || 'monthly') === 'yearly'
-                                                                                ? 'bg-primary text-white shadow-sm'
-                                                                                : 'text-muted-foreground hover:text-foreground'
+                                                                            ? 'bg-primary text-white shadow-sm'
+                                                                            : 'text-muted-foreground hover:text-foreground'
                                                                             }`}
                                                                     >
                                                                         Yearly
@@ -382,11 +383,11 @@ const AdminDashboard = () => {
                                                         </div>
                                                     ) : (
                                                         <span className={`px-2 py-1 text-xs font-medium rounded-full border ${(user.plan_id || 'free').includes('elite') ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
-                                                                (user.plan_id || 'free').includes('pro') ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
-                                                                    (user.plan_id || 'free').includes('basic') ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                                                        'bg-gray-500/10 text-gray-500 border-gray-500/20'
+                                                            (user.plan_id || 'free').includes('pro') ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                                                                (user.plan_id || 'free').includes('basic') ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                                                    'bg-gray-500/10 text-gray-500 border-gray-500/20'
                                                             }`}>
-                                                            {(user.plan_id || 'Free').replace('_', ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                                            {formatPlanName(user.plan_id)}
                                                         </span>
                                                     )}
                                                 </td>
@@ -406,7 +407,7 @@ const AdminDashboard = () => {
                                                             ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                                                             : 'bg-red-500/10 text-red-500 border-red-500/20'
                                                             }`}>
-                                                            {(user.status || 'Active').toUpperCase()}
+                                                            {formatLabel(user.status || 'Active')}
                                                         </span>
                                                     )}
                                                 </td>

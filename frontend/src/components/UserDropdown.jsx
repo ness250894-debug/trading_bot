@@ -62,7 +62,7 @@ export default function UserDropdown({ user }) {
                 </div>
                 <div className="hidden md:block text-left">
                     <p className="text-sm font-medium text-foreground">{displayName}</p>
-                    <p className="text-xs text-muted-foreground">ID: {user?.id}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <ChevronDown
                     size={16}
@@ -88,7 +88,6 @@ export default function UserDropdown({ user }) {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                                     <p className="text-xs text-muted-foreground">{user?.email}</p>
-                                    <p className="text-xs text-muted-foreground">ID: {user?.id}</p>
                                 </div>
                             </div>
                         </div>

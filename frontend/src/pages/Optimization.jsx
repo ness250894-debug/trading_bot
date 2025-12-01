@@ -4,6 +4,7 @@ import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, S
 import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
 import Disclaimer from '../components/Disclaimer';
+import { formatLabel } from '../lib/utils';
 
 // --- Helper Components ---
 
@@ -467,7 +468,7 @@ export default function Optimization() {
                             <div key={param} className="p-3 bg-white/5 rounded-xl border border-white/5">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xs font-bold text-foreground capitalize">
-                                        {param.replace(/_/g, ' ')}
+                                        {formatLabel(param)}
                                     </span>
                                     <Tooltip content={parameterInfo[param]} />
                                 </div>
