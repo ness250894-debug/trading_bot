@@ -32,6 +32,7 @@ const PlanGate = ({ feature, children }) => {
 
             if (response.ok) {
                 const data = await response.json();
+                console.log('[PlanGate] User data:', data);
                 const isAdmin = data.is_admin || false;
 
                 // Check if user has no subscription or subscription is null/expired
@@ -41,14 +42,20 @@ const PlanGate = ({ feature, children }) => {
                     subscription.plan_id &&
                     !subscription.plan_id.startsWith('free');
 
+                console.log('[PlanGate] Is Admin:', isAdmin);
+                console.log('[PlanGate] Subscription:', subscription);
+                console.log('[PlanGate] Has Active Paid Plan:', hasActivePaidPlan);
+                console.log('[PlanGate] Will Restrict:', !isAdmin && !hasActivePaidPlan);
+
                 // Restrict if: not admin AND (no subscription OR subscription is free)
                 setIsRestricted(!isAdmin && !hasActivePaidPlan);
             } else {
+                console.log('[PlanGate] Failed to fetch user info, status:', response.status);
                 // If can't get user info, assume restricted
                 setIsRestricted(true);
             }
         } catch (error) {
-            console.error('Error checking plan access:', error);
+            console.error('[PlanGate] Error checking plan access:', error);
             setIsRestricted(true);
         } finally {
             setLoading(false);

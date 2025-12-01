@@ -18,6 +18,7 @@ const AdminDashboard = () => {
     const [nicknameValue, setNicknameValue] = useState('');
     const [activeTab, setActiveTab] = useState('users');
     const [billingCycle, setBillingCycle] = useState({}); // Track billing cycle per user
+    const [selectedPlan, setSelectedPlan] = useState({}); // Track selected plan tier per user
 
     // Fetch users on mount and get current user ID
     useEffect(() => {
@@ -343,14 +344,15 @@ const AdminDashboard = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     {editingUser === user.id ? (
                                                         <div className="flex flex-col gap-2 min-w-[200px]">
-                                                            {/* Billing Cycle Toggle */}
+                                                            {/* Billing Cycle Toggle - Disabled for Free plan */}
                                                             <div className="flex items-center gap-2 mb-1">
                                                                 <span className="text-xs text-muted-foreground">Billing:</span>
-                                                                <div className="relative inline-flex bg-muted rounded-lg p-0.5">
+                                                                <div className={`relative inline-flex bg-muted rounded-lg p-0.5 ${(selectedPlan[user.id] || (user.plan_id || 'free').split('_')[0]) === 'free' ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setBillingCycle(prev => ({ ...prev, [user.id]: 'monthly' }))}
-                                                                        className={`px-3 py-1 text-xs font-medium rounded transition-all ${(billingCycle[user.id] || 'monthly') === 'monthly'
+                                                                        disabled={(selectedPlan[user.id] || (user.plan_id || 'free').split('_')[0]) === 'free'}
+                                                                        className={`px-3 py-1 text-xs font-medium rounded transition-all disabled:cursor-not-allowed ${(billingCycle[user.id] || 'monthly') === 'monthly'
                                                                             ? 'bg-primary text-white shadow-sm'
                                                                             : 'text-muted-foreground hover:text-foreground'
                                                                             }`}
@@ -360,7 +362,8 @@ const AdminDashboard = () => {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setBillingCycle(prev => ({ ...prev, [user.id]: 'yearly' }))}
-                                                                        className={`px-3 py-1 text-xs font-medium rounded transition-all ${(billingCycle[user.id] || 'monthly') === 'yearly'
+                                                                        disabled={(selectedPlan[user.id] || (user.plan_id || 'free').split('_')[0]) === 'free'}
+                                                                        className={`px-3 py-1 text-xs font-medium rounded transition-all disabled:cursor-not-allowed ${(billingCycle[user.id] || 'monthly') === 'yearly'
                                                                             ? 'bg-primary text-white shadow-sm'
                                                                             : 'text-muted-foreground hover:text-foreground'
                                                                             }`}
@@ -372,10 +375,15 @@ const AdminDashboard = () => {
                                                             {/* Plan Tier Selector */}
                                                             <select
                                                                 className="bg-background border border-border rounded px-2 py-1 text-sm"
-                                                                defaultValue={user.plan_id || 'free_monthly'}
+                                                                defaultValue={user.plan_id || 'free'}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    const tier = value.split('_')[0];
+                                                                    setSelectedPlan(prev => ({ ...prev, [user.id]: tier }));
+                                                                }}
                                                                 id={`plan-${user.id}`}
                                                             >
-                                                                <option value={`free_${billingCycle[user.id] || 'monthly'}`}>Free</option>
+                                                                <option value="free">Free</option>
                                                                 <option value={`basic_${billingCycle[user.id] || 'monthly'}`}>Basic</option>
                                                                 <option value={`pro_${billingCycle[user.id] || 'monthly'}`}>Pro</option>
                                                                 <option value={`elite_${billingCycle[user.id] || 'monthly'}`}>Elite</option>
