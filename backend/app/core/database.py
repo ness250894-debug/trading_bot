@@ -797,12 +797,13 @@ class DuckDBHandler:
                 return None
                 
             return {
-                'user_id': result[0],
-                'plan_id': result[1],
-                'status': result[2],
-                'created_at': result[3],
-                'expires_at': result[4],
-                'updated_at': result[5]
+                'id': result[0],
+                'user_id': result[1],
+                'plan_id': result[2],
+                'status': result[3],
+                'starts_at': result[4],
+                'expires_at': result[5],
+                'updated_at': result[7] if len(result) > 7 else None
             }
         except Exception as e:
             logger.error(f"Error fetching subscription: {e}")
@@ -866,6 +867,7 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error creating payment: {e}")
             return False
+
 
     def get_payment_by_charge_code(self, charge_code):
         """Get payment details by charge code."""
