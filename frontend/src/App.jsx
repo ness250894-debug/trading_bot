@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Landing from './pages/Landing';
+import Main from './pages/Main';
 import Dashboard from './pages/Dashboard';
 import Strategies from './pages/Strategies';
 import StrategyBuilder from './pages/StrategyBuilder';
@@ -91,6 +92,13 @@ function App() {
               </Route>
 
               {/* Protected Routes */}
+              <Route path="/main" element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Main />
+                  </Layout>
+                </ProtectedRoute>
+              } />
               <Route path="/dashboard" element={
                 <ProtectedRoute>
                   <Layout>

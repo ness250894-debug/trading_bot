@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import SentimentWidget from '../components/SentimentWidget';
 
 
 import api from '../lib/api';
@@ -240,11 +239,6 @@ export default function Dashboard() {
                     trend="up"
                     subtext={`${trades.length} total trades`}
                 />
-            </div>
-
-            {/* AI Insights Section */}
-            <div className="mb-8">
-                <SentimentWidget />
             </div>
 
             {/* Main Content Grid */}

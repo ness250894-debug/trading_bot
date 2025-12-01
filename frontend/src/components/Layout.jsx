@@ -43,7 +43,7 @@ export default function Layout({ children }) {
 
             {/* Top Bar */}
             <header className="h-16 px-4 md:px-8 flex items-center justify-between bg-transparent z-40 border-b border-white/5">
-                <NavLink to="/dashboard" className="flex items-center gap-2">
+                <NavLink to="/main" className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
                         <Zap size={20} className="text-white" fill="currentColor" />
                     </div>
