@@ -8,7 +8,7 @@ import {
 import SentimentWidget from '../components/SentimentWidget';
 import BotInstancesTable from '../components/BotInstancesTable';
 import Disclaimer from '../components/Disclaimer';
-import { formatPlanName, formatStrategyName } from '../lib/utils';
+import { formatPlanName, formatStrategyName, formatLabel } from '../lib/utils';
 
 const InfoCard = ({ title, value, icon: Icon, subtext, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group hover:border-primary/20 transition-all">
@@ -313,7 +313,7 @@ export default function Main() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                             {Object.entries(botStatus.config.parameters).map(([key, value]) => (
                                 <div key={key} className="text-xs">
-                                    <span className="text-muted-foreground">{key}: </span>
+                                    <span className="text-muted-foreground capitalize">{formatLabel(key)}: </span>
                                     <span className="text-foreground font-medium">{value}</span>
                                 </div>
                             ))}

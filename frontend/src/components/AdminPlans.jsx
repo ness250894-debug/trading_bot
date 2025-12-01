@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { Plus, Edit, Trash2, Check, DollarSign, Calendar } from 'lucide-react';
 import api from '../lib/api';
 import { useModal } from './Modal';
+import { formatPlanName } from '../lib/utils';
 
 const AdminPlans = () => {
     const [plans, setPlans] = useState([]);
@@ -167,7 +168,7 @@ const AdminPlans = () => {
 
                                 <div className="mb-4">
                                     <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
-                                    <div className="text-sm text-muted-foreground font-mono mt-1">{plan.id}</div>
+                                    <div className="text-sm text-muted-foreground font-mono mt-1">{formatPlanName(plan.id)}</div>
                                 </div>
 
                                 <div className="flex items-baseline gap-1 mb-4">
