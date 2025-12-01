@@ -9,6 +9,15 @@ logger = logging.getLogger("Database")
 
 import os
 
+try:
+    from .resilience import retry
+except ImportError:
+    # Fallback if resilience module not available
+    def retry(max_attempts=3, delay=0.5, backoff=2):
+        def decorator(func):
+            return func
+        return decorator
+
 class DuckDBHandler:
     def __init__(self, db_file="data/trading_bot.duckdb"):
         self.db_file = db_file
@@ -354,6 +363,7 @@ class DuckDBHandler:
             logger.error(f"Error clearing leaderboard: {e}")
             return False
 
+    @retry(max_attempts=3, delay=0.5, backoff=2)
     def save_trade(self, user_id, symbol, side, amount, price, pnl=0):
         """Save a trade to the database."""
         try:

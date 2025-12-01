@@ -8,6 +8,7 @@ from logging.handlers import RotatingFileHandler
 from .exchange import ExchangeClient
 from .strategies.sma_crossover import SMACrossover
 from . import config
+from .resilience import retry, CircuitBreaker
 
 # Configure logging with rotation
 logging.basicConfig(
@@ -227,6 +228,10 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     notifier.send_message(f"🚀 *Bot Started for User {user_id}*\nStrategy: {safe_strategy_name}")
 
     logger.info(f"✓ User {user_id} bot initialized. Entering trading loop...")
+    
+    # Initialize Circuit Breaker
+    circuit_breaker = CircuitBreaker(threshold=5, window=60, cooldown=300)
+    logger.info(f"Circuit breaker initialized: {circuit_breaker.threshold} failures in {circuit_breaker.window}s triggers {circuit_breaker.cooldown}s pause")
 
     # Main trading loop - simplified version
     while True:
@@ -235,20 +240,51 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 running_event.wait()
                 logger.info(f"▶️ User {user_id} bot resumed")
 
-            # Fetch market data
+            # Check circuit breaker
+            if circuit_breaker.is_open():
+                remaining = circuit_breaker.get_cooldown_remaining()
+                logger.warning(f"⚠️ Circuit breaker is {circuit_breaker.get_state()} - cooling down for {remaining:.0f}s")
+                time.sleep(min(30, remaining))  # Check every 30s or remaining time
+                continue
+                
+            # Fetch market data with retry
+            @retry(max_attempts=3, delay=1, backoff=2)
+            def fetch_ohlcv_with_retry():
+                return client.fetch_ohlcv(symbol, timeframe, limit=100)
+                
             try:
-                df = client.fetch_ohlcv(symbol, timeframe, limit=100)
+                df = fetch_ohlcv_with_retry()
+                circuit_breaker.record_success()  # Success, reset failures
             except Exception as e:
-                logger.error(f"User {user_id} OHLCV fetch failed: {e}")
+                logger.error(f"User {user_id} OHLCV fetch failed after retries: {e}")
+                circuit_breaker.record_failure()
                 time.sleep(config.LOOP_DELAY_SECONDS)
                 continue
 
-            # Get current position
-            position = client.fetch_position(symbol)
-            position_size = position.get('size', 0.0)
+            # Get current position with retry
+            @retry(max_attempts=3, delay=1, backoff=2)
+            def fetch_position_with_retry():
+                return client.fetch_position(symbol)
+                
+            try:
+                position = fetch_position_with_retry()
+                position_size = position.get('size', 0.0)
+                logger.debug(f"User {user_id} Position: size={position_size}, side={position.get('side', 'N/A')}")
+                circuit_breaker.record_success()
+            except Exception as e:
+                logger.error(f"❌ User {user_id} position fetch failed after retries: {type(e).__name__}: {e}")
+                circuit_breaker.record_failure()
+                time.sleep(config.LOOP_DELAY_SECONDS)
+                continue
 
             # Generate signal
-            signal = strategy.generate_signal(df)
+            try:
+                signal = strategy.generate_signal(df)
+                logger.debug(f"User {user_id} Signal Generated: {signal}")
+            except Exception as e:
+                logger.error(f"❌ User {user_id} signal generation failed: {type(e).__name__}: {e}")
+                time.sleep(config.LOOP_DELAY_SECONDS)
+                continue
 
             # Simple trading logic (enter/exit based on signal)
             if position_size == 0 and signal in ['long', 'short']:
@@ -288,7 +324,11 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     
                     logger.info(f"✓ User {user_id}: {signal} entry at {exec_price}")
                 except Exception as e:
-                    logger.error(f"User {user_id} order failed: {e}")
+                    logger.error(f"❌ User {user_id} order creation failed:")
+                    logger.error(f"   Symbol: {symbol}, Side: {side}, Amount: {amount:.6f}")
+                    logger.error(f"   Error: {type(e).__name__}: {str(e)}")
+                    import traceback
+                    logger.debug(f"   Stack: {traceback.format_exc()}")
 
             elif position_size > 0:
                 # Check exit (simplified - just on opposite signal)
@@ -313,7 +353,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                         db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
                         
                     except Exception as e:
-                        logger.error(f"User {user_id} close failed: {e}")
+                        logger.error(f"❌ User {user_id} position close failed:")
+                        logger.error(f"   Symbol: {symbol}, Side: {side}, Size: {position_size}")
+                        logger.error(f"   Error: {type(e).__name__}: {str(e)}")
 
             time.sleep(config.LOOP_DELAY_SECONDS)
 
@@ -867,9 +909,28 @@ def main():
             # Sleep to prevent API spam (configurable delay)
             time.sleep(config.LOOP_DELAY_SECONDS)
                 
+        except KeyboardInterrupt:
+            logger.info(f"⏸️ User {user_id} bot stopped by keyboard interrupt")
+            notifier.send_message(f"⏹️ *Bot Stopped*\nUser {user_id} bot manually stopped")
+            break
         except Exception as e:
-            logger.error(f"An error occurred: {e}")
-            notifier.send_error(f"Bot Loop Error: {e}")
+            import traceback
+            error_details = {
+                'user_id': user_id,
+                'symbol': symbol,
+                'strategy': strategy_name,
+                'position_size': position.get('size', 'unknown') if 'position' in locals() else 'unknown',
+                'signal': signal if 'signal' in locals() else 'unknown',
+                'error_type': type(e).__name__,
+                'error_message': str(e)
+            }
+            
+            logger.error(f"❌ Critical Error in Bot Loop for User {user_id}")
+            logger.error(f"Context: {error_details}")
+            logger.error(f"Stack Trace:\n{traceback.format_exc()}")
+            
+            notifier.send_error(f"❌ *Bot Loop Error*\nUser: {user_id}\nError: {type(e).__name__}\nMessage: {str(e)[:200]}")
+            
             # Add a small delay to avoid rapid error loops
             time.sleep(10)
 
