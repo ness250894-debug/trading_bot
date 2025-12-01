@@ -25,7 +25,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TradingBot")
 
-def run_bot_instance(user_id: int, strategy_config: dict, running_event: threading.Event):
+def run_bot_instance(user_id: int, strategy_config: dict, running_event: threading.Event, runtime_state: dict = None):
     """
     Run a bot instance for a specific user.
     
@@ -33,6 +33,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
         user_id: The user ID this bot belongs to
         strategy_config: Dictionary containing strategy configuration
         running_event: Thread event to control pause/resume
+        runtime_state: Dictionary to share runtime state (e.g. active_trades) with manager
     """
     logger.info(f"Starting bot instance for user {user_id} with strategy: {strategy_config.get('STRATEGY', 'unknown')}")
     
@@ -653,8 +654,15 @@ def main():
                 # Update Position Start Time
                 if current_pos_size > 0 and position_start_time is None:
                     position_start_time = time.time() # Start tracking
+                # Update Position Start Time
+                if current_pos_size > 0 and position_start_time is None:
+                    position_start_time = time.time() # Start tracking
                 elif current_pos_size == 0:
                     position_start_time = None # Reset
+                
+                # Update Runtime State (Active Trades)
+                if runtime_state is not None:
+                    runtime_state['active_trades'] = 1 if current_pos_size > 0 else 0
                 
                 # Execute Trading Logic
                 

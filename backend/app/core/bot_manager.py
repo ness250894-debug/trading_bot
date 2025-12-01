@@ -15,6 +15,8 @@ class BotInstance:
         self.running_event = threading.Event()
         self.started_at: Optional[datetime] = None
         self.stopped_at: Optional[datetime] = None
+        # Runtime state for dynamic metrics (like active trades)
+        self.runtime_state: Dict[str, Any] = {"active_trades": 0}
     
     def is_running(self) -> bool:
         """Check if bot instance is currently running."""
@@ -29,6 +31,7 @@ class BotInstance:
             "stopped_at": self.stopped_at.isoformat() if self.stopped_at else None,
             "strategy": self.strategy_config.get("STRATEGY", "unknown"),
             "symbol": self.strategy_config.get("SYMBOL", "unknown"),
+            "active_trades": self.runtime_state.get("active_trades", 0)
         }
 
 
@@ -101,7 +104,8 @@ class BotManager:
                 try:
                     instance.started_at = datetime.now()
                     instance.running_event.set()
-                    run_bot_instance(user_id, strategy_config, instance.running_event)
+                    # Pass runtime_state to the bot loop
+                    run_bot_instance(user_id, strategy_config, instance.running_event, instance.runtime_state)
                 except Exception as e:
                     logger.error(f"Bot instance for user {user_id}, symbol {symbol} crashed: {e}")
                     import traceback

@@ -200,7 +200,7 @@ async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(
             "is_running": is_running,
             "balance": balance_info,
             "total_pnl": total_pnl,
-            "active_trades": 0,  # TODO: Get from bot instance
+            "active_trades": bot_status.get('active_trades', 0) if bot_status and isinstance(bot_status, dict) else 0,
             "config": strategy_config
         }
         

@@ -366,17 +366,13 @@ class DuckDBHandler:
     @retry(max_attempts=3, delay=0.5, backoff=2)
     def save_trade(self, user_id, symbol, side, amount, price, pnl=0):
         """Save a trade to the database."""
-        try:
-            from datetime import datetime
-            query = """
-                INSERT INTO trades (id, user_id, symbol, side, amount, price, pnl, timestamp)
-                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?)
-            """
-            self.conn.execute(query, [user_id, symbol, side, amount, price, pnl, datetime.now()])
-            return True
-        except Exception as e:
-            logger.error(f"Error saving trade: {e}")
-            return False
+        from datetime import datetime
+        query = """
+            INSERT INTO trades (id, user_id, symbol, side, amount, price, pnl, timestamp)
+            VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?)
+        """
+        self.conn.execute(query, [user_id, symbol, side, amount, price, pnl, datetime.now()])
+        return True
 
     def get_trades(self, user_id, limit=100, offset=0):
         """Get trades for a user."""
@@ -496,6 +492,7 @@ class DuckDBHandler:
             logger.error(f"Error fetching strategy: {e}")
             return None
 
+    @retry(max_attempts=3, delay=0.5, backoff=2)
     def save_user_strategy(self, user_id, config):
         """Save or update user strategy configuration.
         
@@ -503,109 +500,84 @@ class DuckDBHandler:
             user_id: The user's ID
             config: Dict with keys: SYMBOL, TIMEFRAME, AMOUNT_USDT, STRATEGY, STRATEGY_PARAMS, DRY_RUN, TAKE_PROFIT_PCT, STOP_LOSS_PCT
         """
-        try:
-            import json
-            from datetime import datetime
-            
-            # Check if exists
-            existing = self.conn.execute(
-                "SELECT 1 FROM user_strategies WHERE user_id = ?",
-                [user_id]
-            ).fetchone()
-            
-            if existing:
-                query = """
-                    UPDATE user_strategies 
-                    SET symbol = ?, timeframe = ?, amount_usdt = ?, strategy = ?, strategy_params = ?, 
-                        dry_run = ?, take_profit_pct = ?, stop_loss_pct = ?, exchange = ?, updated_at = ?
-                    WHERE user_id = ?
-                """
-                self.conn.execute(query, [
-                    config.get('SYMBOL'),
-                    config.get('TIMEFRAME'),
-                    config.get('AMOUNT_USDT'),
-                    config.get('STRATEGY'),
-                    json.dumps(config.get('STRATEGY_PARAMS', {})),
-                    config.get('DRY_RUN', True),
-                    config.get('TAKE_PROFIT_PCT'),
-                    config.get('STOP_LOSS_PCT'),
-                    config.get('EXCHANGE', 'bybit'),
-                    datetime.now(),
-                    user_id
-                ])
-            else:
-                query = """
-                    INSERT INTO user_strategies 
-                    (id, user_id, symbol, timeframe, amount_usdt, strategy, strategy_params, dry_run, take_profit_pct, stop_loss_pct, exchange, updated_at)
-                    VALUES (nextval('seq_user_strategy_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """
-                self.conn.execute(query, [
-                    user_id,
-                    config.get('SYMBOL'),
-                    config.get('TIMEFRAME'),
-                    config.get('AMOUNT_USDT'),
-                    config.get('STRATEGY'),
-                    json.dumps(config.get('STRATEGY_PARAMS', {})),
-                    config.get('DRY_RUN', True),
-                    config.get('TAKE_PROFIT_PCT'),
-                    config.get('STOP_LOSS_PCT'),
-                    config.get('EXCHANGE', 'bybit'),
-                    datetime.now()
-                ])
-            return True
-        except Exception as e:
-            logger.error(f"Error saving strategy: {e}")
-            return False
+        import json
+        from datetime import datetime
+        
+        # Check if exists
+        existing = self.conn.execute(
+            "SELECT 1 FROM user_strategies WHERE user_id = ?",
+            [user_id]
+        ).fetchone()
+        
+        if existing:
+            query = """
+                UPDATE user_strategies 
+                SET symbol = ?, timeframe = ?, amount_usdt = ?, strategy = ?, strategy_params = ?, 
+                    dry_run = ?, take_profit_pct = ?, stop_loss_pct = ?, exchange = ?, updated_at = ?
+                WHERE user_id = ?
+            """
+            self.conn.execute(query, [
+                config.get('SYMBOL'),
+                config.get('TIMEFRAME'),
+                config.get('AMOUNT_USDT'),
+                config.get('STRATEGY'),
+                json.dumps(config.get('STRATEGY_PARAMS', {})),
+                config.get('DRY_RUN', True),
+                config.get('TAKE_PROFIT_PCT'),
+                config.get('STOP_LOSS_PCT'),
+                config.get('EXCHANGE', 'bybit'),
+                datetime.now(),
+                user_id
+            ])
+        else:
+            query = """
+                INSERT INTO user_strategies 
+                (id, user_id, symbol, timeframe, amount_usdt, strategy, strategy_params, dry_run, take_profit_pct, stop_loss_pct, exchange, updated_at)
+                VALUES (nextval('seq_user_strategy_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            self.conn.execute(query, [
+                user_id,
+                config.get('SYMBOL'),
+                config.get('TIMEFRAME'),
+                config.get('AMOUNT_USDT'),
+                config.get('STRATEGY'),
+                json.dumps(config.get('STRATEGY_PARAMS', {})),
+                config.get('DRY_RUN', True),
+                config.get('TAKE_PROFIT_PCT'),
+                config.get('STOP_LOSS_PCT'),
+                config.get('EXCHANGE', 'bybit'),
+                datetime.now()
+            ])
+        return True
 
+    @retry(max_attempts=3, delay=0.5, backoff=2)
     def update_bot_state(self, user_id, position_start_time=None, active_order_id=None):
         """Update bot state (start time, active order)."""
-        try:
-            from datetime import datetime
-            # We need to handle None explicitly for SQL NULL
-            # If argument is NOT passed (None), do we want to set it to NULL or keep existing?
-            # For this helper, let's assume we pass what we want to set. 
-            # But usually we might want to update one without changing the other.
-            # Let's make it flexible: only update provided non-None values? 
-            # No, we often want to set them to None (NULL) to clear them.
-            # So we will use a specific sentinel or just assume the caller knows what they are doing.
-            # Let's assume the caller provides the exact value to set (including None).
+        from datetime import datetime
+        
+        updates = []
+        params = []
+        
+        # We use a special string 'NO_CHANGE' to indicate no update
+        if position_start_time != 'NO_CHANGE':
+            updates.append("position_start_time = ?")
+            params.append(position_start_time)
+        
+        if active_order_id != 'NO_CHANGE':
+            updates.append("active_order_id = ?")
+            params.append(active_order_id)
             
-            # However, to avoid overwriting one when updating the other, we might need dynamic query.
-            # Or simpler: just always update both? No, that requires knowing both.
-            
-            # Better approach: update specific fields if provided.
-            # But how to distinguish "Don't Change" vs "Set to None"?
-            # Let's use kwargs approach or separate methods?
-            # Let's just use a single query that updates both, assuming the caller has the current state?
-            # No, the bot might only know "I just placed an order".
-            
-            # Let's do this:
-            updates = []
-            params = []
-            
-            # We use a special string 'NO_CHANGE' to indicate no update
-            if position_start_time != 'NO_CHANGE':
-                updates.append("position_start_time = ?")
-                params.append(position_start_time)
-            
-            if active_order_id != 'NO_CHANGE':
-                updates.append("active_order_id = ?")
-                params.append(active_order_id)
-                
-            if not updates:
-                return True
-                
-            updates.append("updated_at = ?")
-            params.append(datetime.now())
-            
-            params.append(user_id)
-            
-            query = f"UPDATE user_strategies SET {', '.join(updates)} WHERE user_id = ?"
-            self.conn.execute(query, params)
+        if not updates:
             return True
-        except Exception as e:
-            logger.error(f"Error updating bot state: {e}")
-            return False
+            
+        updates.append("updated_at = ?")
+        params.append(datetime.now())
+        
+        params.append(user_id)
+        
+        query = f"UPDATE user_strategies SET {', '.join(updates)} WHERE user_id = ?"
+        self.conn.execute(query, params)
+        return True
 
     def get_recent_trades(self, limit=10, user_id=None):
         """
