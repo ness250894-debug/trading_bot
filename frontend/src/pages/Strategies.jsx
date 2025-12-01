@@ -471,7 +471,21 @@ export default function Strategies() {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="space-y-4">
+                            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Trading Symbol</label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="BTC/USDT"
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-lg font-mono focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all uppercase"
+                                    value={config.symbol}
+                                    onChange={(e) => handleChange('symbol', e.target.value.toUpperCase())}
+                                />
+                                <span className="absolute top-1 right-2 text-[10px] text-muted-foreground">e.g., BTC/USDT, ETH/USDT</span>
+                            </div>
+                        </div>
+
                         <div className="space-y-4">
                             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Timeframe</label>
                             <div className="grid grid-cols-3 gap-2">

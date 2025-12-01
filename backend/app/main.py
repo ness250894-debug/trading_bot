@@ -27,6 +27,10 @@ logger.info("✅ PII filter enabled - sensitive data will be redacted from logs"
 
 app = FastAPI(title="Trading Bot API", version="1.0.0")
 
+# Add HTTPS enforcement middleware (must be before CORS)
+from .middleware.https_middleware import HTTPSRedirectMiddleware
+app.add_middleware(HTTPSRedirectMiddleware)
+
 # Add rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)

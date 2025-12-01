@@ -6,6 +6,7 @@ import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { Play, Square, Activity, DollarSign, TrendingUp, Terminal, Clock, AlertCircle } from 'lucide-react';
 import TradeHistory from '../components/TradeHistory';
+import BotInstancesTable from '../components/BotInstancesTable';
 import Disclaimer from '../components/Disclaimer';
 
 const StatCard = ({ title, value, subtext, icon: Icon, trend }) => (
@@ -62,12 +63,12 @@ export default function Dashboard() {
         return () => clearInterval(interval);
     }, []);
 
-    const handleStartStop = async () => {
+    const handleStartStop = async (symbol = null) => {
         try {
             if (isRunning) {
-                await api.post('/stop');
+                await api.post('/stop', {}, { params: { symbol } });
             } else {
-                await api.post('/start');
+                await api.post('/start', {}, { params: { symbol } });
             }
             // Refresh status immediately
             const res = await api.get('/status');
@@ -321,8 +322,17 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            {/* Bot Instances Table */}
+            <BotInstancesTable
+                instances={status?.instances || status || {}}
+                onStart={(symbol) => handleStartStop(symbol)}
+                onStop={(symbol) => handleStartStop(symbol)}
+                onStopAll={() => handleStartStop()}
+                loading={loading}
+            />
+
             {/* Trade History Section */}
-            <div className="h-[500px]">
+            <div className="h-[500px] mt-8">
                 <TradeHistory trades={trades} onRefresh={refreshTrades} />
             </div>
         </div>

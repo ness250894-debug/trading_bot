@@ -56,8 +56,8 @@ async def get_balance(current_user: dict = Depends(auth.get_current_user)):
 from datetime import datetime
 
 @router.post("/start")
-async def start_bot(current_user: dict = Depends(auth.get_current_user)):
-    """Start user's bot instance."""
+async def start_bot(symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
+    """Start user's bot instance for a specific symbol (or default from config)."""
     try:
         user_id = current_user['id']
         
@@ -96,8 +96,8 @@ async def start_bot(current_user: dict = Depends(auth.get_current_user)):
                     detail="Live trading requires an active Pro subscription. Please upgrade your plan."
                 )
         
-        # Start bot instance
-        success = bot_manager.start_bot(user_id, strategy_config)
+        # Start bot instance with optional symbol parameter
+        success = bot_manager.start_bot(user_id, strategy_config, symbol=symbol)
         
         if success:
             logger.info(f"Bot started for user {user_id}")
@@ -110,11 +110,11 @@ async def start_bot(current_user: dict = Depends(auth.get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to start bot")
 
 @router.post("/stop")
-async def stop_bot(current_user: dict = Depends(auth.get_current_user)):
-    """Stop user's bot instance."""
+async def stop_bot(symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
+    """Stop user's bot instance. If symbol is None, stops all instances."""
     try:
         user_id = current_user['id']
-        success = bot_manager.stop_bot(user_id)
+        success = bot_manager.stop_bot(user_id, symbol=symbol)
         
         if success:
             logger.info(f"Bot stopped for user {user_id}")
@@ -127,14 +127,20 @@ async def stop_bot(current_user: dict = Depends(auth.get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to stop bot")
 
 @router.get("/status")
-async def get_status(current_user: dict = Depends(auth.get_current_user)):
-    """Get user's bot status."""
+async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
+    """Get user's bot status. If symbol is None, returns all instances."""
     try:
         user_id = current_user['id']
         
-        # Get bot instance status
-        bot_status = bot_manager.get_status(user_id)
-        is_running = bot_status['is_running'] if bot_status else False
+        # Get bot instance status (may return dict of instances or single instance)
+        bot_status = bot_manager.get_status(user_id, symbol=symbol)
+        
+        # Handle multi-instance response (dict of {symbol: status})
+        if bot_status and isinstance(bot_status, dict) and not bot_status.get('is_running'):
+            # This is a multi-instance dict, check if any are running
+            is_running = any(inst.get('is_running', False) for inst in bot_status.values())
+        else:
+            is_running = bot_status.get('is_running', False) if bot_status else False
         
         # Get user's strategy config
         strategy_config = db.get_user_strategy(user_id)
@@ -232,9 +238,15 @@ async def update_config(update: ConfigUpdate, current_user: dict = Depends(auth.
             raise HTTPException(status_code=500, detail="Failed to save configuration")
         
         # If bot is running, restart it with new config
-        bot_status = bot_manager.get_status(user_id)
-        if bot_status and bot_status['is_running']:
-            bot_manager.restart_bot(user_id, new_config)
+        bot_status = bot_manager.get_status(user_id, symbol=update.symbol)
+        is_bot_running = False
+        if bot_status:
+            # Handle both single instance and multi-instance response
+            if isinstance(bot_status, dict) and 'is_running' in bot_status:
+                is_bot_running = bot_status['is_running']
+        
+        if is_bot_running:
+            bot_manager.restart_bot(user_id, new_config, symbol=update.symbol)
             return {"status": "success", "message": "Config updated and bot restarted"}
         else:
             return {"status": "success", "message": "Config updated"}
@@ -244,8 +256,8 @@ async def update_config(update: ConfigUpdate, current_user: dict = Depends(auth.
         raise HTTPException(status_code=500, detail="Failed to update configuration")
 
 @router.post("/restart")
-async def restart_bot(current_user: dict = Depends(auth.get_current_user)):
-    """Restart user's bot with current configuration."""
+async def restart_bot(symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
+    """Restart user's bot with current configuration for a specific symbol."""
     try:
         user_id = current_user['id']
         
@@ -255,8 +267,8 @@ async def restart_bot(current_user: dict = Depends(auth.get_current_user)):
         if not strategy_config:
             raise HTTPException(status_code=400, detail="No configuration found. Please update config first.")
         
-        # Restart bot
-        success = bot_manager.restart_bot(user_id, strategy_config)
+        # Restart bot with optional symbol parameter
+        success = bot_manager.restart_bot(user_id, strategy_config, symbol=symbol)
         
         if success:
             return {"status": "success", "message": "Bot restarted"}
