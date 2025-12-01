@@ -23,8 +23,8 @@ const PlanGate = ({ feature, children }) => {
                 return;
             }
 
-            // Get user subscription status
-            const response = await fetch('/api/user/subscription', {
+            // Get user info including subscription
+            const response = await fetch('/api/user/me', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -32,14 +32,19 @@ const PlanGate = ({ feature, children }) => {
 
             if (response.ok) {
                 const data = await response.json();
-                const planId = data.subscription?.plan_id || 'free_monthly';
                 const isAdmin = data.is_admin || false;
 
-                // Check if user is on Free plan
-                const isFree = planId.startsWith('free') && !isAdmin;
-                setIsRestricted(isFree);
+                // Check if user has no subscription or subscription is null/expired
+                const subscription = data.subscription;
+                const hasActivePaidPlan = subscription &&
+                    subscription.status === 'active' &&
+                    subscription.plan_id &&
+                    !subscription.plan_id.startsWith('free');
+
+                // Restrict if: not admin AND (no subscription OR subscription is free)
+                setIsRestricted(!isAdmin && !hasActivePaidPlan);
             } else {
-                // If can't get subscription, assume restricted
+                // If can't get user info, assume restricted
                 setIsRestricted(true);
             }
         } catch (error) {

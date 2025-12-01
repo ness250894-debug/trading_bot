@@ -10,6 +10,28 @@ router = APIRouter()
 logger = logging.getLogger("API.User")
 db = DuckDBHandler()
 
+@router.get("/user/me")
+@limiter.limit("20/minute")
+async def get_current_user_info(request: Request, current_user: dict = Depends(auth.get_current_user)):
+    """Get current user information including subscription status."""
+    try:
+        user_id = current_user['id']
+        subscription = db.get_subscription(user_id)
+        
+        return {
+            "id": user_id,
+            "email": current_user.get('email'),
+            "is_admin": current_user.get('is_admin', False),
+            "subscription": {
+                "plan_id": subscription.get('plan_id') if subscription else None,
+                "status": subscription.get('status') if subscription else None,
+                "expires_at": subscription.get('expires_at') if subscription else None
+            } if subscription else None
+        }
+    except Exception as e:
+        logger.error(f"Error fetching user info: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch user information")
+
 class TelegramSettingsUpdate(BaseModel):
     chat_id: Optional[str] = None
 
