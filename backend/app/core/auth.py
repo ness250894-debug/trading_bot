@@ -15,7 +15,7 @@ if not SECRET_KEY:
     raise ValueError("JWT_SECRET_KEY environment variable must be set")
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60  # Increased from 30 for better UX
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days (increased from 60 mins for better UX)
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")

@@ -8,6 +8,8 @@ from ..core.bot_manager import bot_manager
 from ..core.database import DuckDBHandler
 from ..core.exchange import ExchangeClient
 from ..core.exchange.paper import PaperExchange
+from ..core.rate_limit import limiter
+from starlette.requests import Request
 
 router = APIRouter()
 logger = logging.getLogger("API.Bot")
@@ -56,7 +58,8 @@ async def get_balance(current_user: dict = Depends(auth.get_current_user)):
 from datetime import datetime
 
 @router.post("/start")
-async def start_bot(symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+async def start_bot(request: Request, symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
     """Start user's bot instance for a specific symbol (or default from config)."""
     try:
         user_id = current_user['id']
@@ -110,7 +113,8 @@ async def start_bot(symbol: Optional[str] = None, current_user: dict = Depends(a
         raise HTTPException(status_code=500, detail="Failed to start bot")
 
 @router.post("/stop")
-async def stop_bot(symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("10/minute")
+async def stop_bot(request: Request, symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
     """Stop user's bot instance. If symbol is None, stops all instances."""
     try:
         user_id = current_user['id']
@@ -214,7 +218,8 @@ async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(
         }
 
 @router.post("/config")
-async def update_config(update: ConfigUpdate, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+async def update_config(request: Request, update: ConfigUpdate, current_user: dict = Depends(auth.get_current_user)):
     """Update user's strategy configuration."""
     try:
         user_id = current_user['id']
@@ -256,7 +261,8 @@ async def update_config(update: ConfigUpdate, current_user: dict = Depends(auth.
         raise HTTPException(status_code=500, detail="Failed to update configuration")
 
 @router.post("/restart")
-async def restart_bot(symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+async def restart_bot(request: Request, symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
     """Restart user's bot with current configuration for a specific symbol."""
     try:
         user_id = current_user['id']
