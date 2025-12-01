@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Request
+from ..core.rate_limit import limiter
 from pydantic import BaseModel, validator
 from typing import Dict, Any, List, Optional
 import pandas as pd
@@ -40,29 +41,30 @@ class BacktestRequest(BaseModel):
         return v
 
 @router.post("/backtest")
-async def run_backtest(request: BacktestRequest, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("5/minute")
+async def run_backtest(request: Request, backtest_data: BacktestRequest, current_user: dict = Depends(auth.get_current_user)):
     try:
         # Initialize Strategy
         strategy_class = None
-        if request.strategy == "Mean Reversion":
+        if backtest_data.strategy == "Mean Reversion":
             strategy_class = MeanReversion
-        elif request.strategy == "SMA Crossover":
+        elif backtest_data.strategy == "SMA Crossover":
             strategy_class = SMACrossover
-        elif request.strategy == "MACD":
+        elif backtest_data.strategy == "MACD":
             strategy_class = MACDStrategy
-        elif request.strategy == "RSI":
+        elif backtest_data.strategy == "RSI":
             strategy_class = RSIStrategy
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown strategy: {request.strategy}")
+            raise HTTPException(status_code=400, detail=f"Unknown strategy: {backtest_data.strategy}")
             
         # Create Strategy Instance with params
         try:
-            strategy = strategy_class(**request.params)
+            strategy = strategy_class(**backtest_data.params)
         except TypeError as e:
-             raise HTTPException(status_code=400, detail=f"Invalid parameters for {request.strategy}: {e}")
+             raise HTTPException(status_code=400, detail=f"Invalid parameters for {backtest_data.strategy}: {e}")
 
         # Run Backtest
-        bt = VectorizedBacktester(request.symbol, request.timeframe, strategy, days=request.days)
+        bt = VectorizedBacktester(backtest_data.symbol, backtest_data.timeframe, strategy, days=backtest_data.days)
         bt.fetch_data()
         
         if bt.df is None or bt.df.empty:
@@ -124,25 +126,26 @@ class OptimizeRequest(BaseModel):
         return v
 
 @router.post("/optimize")
-async def run_optimization(request: OptimizeRequest, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("2/minute")
+async def run_optimization(request: Request, optimize_data: OptimizeRequest, current_user: dict = Depends(auth.get_current_user)):
     try:
         # Initialize Strategy Class
         strategy_class = None
-        if request.strategy == "Mean Reversion":
+        if optimize_data.strategy == "Mean Reversion":
             strategy_class = MeanReversion
-        elif request.strategy == "SMA Crossover":
+        elif optimize_data.strategy == "SMA Crossover":
             strategy_class = SMACrossover
-        elif request.strategy == "MACD":
+        elif optimize_data.strategy == "MACD":
             strategy_class = MACDStrategy
-        elif request.strategy == "RSI":
+        elif optimize_data.strategy == "RSI":
             strategy_class = RSIStrategy
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown strategy: {request.strategy}")
+            raise HTTPException(status_code=400, detail=f"Unknown strategy: {optimize_data.strategy}")
             
         # Fetch Data Once
         # We use a dummy strategy instance just to fetch data using Backtester
         dummy_strategy = strategy_class()
-        bt = VectorizedBacktester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
+        bt = VectorizedBacktester(optimize_data.symbol, optimize_data.timeframe, dummy_strategy, days=optimize_data.days)
         bt.fetch_data()
         
         if bt.df is None or bt.df.empty:
@@ -150,10 +153,10 @@ async def run_optimization(request: OptimizeRequest, current_user: dict = Depend
              
         # Run Optimization
         logger.info("Starting Hyperopt optimization...")
-        optimizer = Hyperopt(request.symbol, request.timeframe, bt.df)
-        logger.info(f"Optimizer initialized. Param ranges: {request.param_ranges}")
+        optimizer = Hyperopt(optimize_data.symbol, optimize_data.timeframe, bt.df)
+        logger.info(f"Optimizer initialized. Param ranges: {optimize_data.param_ranges}")
         
-        results_df = optimizer.optimize(request.param_ranges, strategy_class, n_trials=request.n_trials)
+        results_df = optimizer.optimize(optimize_data.param_ranges, strategy_class, n_trials=optimize_data.n_trials)
         logger.info(f"Optimization complete. Result type: {type(results_df)}")
         
         # Save Successful Runs to DB
@@ -168,7 +171,7 @@ async def run_optimization(request: OptimizeRequest, current_user: dict = Depend
             # Criteria: Positive Return
             if result.get('return', 0) > 0:
                 # Add strategy name to result for DB
-                result['strategy'] = request.strategy
+                result['strategy'] = optimize_data.strategy
                 # Ensure params are stringified if needed or handled by DB
                 # The DB expects 'parameters' as a string, but result has individual columns
                 # We need to reconstruct params dict
@@ -182,7 +185,7 @@ async def run_optimization(request: OptimizeRequest, current_user: dict = Depend
                 result['trades'] = 0
                 result['final_balance'] = 0
                 
-                db.save_result(result, user_id=current_user['id'], timeframe=request.timeframe, symbol=request.symbol)
+                db.save_result(result, user_id=current_user['id'], timeframe=optimize_data.timeframe, symbol=optimize_data.symbol)
                 saved_count += 1
         
         if saved_count > 0:

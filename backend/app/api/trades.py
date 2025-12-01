@@ -1,16 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from ..core.database import DuckDBHandler
 import logging
 
 from ..core import auth
 from fastapi import Depends
+from ..core.rate_limit import limiter
 
 router = APIRouter()
 logger = logging.getLogger("API.Trades")
 db = DuckDBHandler()
 
 @router.get("/trades")
-async def get_trades(limit: int = 50, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("10/minute")
+async def get_trades(request: Request, limit: int = 50, current_user: dict = Depends(auth.get_current_user)):
     try:
         df = db.get_trades(limit=limit, user_id=current_user['id'])
         if df.empty:
@@ -23,7 +25,8 @@ async def get_trades(limit: int = 50, current_user: dict = Depends(auth.get_curr
         raise HTTPException(status_code=500, detail="Failed to fetch trades")
 
 @router.delete("/trades")
-async def clear_trades(current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("10/minute")
+async def clear_trades(request: Request, current_user: dict = Depends(auth.get_current_user)):
     try:
         success = db.clear_trades(user_id=current_user['id'])
         if not success:

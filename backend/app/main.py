@@ -165,7 +165,18 @@ async def startup_event():
     root_logger = logging.getLogger()
     root_logger.addHandler(ws_handler)
     
-    # 2. Bot no longer starts automatically
+    # 2. Setup Automated Backups
+    from .core.backup import create_backup
+    from .core.scheduler import scheduler
+    
+    # Schedule daily backup at 2:00 AM
+    scheduler.schedule_daily(create_backup, hour=2, minute=0)
+    
+    # Start scheduler in background
+    asyncio.create_task(scheduler.start())
+    logger.info("✓ Automated daily backups scheduled for 2:00 AM")
+    
+    # 3. Bot no longer starts automatically
     # Users must explicitly start their bot via /api/start endpoint
     logger.info("✓ Server ready. Bots can be started via API endpoints.")
     logger.info("ℹ️ Bot auto-start is disabled. Use /api/start to begin trading.")

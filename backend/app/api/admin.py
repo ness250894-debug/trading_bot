@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from ..core import auth
 from ..core.database import DuckDBHandler
+from ..core.rate_limit import limiter
 
 router = APIRouter()
 db = DuckDBHandler()
@@ -12,7 +13,9 @@ class UserUpdate(BaseModel):
     status: str
 
 @router.get("/admin/users")
+@limiter.limit("20/minute")
 async def get_all_users(
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     current_user: dict = Depends(auth.get_current_admin_user)
@@ -21,7 +24,9 @@ async def get_all_users(
     return db.get_all_users(skip=skip, limit=limit)
 
 @router.put("/admin/users/{user_id}/subscription")
+@limiter.limit("10/minute")
 async def update_user_subscription(
+    request: Request,
     user_id: str,  # Changed to str to support BIGINT
     update: UserUpdate,
     current_user: dict = Depends(auth.get_current_admin_user)
@@ -33,7 +38,9 @@ async def update_user_subscription(
     return {"status": "success"}
 
 @router.delete("/admin/users/{user_id}")
+@limiter.limit("10/minute")
 async def delete_user(
+    request: Request,
     user_id: str,  # Changed to str to support BIGINT
     current_user: dict = Depends(auth.get_current_admin_user)
 ):

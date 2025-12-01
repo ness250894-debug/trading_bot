@@ -2,7 +2,7 @@
 API endpoints for Social Trading / Strategy Marketplace.
 Allows users to publish strategies, browse marketplace, and clone successful strategies.
 """
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import json
@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 from ..core.database import DuckDBHandler
 from ..core.auth import get_current_user
+from ..core.rate_limit import limiter
 
 
 router = APIRouter()
@@ -25,7 +26,9 @@ class RateStrategyRequest(BaseModel):
 
 
 @router.get("/marketplace/strategies", tags=["social-trading"])
+@limiter.limit("20/minute")
 async def get_marketplace_strategies(
+    request: Request,
     sort_by: str = Query("rating", regex="^(rating|pnl|clones|recent)$"),
     limit: int = Query(20, ge=1, le=100)
 ):
@@ -96,7 +99,8 @@ async def get_marketplace_strategies(
 
 
 @router.get("/marketplace/strategies/{strategy_id}", tags=["social-trading"])
-async def get_marketplace_strategy_detail(strategy_id: int):
+@limiter.limit("20/minute")
+async def get_marketplace_strategy_detail(request: Request, strategy_id: int):
     """
     Get detailed information about a public strategy.
     
@@ -155,8 +159,10 @@ async def get_marketplace_strategy_detail(strategy_id: int):
 
 
 @router.post("/marketplace/publish", tags=["social-trading"])
+@limiter.limit("5/minute")
 async def publish_strategy(
-    request: PublishStrategyRequest,
+    request: Request,
+    publish_request: PublishStrategyRequest,
     user_id: int = Depends(get_current_user)
 ):
     """
@@ -235,7 +241,9 @@ async def publish_strategy(
 
 
 @router.post("/marketplace/clone/{strategy_id}", tags=["social-trading"])
+@limiter.limit("10/minute")
 async def clone_strategy(
+    request: Request,
     strategy_id: int,
     user_id: int = Depends(get_current_user)
 ):
@@ -291,7 +299,9 @@ async def clone_strategy(
 
 
 @router.get("/leaderboard", tags=["social-trading"])
+@limiter.limit("20/minute")
 async def get_leaderboard(
+    request: Request,
     period: str = Query("all", regex="^(day|week|month|all)$"),
     limit: int = Query(10, ge=1, le=50)
 ):
@@ -357,7 +367,8 @@ async def get_leaderboard(
 
 
 @router.get("/my-published-strategies", tags=["social-trading"])
-async def get_my_published_strategies(user_id: int = Depends(get_current_user)):
+@limiter.limit("20/minute")
+async def get_my_published_strategies(request: Request, user_id: int = Depends(get_current_user)):
     """
     Get current user's published strategies.
     

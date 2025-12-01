@@ -8,6 +8,7 @@ import requests
 from ..core import auth, config
 from ..core.database import DuckDBHandler
 from datetime import datetime, timedelta
+from ..core.rate_limit import limiter
 
 router = APIRouter()
 logger = logging.getLogger("API.Billing")
@@ -44,15 +45,17 @@ async def get_plans():
     return db.get_plans()
 
 @router.post("/billing/charge")
+@limiter.limit("10/minute")
 async def create_charge(
-    request: ChargeRequest,
+    request: Request,
+    charge_request: ChargeRequest,
     current_user: dict = Depends(auth.get_current_user)
 ):
     """Create a Coinbase Commerce charge for a subscription plan."""
     if not COINBASE_API_KEY:
         raise HTTPException(status_code=500, detail="Billing not configured")
     
-    plan = db.get_plan(request.plan_id)
+    plan = db.get_plan(charge_request.plan_id)
     if not plan:
         raise HTTPException(status_code=400, detail="Invalid plan ID")
     
@@ -74,7 +77,7 @@ async def create_charge(
             },
             'metadata': {
                 'user_id': str(current_user['id']),
-                'plan_id': request.plan_id
+                'plan_id': charge_request.plan_id
             }
         }
         
@@ -98,7 +101,7 @@ async def create_charge(
             charge_code=charge_code,
             amount=plan['price'],
             currency=plan['currency'],
-            plan_id=request.plan_id
+            plan_id=charge_request.plan_id
         )
         
         return {
@@ -220,7 +223,8 @@ async def handle_webhook(
         raise HTTPException(status_code=500, detail="Webhook processing failed")
 
 @router.get("/billing/status")
-async def get_billing_status(current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("10/minute")
+async def get_billing_status(request: Request, current_user: dict = Depends(auth.get_current_user)):
     """Get current user's subscription status."""
     try:
         subscription = db.get_subscription(current_user['id'])

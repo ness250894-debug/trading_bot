@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import Optional
 import logging
 from ..core import auth
 from ..core.database import DuckDBHandler
+from ..core.rate_limit import limiter
 
 router = APIRouter()
 logger = logging.getLogger("API.User")
@@ -13,7 +14,8 @@ class TelegramSettingsUpdate(BaseModel):
     chat_id: Optional[str] = None
 
 @router.get("/user/telegram")
-async def get_telegram_settings(current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("10/minute")
+async def get_telegram_settings(request: Request, current_user: dict = Depends(auth.get_current_user)):
     """Get user's Telegram notification settings."""
     try:
         user = db.get_user_by_id(current_user['id'])
@@ -31,7 +33,9 @@ async def get_telegram_settings(current_user: dict = Depends(auth.get_current_us
         raise HTTPException(status_code=500, detail="Failed to fetch Telegram settings")
 
 @router.post("/user/telegram")
+@limiter.limit("10/minute")
 async def update_telegram_settings(
+    request: Request,
     settings: TelegramSettingsUpdate,
     current_user: dict = Depends(auth.get_current_user)
 ):
