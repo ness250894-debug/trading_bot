@@ -835,6 +835,38 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error fetching subscription: {e}")
             return None
+    
+    def is_subscription_active(self, user_id):
+        """Check if user has an active, non-expired subscription."""
+        try:
+            subscription = self.get_subscription(user_id)
+            if not subscription:
+                return False
+            
+            # Check status
+            if subscription.get('status') != 'active':
+                return False
+            
+            # Check expiration date
+            from datetime import datetime
+            expires_at = subscription.get('expires_at')
+            if not expires_at:
+                return False
+                
+            # Handle string dates from database
+            if isinstance(expires_at, str):
+                try:
+                    expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+                except:
+                    return False
+            
+            # Check if not expired
+            return datetime.now() < expires_at
+            
+        except Exception as e:
+            logger.error(f"Error checking subscription status: {e}")
+            # Fail-safe: allow trading if check fails to avoid blocking legitimate users
+            return True
 
     def create_payment(self, user_id, charge_code, amount, currency, plan_id):
         """Log a new payment attempt."""

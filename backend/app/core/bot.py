@@ -232,6 +232,10 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     # Initialize Circuit Breaker
     circuit_breaker = CircuitBreaker(threshold=5, window=60, cooldown=300)
     logger.info(f"Circuit breaker initialized: {circuit_breaker.threshold} failures in {circuit_breaker.window}s triggers {circuit_breaker.cooldown}s pause")
+    
+    # Initialize subscription check counter
+    subscription_check_counter = 0
+    SUBSCRIPTION_CHECK_INTERVAL = 10  # Check every 10 loops (~5 minutes with 30s delay)
 
     # Main trading loop - simplified version
     while True:
@@ -285,9 +289,61 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 logger.error(f"❌ User {user_id} signal generation failed: {type(e).__name__}: {e}")
                 time.sleep(config.LOOP_DELAY_SECONDS)
                 continue
+            
+            # --- Periodic Subscription Check ---
+            subscription_check_counter += 1
+            if subscription_check_counter >= SUBSCRIPTION_CHECK_INTERVAL:
+                subscription_check_counter = 0
+                
+                if not db.is_subscription_active(user_id):
+                    logger.warning(f"⚠️ User {user_id} subscription expired!")
+                    
+                    # Check if position is open
+                    if position_size > 0:
+                        logger.info(f"📤 Closing position gracefully for user {user_id} (subscription expired)")
+                        notifier.send_message(
+                            f"⚠️ *Subscription Expired*\n"
+                            f"Closing your open position gracefully.\n"
+                            f"Please renew to continue trading."
+                        )
+                        
+                        # Close position at market
+                        try:
+                            side = 'sell' if position.get('side') == 'Buy' else 'buy'
+                            close_order = client.create_order(
+                                symbol=symbol,
+                                type='market',
+                                side=side,
+                                amount=position_size
+                            )
+                            logger.info(f"✅ Position closed for user {user_id} due to subscription expiry")
+                            
+                            # Clear state
+                            db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
+                            
+                        except Exception as e:
+                            logger.error(f"❌ Failed to close position on subscription expiry: {e}")
+                            notifier.send_error(f"Failed to close position: {e}")
+                    
+                    # Send final notification and exit
+                    notifier.send_message(
+                        f"🛑 *Bot Stopped*\n"
+                        f"Your subscription has expired.\n"
+                        f"Please renew to resume trading."
+                    )
+                    
+                    logger.info(f"Bot stopped for user {user_id} - subscription expired")
+                    break  # Exit loop gracefully
+            # -----------------------------------
 
             # Simple trading logic (enter/exit based on signal)
             if position_size == 0 and signal in ['long', 'short']:
+                # Check subscription before opening new position
+                if not db.is_subscription_active(user_id):
+                    logger.warning(f"⚠️ User {user_id} subscription inactive - skipping new trade")
+                    time.sleep(config.LOOP_DELAY_SECONDS)
+                    continue
+                    
                 # Open position
                 ticker = client.fetch_ticker(symbol)
                 current_price = ticker['last']
