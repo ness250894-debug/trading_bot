@@ -811,6 +811,11 @@ class DuckDBHandler:
     def is_subscription_active(self, user_id):
         """Check if user has an active, non-expired subscription."""
         try:
+            # Check if user is admin - admins bypass subscription checks
+            user = self.get_user_by_id(user_id)
+            if user and user.get('is_admin'):
+                return True
+
             subscription = self.get_subscription(user_id)
             if not subscription:
                 return False
@@ -925,6 +930,29 @@ class DuckDBHandler:
             return plans
         except Exception as e:
             logger.error(f"Error fetching plans: {e}")
+            return []
+
+    def get_all_plans(self):
+        """Get all plans (active and inactive)."""
+        try:
+            import json
+            results = self.conn.execute("SELECT * FROM plans ORDER BY price ASC").fetchall()
+            plans = []
+            for r in results:
+                plans.append({
+                    'id': r[0],
+                    'name': r[1],
+                    'price': r[2],
+                    'currency': r[3],
+                    'duration_days': r[4],
+                    'features': json.loads(r[5]) if r[5] else [],
+                    'is_active': bool(r[6]),
+                    'created_at': str(r[7]),
+                    'updated_at': str(r[8])
+                })
+            return plans
+        except Exception as e:
+            logger.error(f"Error fetching all plans: {e}")
             return []
 
     def get_plan(self, plan_id):

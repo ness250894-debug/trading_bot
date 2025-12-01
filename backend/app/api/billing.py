@@ -256,6 +256,11 @@ async def get_billing_status(request: Request, current_user: dict = Depends(auth
 
 # Admin Endpoints
 
+@router.get("/admin/plans")
+async def get_all_plans_admin(current_user: dict = Depends(auth.get_current_admin_user)):
+    """Get all subscription plans (active and inactive) for admin."""
+    return db.get_all_plans()
+
 @router.post("/admin/plans")
 async def create_plan(
     plan: PlanCreate,

@@ -82,7 +82,9 @@ async def start_bot(request: Request, symbol: Optional[str] = None, current_user
             
         # Enforce Billing for Live Trading
         is_dry_run = strategy_config.get("DRY_RUN", True)
-        if not is_dry_run:
+        is_admin = current_user.get('is_admin', False)
+        
+        if not is_dry_run and not is_admin:
             subscription = db.get_subscription(user_id)
             is_valid_pro = False
             
