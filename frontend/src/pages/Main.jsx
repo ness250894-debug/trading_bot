@@ -291,7 +291,7 @@ export default function Main() {
                         <div className="flex items-center gap-2">
                             {botStatus?.config?.dry_run ? (
                                 <span className="px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded text-xs font-medium">
-                                    ⚠️ Dry Run
+                                    ⚠️ Practice Mode
                                 </span>
                             ) : (
                                 <span className="px-2 py-1 bg-green-500/10 text-green-400 rounded text-xs font-medium">

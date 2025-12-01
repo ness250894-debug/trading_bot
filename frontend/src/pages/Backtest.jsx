@@ -4,6 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Play, Loader2 } from 'lucide-react';
 import { useToast } from '../components/ToastContext';
 import Disclaimer from '../components/Disclaimer';
+import { formatLabel } from '../lib/utils';
 
 const STRATEGIES = [
     { name: 'Mean Reversion', params: { bb_period: 20, bb_std: 2.0, rsi_period: 14, rsi_oversold: 30, rsi_overbought: 70 } },
@@ -90,7 +91,7 @@ export default function Backtest() {
 
                             {Object.entries(params).map(([key, value]) => (
                                 <div key={key}>
-                                    <label className="block text-sm text-muted-foreground mb-1 capitalize">{key.replace('_', ' ')}</label>
+                                    <label className="block text-sm text-muted-foreground mb-1 capitalize">{formatLabel(key)}</label>
                                     <input
                                         type="number"
                                         className="w-full bg-background border border-border rounded-md p-2 text-sm"

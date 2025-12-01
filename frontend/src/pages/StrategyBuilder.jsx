@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Plus, Trash2, Save, Eye, CheckCircle, AlertTriangle } from 'lucide-react';
 import Disclaimer from '../components/Disclaimer';
+import { formatLabel } from '../lib/utils';
 
 export default function StrategyBuilder() {
-    const [indicators, setIndicators] = useState([]);
-    const [operators, setOperators] = useState({});
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState(null);
 
@@ -282,7 +281,7 @@ export default function StrategyBuilder() {
 
                             {indicators[indicator.type]?.params && Object.entries(indicators[indicator.type].params).map(([paramKey, paramMeta]) => (
                                 <div key={paramKey}>
-                                    <label className="text-sm text-muted-foreground capitalize">{paramKey.replace('_', ' ')}</label>
+                                    <label className="text-sm text-muted-foreground capitalize">{formatLabel(paramKey)}</label>
                                     {paramMeta.type === 'select' ? (
                                         <select
                                             value={indicator.params[paramKey]}
