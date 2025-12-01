@@ -15,6 +15,9 @@ export default function StrategyBuilder() {
     const [selectedIndicators, setSelectedIndicators] = useState([]);
     const [buyConditions, setBuyConditions] = useState([]);
     const [sellConditions, setSellConditions] = useState([]);
+    const [indicators, setIndicators] = useState({});
+    const [operators, setOperators] = useState({});
+
 
     useEffect(() => {
         fetchMetadata();
