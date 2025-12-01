@@ -167,6 +167,25 @@ async def create_strategy(
         Created strategy
     """
     try:
+        # Enforce Free Plan Limits
+        # Assuming I can fetch subscription by user_id.
+        from ..core.database import DuckDBHandler
+        db = DuckDBHandler()
+        
+        # Check subscription
+        subscription = db.get_subscription(user_id)
+        is_free_plan = True
+        if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+            is_free_plan = False
+            
+        # Check admin status - need to fetch user
+        user = db.get_user_by_id(user_id)
+        if user and user.get('is_admin'):
+            is_free_plan = False
+            
+        if is_free_plan:
+             raise HTTPException(status_code=403, detail="Visual Strategy Builder is not available on the Free plan. Please upgrade.")
+
         # Validate strategy first
         executor = JSONStrategyExecutor(strategy.json_config)
         
@@ -347,6 +366,20 @@ async def delete_strategy(
     try:
         from ..core.database import DuckDBHandler
         db = DuckDBHandler()
+        
+        # Enforce Free Plan Limits
+        subscription = db.get_subscription(user_id)
+        is_free_plan = True
+        if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+            is_free_plan = False
+            
+        user = db.get_user_by_id(user_id)
+        if user and user.get('is_admin'):
+            is_free_plan = False
+            
+        if is_free_plan:
+             raise HTTPException(status_code=403, detail="Visual Strategy Builder is not available on the Free plan. Please upgrade.")
+
         
         result = db.conn.execute("""
             DELETE FROM visual_strategies

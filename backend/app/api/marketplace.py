@@ -30,7 +30,8 @@ class RateStrategyRequest(BaseModel):
 async def get_marketplace_strategies(
     request: Request,
     sort_by: str = Query("rating", regex="^(rating|pnl|clones|recent)$"),
-    limit: int = Query(20, ge=1, le=100)
+    limit: int = Query(20, ge=1, le=100),
+    user_id: int = Depends(get_current_user)
 ):
     """
     Browse strategy marketplace.
@@ -44,6 +45,20 @@ async def get_marketplace_strategies(
     """
     try:
         db = DuckDBHandler()
+        
+        # Enforce Free Plan Limits
+        subscription = db.get_subscription(user_id)
+        is_free_plan = True
+        if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+            is_free_plan = False
+            
+        user = db.get_user_by_id(user_id)
+        if user and user.get('is_admin'):
+            is_free_plan = False
+            
+        if is_free_plan:
+             raise HTTPException(status_code=403, detail="Social Trading is not available on the Free plan. Please upgrade.")
+
         
         # Determine sort column
         sort_column = {
@@ -100,7 +115,7 @@ async def get_marketplace_strategies(
 
 @router.get("/marketplace/strategies/{strategy_id}", tags=["social-trading"])
 @limiter.limit("20/minute")
-async def get_marketplace_strategy_detail(request: Request, strategy_id: int):
+async def get_marketplace_strategy_detail(request: Request, strategy_id: int, user_id: int = Depends(get_current_user)):
     """
     Get detailed information about a public strategy.
     
@@ -303,7 +318,8 @@ async def clone_strategy(
 async def get_leaderboard(
     request: Request,
     period: str = Query("all", regex="^(day|week|month|all)$"),
-    limit: int = Query(10, ge=1, le=50)
+    limit: int = Query(10, ge=1, le=50),
+    user_id: int = Depends(get_current_user)
 ):
     """
     Get strategy leaderboard.

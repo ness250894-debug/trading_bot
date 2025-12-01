@@ -100,6 +100,54 @@ async def start_bot(request: Request, symbol: Optional[str] = None, current_user
                     status_code=403, 
                     detail="Live trading requires an active Pro subscription. Please upgrade your plan."
                 )
+
+        # Enforce Free Plan Limits
+        # Check if user is on Free plan
+        subscription = db.get_subscription(user_id)
+        is_free_plan = True
+        if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+            is_free_plan = False
+        
+        if is_admin:
+            is_free_plan = False
+
+        if is_free_plan:
+            # 1. Force Dry Run
+            if not strategy_config.get("DRY_RUN", True):
+                 raise HTTPException(status_code=403, detail="Free plan only supports Dry Run mode.")
+            
+            # 2. Force Default Strategy
+            if strategy_config.get("STRATEGY") != 'mean_reversion':
+                # We could force it here, but better to fail if they try to run something else
+                # Or just override it silently? User asked to "cannot choose strategy".
+                # Let's override it to be safe, but maybe warn?
+                # Actually, let's just enforce it.
+                strategy_config["STRATEGY"] = 'mean_reversion'
+                # Also reset params to default? Maybe not strictly necessary if strategy is fixed.
+            
+            # 3. Limit to 1 Bot
+            # Check if any bot is already running
+            running_bots = bot_manager.get_status(user_id)
+            if running_bots:
+                # running_bots can be a dict of {symbol: status} or a single status dict
+                # If it's a dict of dicts, check if any is running
+                any_running = False
+                if isinstance(running_bots, dict):
+                    # Check if it's a multi-instance response (keys are symbols)
+                    # A single instance status also has keys like 'user_id', 'is_running'
+                    if 'is_running' in running_bots:
+                         if running_bots['is_running']:
+                             any_running = True
+                    else:
+                        # It's a dict of symbols
+                        for sym, status in running_bots.items():
+                            if status.get('is_running'):
+                                any_running = True
+                                break
+                
+                if any_running:
+                     raise HTTPException(status_code=403, detail="Free plan is limited to 1 active bot.")
+
         
         # Start bot instance with optional symbol parameter
         success = bot_manager.start_bot(user_id, strategy_config, symbol=symbol)
@@ -237,6 +285,25 @@ async def update_config(request: Request, update: ConfigUpdate, current_user: di
             "TAKE_PROFIT_PCT": update.take_profit_pct,
             "STOP_LOSS_PCT": update.stop_loss_pct
         }
+        
+        # Enforce Free Plan Limits on Config Update
+        is_admin = current_user.get('is_admin', False)
+        if not is_admin:
+            subscription = db.get_subscription(user_id)
+            is_free_plan = True
+            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+                is_free_plan = False
+            
+            if is_free_plan:
+                # Force Strategy to Default
+                if new_config["STRATEGY"] != 'mean_reversion':
+                     # We can either raise error or force it. 
+                     # "cannot choose strategy" implies they shouldn't be able to set it.
+                     # Let's force it to ensure compliance even if frontend allows it.
+                     new_config["STRATEGY"] = 'mean_reversion'
+                     # We might want to notify user, but API just returns success.
+                     # Frontend should handle the UI part.
+
         
         # Save to database
         success = db.save_user_strategy(user_id, new_config)

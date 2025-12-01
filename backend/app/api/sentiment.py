@@ -1,9 +1,10 @@
 """
 API endpoints for AI-powered sentiment analysis.
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 from ..core.sentiment_analyzer import SentimentAnalyzer
+from ..core import auth
 
 router = APIRouter()
 
@@ -14,7 +15,8 @@ sentiment_analyzer = SentimentAnalyzer()
 @router.get("/sentiment/{symbol}", tags=["ai-insights"])
 async def get_sentiment_analysis(
     symbol: str,
-    use_cache: bool = Query(True, description="Use cached results if available")
+    use_cache: bool = Query(True, description="Use cached results if available"),
+    current_user: dict = Depends(auth.get_current_user)
 ):
     """
     Get AI-powered sentiment analysis for a cryptocurrency.
@@ -27,6 +29,19 @@ async def get_sentiment_analysis(
         Sentiment analysis with score, confidence, and recent news
     """
     try:
+        # Enforce Free Plan Limits
+        is_admin = current_user.get('is_admin', False)
+        if not is_admin:
+            from ..core.database import DuckDBHandler
+            db = DuckDBHandler()
+            subscription = db.get_subscription(current_user['id'])
+            is_free_plan = True
+            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+                is_free_plan = False
+            
+            if is_free_plan:
+                 raise HTTPException(status_code=403, detail="AI Sentiment is not available on the Free plan. Please upgrade.")
+
         # Normalize symbol (remove common suffixes)
         symbol = symbol.upper().replace('USDT', '').replace('USD', '').replace('/','')
         
@@ -45,7 +60,7 @@ async def get_sentiment_analysis(
 
 
 @router.get("/sentiment/{symbol}/simple", tags=["ai-insights"])
-async def get_simple_sentiment(symbol: str):
+async def get_simple_sentiment(symbol: str, current_user: dict = Depends(auth.get_current_user)):
     """
     Get simplified sentiment (just the score and emoji) for quick display.
     
@@ -78,7 +93,8 @@ async def get_simple_sentiment(symbol: str):
 @router.get("/news/{symbol}", tags=["ai-insights"])
 async def get_crypto_news(
     symbol: str,
-    limit: int = Query(10, ge=1, le=50, description="Number of news items")
+    limit: int = Query(10, ge=1, le=50, description="Number of news items"),
+    current_user: dict = Depends(auth.get_current_user)
 ):
     """
     Get latest news for a cryptocurrency from multiple sources.
@@ -109,7 +125,7 @@ async def get_crypto_news(
 
 
 @router.post("/sentiment/analyze", tags=["ai-insights"])
-async def manual_sentiment_analysis(data: dict):
+async def manual_sentiment_analysis(data: dict, current_user: dict = Depends(auth.get_current_user)):
     """
     Manually trigger sentiment analysis with custom text.
     
@@ -120,6 +136,19 @@ async def manual_sentiment_analysis(data: dict):
         Sentiment analysis result
     """
     try:
+        # Enforce Free Plan Limits
+        is_admin = current_user.get('is_admin', False)
+        if not is_admin:
+            from ..core.database import DuckDBHandler
+            db = DuckDBHandler()
+            subscription = db.get_subscription(current_user['id'])
+            is_free_plan = True
+            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+                is_free_plan = False
+            
+            if is_free_plan:
+                 raise HTTPException(status_code=403, detail="AI Sentiment is not available on the Free plan. Please upgrade.")
+
         symbol = data.get('symbol', 'CRYPTO')
         texts = data.get('texts', [])
         

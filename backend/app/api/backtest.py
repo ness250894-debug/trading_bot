@@ -42,8 +42,22 @@ class BacktestRequest(BaseModel):
 
 @router.post("/backtest")
 @limiter.limit("5/minute")
+@limiter.limit("5/minute")
 async def run_backtest(request: Request, backtest_data: BacktestRequest, current_user: dict = Depends(auth.get_current_user)):
     try:
+        # Enforce Free Plan Limits
+        is_admin = current_user.get('is_admin', False)
+        if not is_admin:
+            from ..core.database import DuckDBHandler
+            db = DuckDBHandler()
+            subscription = db.get_subscription(current_user['id'])
+            is_free_plan = True
+            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+                is_free_plan = False
+            
+            if is_free_plan:
+                 raise HTTPException(status_code=403, detail="Backtesting is not available on the Free plan. Please upgrade.")
+
         # Initialize Strategy
         strategy_class = None
         if backtest_data.strategy == "Mean Reversion":
@@ -129,6 +143,19 @@ class OptimizeRequest(BaseModel):
 @limiter.limit("2/minute")
 async def run_optimization(request: Request, optimize_data: OptimizeRequest, current_user: dict = Depends(auth.get_current_user)):
     try:
+        # Enforce Free Plan Limits
+        is_admin = current_user.get('is_admin', False)
+        if not is_admin:
+            from ..core.database import DuckDBHandler
+            db = DuckDBHandler()
+            subscription = db.get_subscription(current_user['id'])
+            is_free_plan = True
+            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+                is_free_plan = False
+            
+            if is_free_plan:
+                 raise HTTPException(status_code=403, detail="Optimization is not available on the Free plan. Please upgrade.")
+
         # Initialize Strategy Class
         strategy_class = None
         if optimize_data.strategy == "Mean Reversion":
