@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Play, Loader2 } from 'lucide-react';
 import { useToast } from '../components/ToastContext';
 import Disclaimer from '../components/Disclaimer';
-import PlanGate from '../components/PlanGate';
+// import PlanGate from '../components/PlanGate';
 import { formatLabel } from '../lib/utils';
 
 const STRATEGIES = [
@@ -54,147 +54,147 @@ export default function Backtest() {
     };
 
     return (
-        <PlanGate feature="Backtesting">
-            <div className="p-8 max-w-7xl mx-auto">
-                <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-3xl font-bold">Backtest Lab</h2>
-                </div>
+        // <PlanGate feature="Backtesting">
+        <div className="p-8 max-w-7xl mx-auto">
+            <div className="flex justify-between items-center mb-8">
+                <h2 className="text-3xl font-bold">Backtest Lab</h2>
+            </div>
 
-                <Disclaimer compact />
+            <Disclaimer compact />
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    {/* Configuration Panel */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-card p-6 rounded-xl border border-border">
-                            <h3 className="font-semibold mb-4">Configuration</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                {/* Configuration Panel */}
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-card p-6 rounded-xl border border-border">
+                        <h3 className="font-semibold mb-4">Configuration</h3>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm text-muted-foreground mb-1">Strategy</label>
-                                    <select
-                                        className="w-full bg-background border border-border rounded-md p-2 text-sm"
-                                        value={selectedStrategy.name}
-                                        onChange={handleStrategyChange}
-                                    >
-                                        {STRATEGIES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm text-muted-foreground mb-1">Timeframe</label>
-                                    <select
-                                        className="w-full bg-background border border-border rounded-md p-2 text-sm"
-                                        value={timeframe}
-                                        onChange={(e) => setTimeframe(e.target.value)}
-                                    >
-                                        {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
-                                    </select>
-                                </div>
-
-                                {Object.entries(params).map(([key, value]) => (
-                                    <div key={key}>
-                                        <label className="block text-sm text-muted-foreground mb-1 capitalize">{formatLabel(key)}</label>
-                                        <input
-                                            type="number"
-                                            className="w-full bg-background border border-border rounded-md p-2 text-sm"
-                                            value={value}
-                                            onChange={(e) => handleParamChange(key, e.target.value)}
-                                        />
-                                    </div>
-                                ))}
-
-                                <button
-                                    onClick={runBacktest}
-                                    disabled={loading}
-                                    className="w-full bg-primary text-primary-foreground py-2 rounded-md font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm text-muted-foreground mb-1">Strategy</label>
+                                <select
+                                    className="w-full bg-background border border-border rounded-md p-2 text-sm"
+                                    value={selectedStrategy.name}
+                                    onChange={handleStrategyChange}
                                 >
-                                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} />}
-                                    Run Backtest
-                                </button>
+                                    {STRATEGIES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                                </select>
                             </div>
+
+                            <div>
+                                <label className="block text-sm text-muted-foreground mb-1">Timeframe</label>
+                                <select
+                                    className="w-full bg-background border border-border rounded-md p-2 text-sm"
+                                    value={timeframe}
+                                    onChange={(e) => setTimeframe(e.target.value)}
+                                >
+                                    {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+                                </select>
+                            </div>
+
+                            {Object.entries(params).map(([key, value]) => (
+                                <div key={key}>
+                                    <label className="block text-sm text-muted-foreground mb-1 capitalize">{formatLabel(key)}</label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-background border border-border rounded-md p-2 text-sm"
+                                        value={value}
+                                        onChange={(e) => handleParamChange(key, e.target.value)}
+                                    />
+                                </div>
+                            ))}
+
+                            <button
+                                onClick={runBacktest}
+                                disabled={loading}
+                                className="w-full bg-primary text-primary-foreground py-2 rounded-md font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} />}
+                                Run Backtest
+                            </button>
                         </div>
                     </div>
+                </div>
 
-                    {/* Results Panel */}
-                    <div className="lg:col-span-3 space-y-6">
-                        {results && (
-                            <>
-                                {/* Metrics Cards */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="bg-card p-4 rounded-xl border border-border">
-                                        <p className="text-sm text-muted-foreground">Total Return</p>
-                                        <p className={`text-xl font-bold ${results.metrics.total_return >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                            {results.metrics.total_return.toFixed(2)}%
-                                        </p>
-                                    </div>
-                                    <div className="bg-card p-4 rounded-xl border border-border">
-                                        <p className="text-sm text-muted-foreground">Win Rate</p>
-                                        <p className="text-xl font-bold">{results.metrics.win_rate.toFixed(2)}%</p>
-                                    </div>
-                                    <div className="bg-card p-4 rounded-xl border border-border">
-                                        <p className="text-sm text-muted-foreground">Trades</p>
-                                        <p className="text-xl font-bold">{results.metrics.total_trades}</p>
-                                    </div>
-                                    <div className="bg-card p-4 rounded-xl border border-border">
-                                        <p className="text-sm text-muted-foreground">Final Balance</p>
-                                        <p className="text-xl font-bold">${results.metrics.final_balance.toFixed(2)}</p>
-                                    </div>
+                {/* Results Panel */}
+                <div className="lg:col-span-3 space-y-6">
+                    {results && (
+                        <>
+                            {/* Metrics Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-card p-4 rounded-xl border border-border">
+                                    <p className="text-sm text-muted-foreground">Total Return</p>
+                                    <p className={`text-xl font-bold ${results.metrics.total_return >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                        {results.metrics.total_return.toFixed(2)}%
+                                    </p>
                                 </div>
-
-                                {/* Chart */}
-                                <div className="bg-card p-6 rounded-xl border border-border h-[400px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={results.chart_data}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                                            <XAxis dataKey="timestamp" hide />
-                                            <YAxis domain={['auto', 'auto']} stroke="#888" />
-                                            <Tooltip
-                                                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }}
-                                                itemStyle={{ color: '#e2e8f0' }}
-                                            />
-                                            <Line type="monotone" dataKey="close" stroke="#3b82f6" dot={false} strokeWidth={2} />
-                                            {/* Add more lines for indicators if available */}
-                                        </LineChart>
-                                    </ResponsiveContainer>
+                                <div className="bg-card p-4 rounded-xl border border-border">
+                                    <p className="text-sm text-muted-foreground">Win Rate</p>
+                                    <p className="text-xl font-bold">{results.metrics.win_rate.toFixed(2)}%</p>
                                 </div>
-
-                                {/* Trade History */}
-                                <div className="bg-card rounded-xl border border-border overflow-hidden">
-                                    <div className="p-4 border-b border-border">
-                                        <h3 className="font-semibold">Trade History</h3>
-                                    </div>
-                                    <div className="max-h-[300px] overflow-auto">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="bg-muted/50 text-muted-foreground">
-                                                <tr>
-                                                    <th className="p-3">Time</th>
-                                                    <th className="p-3">PnL</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {results.trades.map((trade, i) => (
-                                                    <tr key={i} className="border-b border-border hover:bg-muted/20">
-                                                        <td className="p-3">{new Date(trade.time).toLocaleString()}</td>
-                                                        <td className={`p-3 font-medium ${trade.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                                            {trade.pnl > 0 ? '+' : ''}{trade.pnl.toFixed(2)}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                <div className="bg-card p-4 rounded-xl border border-border">
+                                    <p className="text-sm text-muted-foreground">Trades</p>
+                                    <p className="text-xl font-bold">{results.metrics.total_trades}</p>
                                 </div>
-                            </>
-                        )}
-
-                        {!results && !loading && (
-                            <div className="h-[400px] flex items-center justify-center text-muted-foreground border-2 border-dashed border-border rounded-xl">
-                                Select a strategy and run backtest to see results
+                                <div className="bg-card p-4 rounded-xl border border-border">
+                                    <p className="text-sm text-muted-foreground">Final Balance</p>
+                                    <p className="text-xl font-bold">${results.metrics.final_balance.toFixed(2)}</p>
+                                </div>
                             </div>
-                        )}
-                    </div>
+
+                            {/* Chart */}
+                            <div className="bg-card p-6 rounded-xl border border-border h-[400px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={results.chart_data}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                        <XAxis dataKey="timestamp" hide />
+                                        <YAxis domain={['auto', 'auto']} stroke="#888" />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155' }}
+                                            itemStyle={{ color: '#e2e8f0' }}
+                                        />
+                                        <Line type="monotone" dataKey="close" stroke="#3b82f6" dot={false} strokeWidth={2} />
+                                        {/* Add more lines for indicators if available */}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+
+                            {/* Trade History */}
+                            <div className="bg-card rounded-xl border border-border overflow-hidden">
+                                <div className="p-4 border-b border-border">
+                                    <h3 className="font-semibold">Trade History</h3>
+                                </div>
+                                <div className="max-h-[300px] overflow-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-muted/50 text-muted-foreground">
+                                            <tr>
+                                                <th className="p-3">Time</th>
+                                                <th className="p-3">PnL</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {results.trades.map((trade, i) => (
+                                                <tr key={i} className="border-b border-border hover:bg-muted/20">
+                                                    <td className="p-3">{new Date(trade.time).toLocaleString()}</td>
+                                                    <td className={`p-3 font-medium ${trade.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                        {trade.pnl > 0 ? '+' : ''}{trade.pnl.toFixed(2)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {!results && !loading && (
+                        <div className="h-[400px] flex items-center justify-center text-muted-foreground border-2 border-dashed border-border rounded-xl">
+                            Select a strategy and run backtest to see results
+                        </div>
+                    )}
                 </div>
             </div>
-        </PlanGate>
+        </div>
+        // </PlanGate>
     );
 }
