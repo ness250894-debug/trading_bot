@@ -27,7 +27,7 @@ export default function Layout({ children }) {
                     setIsAdmin(user.is_admin);
                 }
             } catch (error) {
-                console.error('Failed to fetch user data:', error);
+                // Silent fail - not critical
             }
         };
         fetchCurrentUser();

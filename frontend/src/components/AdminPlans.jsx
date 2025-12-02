@@ -32,7 +32,7 @@ const AdminPlans = () => {
             const response = await api.get('/admin/plans');
             setPlans(response.data);
         } catch (error) {
-            console.error('Error fetching plans:', error);
+            // Silent fail
             toast.error('Failed to load plans');
         } finally {
             setLoading(false);
@@ -87,7 +87,7 @@ const AdminPlans = () => {
             fetchPlans();
             handleCancel();
         } catch (error) {
-            console.error('Error saving plan:', error);
+            // Error shown via toast
             toast.error(error.response?.data?.detail || 'Failed to save plan');
         }
     };
@@ -104,7 +104,7 @@ const AdminPlans = () => {
                     toast.success('Plan deactivated');
                     fetchPlans();
                 } catch (error) {
-                    console.error('Error deleting plan:', error);
+                    // Error shown via toast
                     toast.error('Failed to deactivate plan');
                 }
             }

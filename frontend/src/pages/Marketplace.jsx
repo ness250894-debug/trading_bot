@@ -21,7 +21,7 @@ export default function Marketplace() {
             const response = await api.get(`/marketplace/strategies?sort_by=${sortBy}&limit=20`);
             setStrategies(response.data.strategies || []);
         } catch (err) {
-            console.error('Error fetching marketplace:', err);
+            // Silent fail - show empty state
         } finally {
             setLoading(false);
         }
@@ -32,7 +32,7 @@ export default function Marketplace() {
             const response = await api.get('/leaderboard?period=all&limit=10');
             setLeaderboard(response.data.leaderboard || []);
         } catch (err) {
-            console.error('Error fetching leaderboard:', err);
+            // Silent fail - show empty state
         }
     };
 

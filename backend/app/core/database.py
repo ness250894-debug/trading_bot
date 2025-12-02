@@ -1128,4 +1128,19 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error setting admin status: {e}")
             return False
+    
+    def close(self):
+        """Close the database connection."""
+        try:
+            if self.conn:
+                self.conn.close()
+                logger.info("Database connection closed")
+        except Exception as e:
+            logger.error(f"Error closing database connection: {e}")
+    
+    def __del__(self):
+        """Cleanup on garbage collection."""
+        self.close()
 
+# Global instance
+db = DuckDBHandler()

@@ -21,7 +21,7 @@ const TradeHistory = ({ trades, onRefresh }) => {
                     toast.success('Trade history cleared successfully');
                     if (onRefresh) onRefresh();
                 } catch (err) {
-                    console.error("Failed to clear history:", err);
+                    // Toast will show error to user
                     toast.error("Failed to clear history");
                 }
             }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import Disclaimer from '../components/Disclaimer';
 import {
@@ -34,20 +34,30 @@ export default function Settings() {
     const [theme, setTheme] = useState('dark');
     const [currency, setCurrency] = useState('USD');
 
-    useEffect(() => {
-        fetchExchanges();
-        fetchUserInfo();
-        checkApiKeyStatus();
-        checkTelegramStatus();
+    const checkApiKeyStatus = useCallback(async () => {
+        try {
+            const response = await api.get(`/api-keys/${exchange}`);
+            setHasKey(response.data.has_key);
+        } catch (error) {
+            // Silent fail - will show "no key" state
+        }
     }, [exchange]);
 
-    const fetchExchanges = async () => {
+    const checkTelegramStatus = useCallback(async () => {
+        try {
+            const response = await api.get('/user/telegram');
+            setHasTelegram(response.data.has_telegram);
+        } catch (error) {
+            // Silent fail - will show "not configured" state
+        }
+    }, []);
+
+    const fetchExchanges = useCallback(async () => {
         setExchangesLoading(true);
         try {
             const response = await api.get('/exchanges');
             setExchanges(response.data.exchanges || []);
         } catch (error) {
-            console.error('Failed to load exchanges:', error);
             setExchanges([
                 { name: 'bybit', display_name: 'ByBit', supports_demo: true },
                 { name: 'binance', display_name: 'Binance', supports_demo: true },
@@ -58,37 +68,26 @@ export default function Settings() {
         } finally {
             setExchangesLoading(false);
         }
-    };
+    }, []);
 
-    const fetchUserInfo = async () => {
+    const fetchUserInfo = useCallback(async () => {
         setUserInfoLoading(true);
         try {
             const response = await api.get('/auth/me');
             setUserInfo(response.data);
         } catch (error) {
-            console.error('Failed to load user info:', error);
+            // Silent fail - non-critical
         } finally {
             setUserInfoLoading(false);
         }
-    };
+    }, []);
 
-    const checkApiKeyStatus = async () => {
-        try {
-            const response = await api.get(`/api-keys/${exchange}`);
-            setHasKey(response.data.has_key);
-        } catch (error) {
-            console.error('Error checking API key status:', error);
-        }
-    };
-
-    const checkTelegramStatus = async () => {
-        try {
-            const response = await api.get('/user/telegram');
-            setHasTelegram(response.data.has_telegram);
-        } catch (error) {
-            console.error('Error checking Telegram status:', error);
-        }
-    };
+    useEffect(() => {
+        fetchExchanges();
+        fetchUserInfo();
+        checkApiKeyStatus();
+        checkTelegramStatus();
+    }, [exchange, fetchExchanges, fetchUserInfo, checkApiKeyStatus, checkTelegramStatus]);
 
     const handleSaveKeys = async (e) => {
         e.preventDefault();
@@ -180,8 +179,8 @@ export default function Settings() {
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/25'
-                                        : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/25'
+                                    : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
                                     }`}
                             >
                                 <tab.icon size={18} />
@@ -270,8 +269,8 @@ export default function Settings() {
                                             key={ex.name}
                                             onClick={() => setExchange(ex.name)}
                                             className={`p-4 rounded-xl border transition-all relative ${exchange === ex.name
-                                                    ? 'bg-primary/10 border-primary text-foreground'
-                                                    : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'
+                                                ? 'bg-primary/10 border-primary text-foreground'
+                                                : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'
                                                 }`}
                                         >
                                             <div className="font-bold text-sm">{ex.display_name}</div>

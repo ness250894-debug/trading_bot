@@ -89,7 +89,7 @@ export default function Strategies() {
             const response = await api.get('/exchanges');
             setExchanges(response.data.exchanges || []);
         } catch (err) {
-            console.error('Failed to load exchanges:', err);
+            // Silent fail - use fallback list
             // Default to bybit if API fails
             setExchanges([{ name: 'bybit', display_name: 'Bybit' }]);
         } finally {

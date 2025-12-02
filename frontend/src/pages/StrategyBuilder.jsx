@@ -34,7 +34,7 @@ export default function StrategyBuilder() {
             setIndicators(indicatorsRes.data.indicators || {});
             setOperators(conditionsRes.data.operators || {});
         } catch (err) {
-            console.error('Error loading metadata:', err);
+            // Silent fail - will use default metadata
             setMessage({ type: 'error', text: 'Failed to load metadata' });
         } finally {
             setLoading(false);

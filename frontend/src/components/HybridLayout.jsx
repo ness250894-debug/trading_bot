@@ -39,7 +39,7 @@ export default function HybridLayout() {
                     setCurrentUser(user);
                 }
             } catch (error) {
-                console.error('Failed to fetch user data:', error);
+                // Silent fail - not critical
             } finally {
                 setLoading(false);
             }

@@ -7,7 +7,7 @@ import hashlib
 import requests
 from ..core import auth, config
 from ..core.database import DuckDBHandler
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from ..core.rate_limit import limiter
 
 router = APIRouter()
@@ -153,7 +153,6 @@ async def handle_webhook(
         
         # Parse event
         import json
-        from datetime import datetime, timedelta
         
         event = json.loads(body)
         
@@ -162,9 +161,11 @@ async def handle_webhook(
         if event_created_at:
             # Parse ISO format timestamp
             try:
+                # Parse as timezone-aware datetime
                 event_time = datetime.fromisoformat(event_created_at.replace('Z', '+00:00'))
                 current_time = datetime.now(timezone.utc)
-                time_diff = abs((current_time - event_time.replace(tzinfo=None)).total_seconds())
+                # Both are timezone-aware, direct comparison is safe
+                time_diff = abs((current_time - event_time).total_seconds())
                 
                 # Reject events older than 5 minutes
                 if time_diff > 300:

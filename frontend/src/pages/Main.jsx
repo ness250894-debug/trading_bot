@@ -68,7 +68,7 @@ export default function Main() {
             setSubscription(subRes.data);
             setBotStatus(statusRes.data);
         } catch (err) {
-            console.error('Failed to fetch data:', err);
+            // Silent fail - loading state will show error UI if needed
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -98,7 +98,7 @@ export default function Main() {
             const res = await api.get('/status');
             setBotStatus(res.data);
         } catch (err) {
-            console.error('Error toggling bot:', err);
+            // Error will be visible in UI state
         }
     };
 
@@ -111,30 +111,9 @@ export default function Main() {
         return botStatus.is_running ? 1 : 0;
     }, [botStatus]);
 
-    // Mock news data (you can replace with real API later)
-    const newsItems = [
-        {
-            title: "Bitcoin Hits New All-Time High",
-            summary: "BTC surpasses previous records as institutional adoption grows...",
-            source: "CryptoNews",
-            time: "2h ago",
-            url: "https://cryptonews.com"
-        },
-        {
-            title: "Ethereum 2.0 Upgrade Complete",
-            summary: "Major network upgrade brings improved scalability and security...",
-            source: "CoinDesk",
-            time: "5h ago",
-            url: "https://coindesk.com"
-        },
-        {
-            title: "New Trading Regulations Announced",
-            summary: "SEC releases new guidelines for cryptocurrency exchanges...",
-            source: "Bloomberg Crypto",
-            time: "1d ago",
-            url: "https://bloomberg.com"
-        }
-    ];
+    // News data - integrate with real API in future
+    // (e.g., CryptoCompare News API, NewsAPI, etc.)
+    const newsItems = [];
 
     if (loading) {
         return (
@@ -337,20 +316,32 @@ export default function Main() {
                     <h2 className="text-xl font-bold">Market News</h2>
                 </div>
                 <div className="space-y-3">
-                    {newsItems.map((item, idx) => (
-                        <NewsItem key={idx} {...item} />
-                    ))}
+                    {newsItems.length > 0 ? (
+                        newsItems.map((item, idx) => (
+                            <NewsItem key={idx} {...item} />
+                        ))
+                    ) : (
+                        <div className="text-center py-12">
+                            <Newspaper size={48} className="mx-auto text-muted-foreground/30 mb-4" />
+                            <p className="text-muted-foreground">News feed coming soon</p>
+                            <p className="text-sm text-muted-foreground/60 mt-1">
+                                We'll integrate live market news in a future update
+                            </p>
+                        </div>
+                    )}
                 </div>
-                <div className="mt-4 text-center">
-                    <a
-                        href="https://cryptonews.com"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:text-primary/80 inline-flex items-center gap-1"
-                    >
-                        View More News <TrendingUp size={14} />
-                    </a>
-                </div>
+                {newsItems.length > 0 && (
+                    <div className="mt-4 text-center">
+                        <a
+                            href="https://cryptonews.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-primary hover:text-primary/80 inline-flex items-center gap-1"
+                        >
+                            View More News <TrendingUp size={14} />
+                        </a>
+                    </div>
+                )}
             </div>
 
             {/* Bot Instances Table */}

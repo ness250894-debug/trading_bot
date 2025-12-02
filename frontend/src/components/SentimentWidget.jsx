@@ -15,7 +15,7 @@ export default function SentimentWidget({ symbol = 'BTC' }) {
             setSentiment(response.data);
         } catch (err) {
             setError('Failed to load sentiment');
-            console.error(err);
+            // Silent fail
         } finally {
             setLoading(false);
         }
@@ -90,8 +90,8 @@ export default function SentimentWidget({ symbol = 'BTC' }) {
                     <div className="relative w-full h-2 bg-black/30 rounded-full overflow-hidden">
                         <div
                             className={`h-full transition-all duration-500 ${sentiment.score >= 60 ? 'bg-green-400' :
-                                    sentiment.score >= 40 ? 'bg-yellow-400' :
-                                        'bg-red-400'
+                                sentiment.score >= 40 ? 'bg-yellow-400' :
+                                    'bg-red-400'
                                 }`}
                             style={{ width: `${sentiment.score}%` }}
                         />
