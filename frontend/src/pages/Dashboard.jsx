@@ -37,6 +37,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [wsConnected, setWsConnected] = useState(false);
+    const [pollingInterval] = useState(30000); // 30 seconds polling interval
     const logsEndRef = useRef(null);
 
     // Initial Data Fetch
