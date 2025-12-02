@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp } from 'lucide-react';
-import ExchangeLinks from './ExchangeLinks';
 
 export default function Header({ onLoginClick, onSignupClick }) {
     return (
@@ -14,9 +13,6 @@ export default function Header({ onLoginClick, onSignupClick }) {
                             TradingBot
                         </span>
                     </Link>
-
-                    {/* Exchange Links with Live Prices */}
-                    <ExchangeLinks />
 
                     <div className="flex items-center gap-3 flex-shrink-0">
                         <Link
