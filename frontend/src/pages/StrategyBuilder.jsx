@@ -316,30 +316,44 @@ export default function StrategyBuilder() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-sm text-muted-foreground">Type</label>
-                                                <select
-                                                    value={indicator.type}
-                                                    onChange={(e) => updateIndicator(index, 'type', e.target.value)}
-                                                    className="w-full mt-1 bg-black/20 border border-white/10 rounded-lg p-2 text-foreground"
-                                                >
-                                                    {Object.entries(indicators).map(([key, meta]) => (
-                                                        <option key={key} value={key}>{meta.name}</option>
-                                                    ))}
-                                                </select>
+                                                <div className="relative">
+                                                    <select
+                                                        value={indicator.type}
+                                                        onChange={(e) => updateIndicator(index, 'type', e.target.value)}
+                                                        className="w-full mt-1 bg-black/20 border border-white/10 rounded-lg p-2 pr-8 text-foreground appearance-none cursor-pointer hover:bg-black/30 transition-all outline-none focus:border-primary/50"
+                                                    >
+                                                        {Object.entries(indicators).map(([key, meta]) => (
+                                                            <option key={key} value={key}>{meta.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none mt-0.5">
+                                                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {indicators[indicator.type]?.params && Object.entries(indicators[indicator.type].params).map(([paramKey, paramMeta]) => (
                                                 <div key={paramKey}>
                                                     <label className="text-sm text-muted-foreground capitalize">{formatLabel(paramKey)}</label>
                                                     {paramMeta.type === 'select' ? (
-                                                        <select
-                                                            value={indicator.params[paramKey]}
-                                                            onChange={(e) => updateIndicator(index, paramKey, e.target.value)}
-                                                            className="w-full mt-1 bg-black/20 border border-white/10 rounded-lg p-2 text-foreground"
-                                                        >
-                                                            {paramMeta.options.map(opt => (
-                                                                <option key={opt} value={opt}>{opt}</option>
-                                                            ))}
-                                                        </select>
+                                                        <div className="relative">
+                                                            <select
+                                                                value={indicator.params[paramKey]}
+                                                                onChange={(e) => updateIndicator(index, paramKey, e.target.value)}
+                                                                className="w-full mt-1 bg-black/20 border border-white/10 rounded-lg p-2 pr-8 text-foreground appearance-none cursor-pointer hover:bg-black/30 transition-all outline-none focus:border-primary/50"
+                                                            >
+                                                                {paramMeta.options.map(opt => (
+                                                                    <option key={opt} value={opt}>{opt}</option>
+                                                                ))}
+                                                            </select>
+                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none mt-0.5">
+                                                                <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
                                                     ) : (
                                                         <input
                                                             type="number"
@@ -450,32 +464,46 @@ function ConditionRow({ condition, index, type, selectedIndicators, operators, o
             <div className="flex-1 grid grid-cols-3 gap-4">
                 <div>
                     <label className="text-xs text-muted-foreground">Left Value</label>
-                    <select
-                        value={condition.left}
-                        onChange={(e) => onUpdate(type, index, 'left', e.target.value)}
-                        className="w-full mt-1 bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-foreground"
-                    >
-                        <option value="close">Close Price</option>
-                        <option value="open">Open Price</option>
-                        <option value="high">High Price</option>
-                        <option value="low">Low Price</option>
-                        {selectedIndicators.map(ind => (
-                            <option key={ind.id} value={ind.id}>{ind.id}</option>
-                        ))}
-                    </select>
+                    <div className="relative">
+                        <select
+                            value={condition.left}
+                            onChange={(e) => onUpdate(type, index, 'left', e.target.value)}
+                            className="w-full mt-1 bg-black/20 border border-white/10 rounded-lg p-2 pr-8 text-sm text-foreground appearance-none cursor-pointer hover:bg-black/30 transition-all outline-none focus:border-primary/50"
+                        >
+                            <option value="close">Close Price</option>
+                            <option value="open">Open Price</option>
+                            <option value="high">High Price</option>
+                            <option value="low">Low Price</option>
+                            {selectedIndicators.map(ind => (
+                                <option key={ind.id} value={ind.id}>{ind.id}</option>
+                            ))}
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none mt-0.5">
+                            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
                 </div>
 
                 <div>
                     <label className="text-xs text-muted-foreground">Operator</label>
-                    <select
-                        value={condition.operator}
-                        onChange={(e) => onUpdate(type, index, 'operator', e.target.value)}
-                        className="w-full mt-1 bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-foreground"
-                    >
-                        {Object.entries(allOps).map(([key, meta]) => (
-                            <option key={key} value={key}>{meta.symbol} {meta.name}</option>
-                        ))}
-                    </select>
+                    <div className="relative">
+                        <select
+                            value={condition.operator}
+                            onChange={(e) => onUpdate(type, index, 'operator', e.target.value)}
+                            className="w-full mt-1 bg-black/20 border border-white/10 rounded-lg p-2 pr-8 text-sm text-foreground appearance-none cursor-pointer hover:bg-black/30 transition-all outline-none focus:border-primary/50"
+                        >
+                            {Object.entries(allOps).map(([key, meta]) => (
+                                <option key={key} value={key}>{meta.symbol} {meta.name}</option>
+                            ))}
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none mt-0.5">
+                            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
                 </div>
 
                 <div>

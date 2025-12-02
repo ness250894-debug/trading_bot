@@ -464,24 +464,38 @@ export default function Optimization() {
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium text-foreground">Timeframe:</label>
-                                <select
-                                    className="bg-black/20 border border-white/10 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm [&>option]:bg-zinc-900 [&>option]:text-white"
-                                    value={timeframe}
-                                    onChange={(e) => setTimeframe(e.target.value)}
-                                >
-                                    {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        className="bg-black/20 border border-white/10 rounded-lg p-2 pr-8 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm appearance-none cursor-pointer hover:bg-black/30 [&>option]:bg-zinc-900 [&>option]:text-white"
+                                        value={timeframe}
+                                        onChange={(e) => setTimeframe(e.target.value)}
+                                    >
+                                        {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+                                    </select>
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium text-foreground">Strategy:</label>
-                                <select
-                                    className="bg-black/20 border border-white/10 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm [&>option]:bg-zinc-900 [&>option]:text-white"
-                                    value={strategy}
-                                    onChange={handleStrategyChange}
-                                >
-                                    {strategies.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        className="bg-black/20 border border-white/10 rounded-lg p-2 pr-8 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm appearance-none cursor-pointer hover:bg-black/30 [&>option]:bg-zinc-900 [&>option]:text-white"
+                                        value={strategy}
+                                        onChange={handleStrategyChange}
+                                    >
+                                        {strategies.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
                             </div>
                             {presets[strategy] && (
                                 <div className="flex gap-2">

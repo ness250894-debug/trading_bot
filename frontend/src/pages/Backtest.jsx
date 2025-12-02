@@ -74,24 +74,38 @@ export default function Backtest() {
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-sm text-muted-foreground mb-1">Strategy</label>
-                                    <select
-                                        className="w-full bg-background border border-border rounded-md p-2 text-sm"
-                                        value={selectedStrategy.name}
-                                        onChange={handleStrategyChange}
-                                    >
-                                        {STRATEGIES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
-                                    </select>
+                                    <div className="relative">
+                                        <select
+                                            className="w-full bg-black/20 border border-white/10 rounded-xl p-3 pr-10 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all appearance-none cursor-pointer hover:bg-black/30"
+                                            value={selectedStrategy.name}
+                                            onChange={handleStrategyChange}
+                                        >
+                                            {STRATEGIES.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                                        </select>
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div>
                                     <label className="block text-sm text-muted-foreground mb-1">Timeframe</label>
-                                    <select
-                                        className="w-full bg-background border border-border rounded-md p-2 text-sm"
-                                        value={timeframe}
-                                        onChange={(e) => setTimeframe(e.target.value)}
-                                    >
-                                        {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
-                                    </select>
+                                    <div className="relative">
+                                        <select
+                                            className="w-full bg-black/20 border border-white/10 rounded-xl p-3 pr-10 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all appearance-none cursor-pointer hover:bg-black/30"
+                                            value={timeframe}
+                                            onChange={(e) => setTimeframe(e.target.value)}
+                                        >
+                                            {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+                                        </select>
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {Object.entries(params).map(([key, value]) => (

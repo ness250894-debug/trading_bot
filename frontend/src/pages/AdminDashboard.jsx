@@ -373,21 +373,28 @@ const AdminDashboard = () => {
                                                                 </div>
                                                             </div>
                                                             {/* Plan Tier Selector */}
-                                                            <select
-                                                                className="bg-background border border-border rounded px-2 py-1 text-sm"
-                                                                defaultValue={user.plan_id || 'free'}
-                                                                onChange={(e) => {
-                                                                    const value = e.target.value;
-                                                                    const tier = value.split('_')[0];
-                                                                    setSelectedPlan(prev => ({ ...prev, [user.id]: tier }));
-                                                                }}
-                                                                id={`plan-${user.id}`}
-                                                            >
-                                                                <option value="free">Free</option>
-                                                                <option value={`basic_${billingCycle[user.id] || 'monthly'}`}>Basic</option>
-                                                                <option value={`pro_${billingCycle[user.id] || 'monthly'}`}>Pro</option>
-                                                                <option value={`elite_${billingCycle[user.id] || 'monthly'}`}>Elite</option>
-                                                            </select>
+                                                            <div className="relative">
+                                                                <select
+                                                                    className="w-full bg-black/20 border border-white/10 rounded-lg pl-2 pr-8 py-1 text-sm outline-none focus:border-primary/50 appearance-none cursor-pointer hover:bg-black/30 transition-all"
+                                                                    defaultValue={user.plan_id || 'free'}
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        const tier = value.split('_')[0];
+                                                                        setSelectedPlan(prev => ({ ...prev, [user.id]: tier }));
+                                                                    }}
+                                                                    id={`plan-${user.id}`}
+                                                                >
+                                                                    <option value="free">Free</option>
+                                                                    <option value={`basic_${billingCycle[user.id] || 'monthly'}`}>Basic</option>
+                                                                    <option value={`pro_${billingCycle[user.id] || 'monthly'}`}>Pro</option>
+                                                                    <option value={`elite_${billingCycle[user.id] || 'monthly'}`}>Elite</option>
+                                                                </select>
+                                                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                                    <svg className="w-3 h-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                    </svg>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     ) : (
                                                         <span className={`px-2 py-1 text-xs font-medium rounded-full border ${(user.plan_id || 'free').includes('elite') ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
@@ -401,15 +408,22 @@ const AdminDashboard = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     {editingUser === user.id ? (
-                                                        <select
-                                                            className="bg-background border border-border rounded px-2 py-1 text-sm"
-                                                            defaultValue={user.status || 'active'}
-                                                            id={`status-${user.id}`}
-                                                        >
-                                                            <option value="active">Active</option>
-                                                            <option value="expired">Expired</option>
-                                                            <option value="cancelled">Cancelled</option>
-                                                        </select>
+                                                        <div className="relative">
+                                                            <select
+                                                                className="w-full bg-black/20 border border-white/10 rounded-lg pl-2 pr-8 py-1 text-sm outline-none focus:border-primary/50 appearance-none cursor-pointer hover:bg-black/30 transition-all"
+                                                                defaultValue={user.status || 'active'}
+                                                                id={`status-${user.id}`}
+                                                            >
+                                                                <option value="active">Active</option>
+                                                                <option value="expired">Expired</option>
+                                                                <option value="cancelled">Cancelled</option>
+                                                            </select>
+                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                                <svg className="w-3 h-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
                                                     ) : (
                                                         <span className={`px-2 py-1 text-xs font-medium rounded-full border ${user.status === 'active'
                                                             ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
