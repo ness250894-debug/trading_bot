@@ -7,7 +7,6 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
 import requests
-from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +19,10 @@ class NewsService:
         self.finnhub_key = os.getenv('FINNHUB_API_KEY', '')
         self.marketaux_key = os.getenv('MARKETAUX_API_KEY', '')
         
-        # Cache timeout in seconds (5 minutes)
-        self.cache_timeout = 300
+        # Simple cache
+        self._cache = {}
+        self._cache_timestamp = {}
+        self.cache_timeout = 300  # 5 minutes
         
     def _format_time_ago(self, timestamp: str) -> str:
         """Convert timestamp to relative time (e.g., '2h ago')"""
@@ -225,12 +226,21 @@ class NewsService:
             logger.warning(f"Error fetching CoinDesk RSS: {e}")
             return []
     
-    @lru_cache(maxsize=1)
     def get_aggregated_news(self, symbols: Optional[str] = None, limit: int = 15) -> List[Dict]:
         """
         Aggregate news from all available sources
-        This function is cached to avoid excessive API calls
+        This function uses simple caching to avoid excessive API calls
         """
+        # Create cache key
+        cache_key = f"{symbols}:{limit}"
+        
+        # Check cache
+        if cache_key in self._cache:
+            cache_age = datetime.now(timezone.utc).timestamp() - self._cache_timestamp.get(cache_key, 0)
+            if cache_age < self.cache_timeout:
+                logger.info(f"Returning cached news (age: {int(cache_age)}s)")
+                return self._cache[cache_key]
+        
         all_news = []
         
         # Parse symbols
@@ -270,8 +280,14 @@ class NewsService:
         # Sort by recency (items with 'ago' in time first)
         unique_news.sort(key=lambda x: x['time'])
         
-        logger.info(f"Aggregated {len(unique_news)} unique news items from {len(all_news)} total")
-        return unique_news[:limit]
+        result = unique_news[:limit]
+        
+        # Update cache
+        self._cache[cache_key] = result
+        self._cache_timestamp[cache_key] = datetime.now(timezone.utc).timestamp()
+        
+        logger.info(f"Aggregated {len(result)} unique news items from {len(all_news)} total")
+        return result
 
 
 # Global instance

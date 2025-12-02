@@ -21,7 +21,6 @@ export default function Settings() {
     const [hasKey, setHasKey] = useState(false);
     const [loading, setLoading] = useState(false);
     const [exchanges, setExchanges] = useState([]);
-    const [exchangesLoading, setExchangesLoading] = useState(true);
 
     // Telegram settings state
     const [telegramChatId, setTelegramChatId] = useState('');
@@ -30,7 +29,6 @@ export default function Settings() {
 
     // User info state
     const [userInfo, setUserInfo] = useState(null);
-    const [userInfoLoading, setUserInfoLoading] = useState(true);
 
     // Preferences state
     const [theme, setTheme] = useState('dark');
