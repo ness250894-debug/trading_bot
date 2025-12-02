@@ -27,10 +27,7 @@ const PageLoader = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
   </div>
 );
-import { ToastProvider } from './components/Toast';
-import { ModalProvider } from './components/Modal';
-import PublicLayout from './components/PublicLayout';
-import HybridLayout from './components/HybridLayout';
+
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
