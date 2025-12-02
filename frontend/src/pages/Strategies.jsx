@@ -18,6 +18,19 @@ const STRATEGY_OPTIONS = [
 
 const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
+const POPULAR_SYMBOLS = [
+    'BTC/USDT',
+    'ETH/USDT',
+    'BNB/USDT',
+    'SOL/USDT',
+    'XRP/USDT',
+    'ADA/USDT',
+    'DOGE/USDT',
+    'MATIC/USDT',
+    'CUSTOM' // Special option to enable custom input
+];
+
+
 const STRATEGY_PARAMS = {
     mean_reversion: {
         rsi_period: { label: 'RSI Period', type: 'number', min: 2, max: 50, default: 14 },
@@ -131,6 +144,8 @@ export default function Strategies() {
     const [suggestion, setSuggestion] = useState(null);
     const [exchanges, setExchanges] = useState([]);
     const [exchangesLoading, setExchangesLoading] = useState(true);
+    const [customSymbol, setCustomSymbol] = useState(false);
+
 
     const fetchExchanges = async () => {
         setExchangesLoading(true);
@@ -289,8 +304,10 @@ export default function Strategies() {
         </div>
     );
 
+    if (!config) return null;
+
     const currentParams = STRATEGY_PARAMS[config.strategy] || {};
-    const currentPresets = STRATEGY_PRESETS[config.strategy] || [];
+    const currentPresets = STRATEGY_PRESETS[config.strategy] || {};
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
@@ -345,90 +362,59 @@ export default function Strategies() {
 
                 <div className="p-8 space-y-8">
                     {/* Exchange Selection */}
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div className="flex items-center gap-2">
                             <Globe size={18} className="text-primary" />
                             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Trading Exchange</label>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                            {exchangesLoading ? (
-                                <div className="col-span-full text-center text-muted-foreground py-4">
-                                    Loading exchanges...
+                        {exchangesLoading ? (
+                            <div className="text-center text-muted-foreground py-4">
+                                Loading exchanges...
+                            </div>
+                        ) : (
+                            <div className="relative">
+                                <select
+                                    value={config.exchange || 'bybit'}
+                                    onChange={(e) => handleChange('exchange', e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pr-10 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all appearance-none cursor-pointer hover:bg-black/30"
+                                >
+                                    {exchanges.map((exchange) => (
+                                        <option key={exchange.name} value={exchange.name}>
+                                            {exchange.display_name}
+                                            {exchange.supports_futures && exchange.supports_spot ? ' (Futures & Spot)' :
+                                                exchange.supports_futures ? ' (Futures)' : ' (Spot)'}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
                                 </div>
-                            ) : (
-                                exchanges.map((exchange) => {
-                                    const isActive = (config.exchange || 'bybit') === exchange.name;
-                                    return (
-                                        <div
-                                            key={exchange.name}
-                                            onClick={() => handleChange('exchange', exchange.name)}
-                                            className={`
-                                                cursor-pointer p-4 rounded-xl border transition-all duration-300
-                                                ${isActive
-                                                    ? 'bg-primary/10 border-primary/50 shadow-lg shadow-primary/10'
-                                                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                                                }
-                                            `}
-                                        >
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h4 className={`font-bold text-sm ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                                    {exchange.display_name}
-                                                </h4>
-                                                {isActive && <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(139,92,246,0.6)]" />}
-                                            </div>
-                                            <div className="flex gap-1 flex-wrap">
-                                                {exchange.supports_futures && (
-                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">Futures</span>
-                                                )}
-                                                {exchange.supports_spot && (
-                                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Spot</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            Selected: <span className="font-medium text-foreground">{exchanges.find(e => e.name === (config.exchange || 'bybit'))?.display_name || 'ByBit'}</span>
-                            {exchanges.find(e => e.name === (config.exchange || 'bybit'))?.supports_demo && (
-                                <span className="ml-2 text-primary">• Testnet Available</span>
-                            )}
-                        </p>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Strategy Selection Cards */}
-                    <div className="space-y-4">
+                    {/* Strategy Selection */}
+                    <div className="space-y-3">
                         <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Active Strategy</label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {STRATEGY_OPTIONS.map((opt) => {
-                                const Icon = opt.icon;
-                                const isActive = config.strategy === opt.value;
-                                return (
-                                    <div
-                                        key={opt.value}
-                                        onClick={() => handleChange('strategy', opt.value)}
-                                        className={`
-                                            cursor-pointer p-5 rounded-xl border transition-all duration-300 relative overflow-hidden group
-                                            ${isActive
-                                                ? 'bg-primary/10 border-primary/50 shadow-lg shadow-primary/10'
-                                                : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
-                                            }
-                                        `}
-                                    >
-                                        <div className="flex items-start justify-between mb-3">
-                                            <Icon size={24} className={isActive ? 'text-primary' : 'text-muted-foreground'} />
-                                            {isActive && <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_10px_rgba(139,92,246,0.5)]" />}
-                                        </div>
-                                        <h4 className={`font-bold mb-1 ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>
-                                            {opt.label}
-                                        </h4>
-                                        <p className="text-xs text-muted-foreground leading-relaxed">
-                                            {opt.desc}
-                                        </p>
-                                    </div>
-                                );
-                            })}
+                        <div className="relative">
+                            <select
+                                value={config.strategy}
+                                onChange={(e) => handleChange('strategy', e.target.value)}
+                                className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pr-10 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all appearance-none cursor-pointer hover:bg-black/30"
+                            >
+                                {STRATEGY_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                        {opt.label} - {opt.desc}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
 
@@ -521,47 +507,80 @@ export default function Strategies() {
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Trading Symbol</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="BTC/USDT"
-                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-lg font-mono focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all uppercase"
-                                    value={config.symbol}
-                                    onChange={(e) => handleChange('symbol', e.target.value.toUpperCase())}
-                                />
-                                <span className="absolute top-1 right-2 text-[10px] text-muted-foreground">e.g., BTC/USDT, ETH/USDT</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Timeframe</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {TIMEFRAME_OPTIONS.map(opt => (
+                            {customSymbol ? (
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Enter symbol (e.g., BTC/USDT)"
+                                            className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-sm font-mono focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all uppercase"
+                                            value={config.symbol}
+                                            onChange={(e) => handleChange('symbol', e.target.value.toUpperCase())}
+                                        />
+                                    </div>
                                     <button
-                                        key={opt}
-                                        onClick={() => handleChange('timeframe', opt)}
-                                        className={`
-                                            py-2 rounded-lg text-sm font-medium transition-all
-                                            ${config.timeframe === opt
-                                                ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                                                : 'bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground'
-                                            }
-                                        `}
+                                        onClick={() => setCustomSymbol(false)}
+                                        className="text-xs text-primary hover:text-primary/80 transition-colors"
                                     >
-                                        {opt}
+                                        ← Back to popular symbols
                                     </button>
-                                ))}
+                                </div>
+                            ) : (
+                                <div className="relative">
+                                    <select
+                                        value={POPULAR_SYMBOLS.includes(config.symbol) ? config.symbol : 'CUSTOM'}
+                                        onChange={(e) => {
+                                            if (e.target.value === 'CUSTOM') {
+                                                setCustomSymbol(true);
+                                            } else {
+                                                handleChange('symbol', e.target.value);
+                                            }
+                                        }}
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pr-10 text-sm font-mono focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all appearance-none cursor-pointer hover:bg-black/30"
+                                    >
+                                        {POPULAR_SYMBOLS.map((symbol) => (
+                                            <option key={symbol} value={symbol}>
+                                                {symbol === 'CUSTOM' ? '+ Custom Symbol' : symbol}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Timeframe</label>
+                            <div className="relative">
+                                <select
+                                    value={config.timeframe}
+                                    onChange={(e) => handleChange('timeframe', e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pr-10 text-sm font-mono focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all appearance-none cursor-pointer hover:bg-black/30"
+                                >
+                                    {TIMEFRAME_OPTIONS.map(opt => (
+                                        <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Trade Amount (USDT)</label>
                             <div className="relative">
                                 <input
                                     type="number"
-                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pl-12 text-lg font-mono focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                                    className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pl-12 text-sm font-mono focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
                                     value={config.amount_usdt}
                                     onChange={(e) => handleChange('amount_usdt', parseFloat(e.target.value))}
                                 />
