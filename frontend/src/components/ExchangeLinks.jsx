@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { useTokenPrices } from '../hooks/useTokenPrices';
 
-// Exchange configuration with branding
+// Exchange configuration with branding (reduced to 3 for space)
 const EXCHANGES = [
     {
         name: 'Binance',
@@ -33,30 +33,10 @@ const EXCHANGES = [
             border: 'border-blue-400/30',
             hover: 'hover:border-blue-400/60'
         }
-    },
-    {
-        name: 'Coinbase',
-        url: 'https://www.coinbase.com/join/YOUR_COINBASE_REF_CODE',
-        colors: {
-            bg: 'bg-[#0052FF]',
-            text: 'text-white',
-            border: 'border-white/20',
-            hover: 'hover:border-white/40'
-        }
-    },
-    {
-        name: 'Kraken',
-        url: 'https://www.kraken.com/',
-        colors: {
-            bg: 'bg-[#5741D9]',
-            text: 'text-white',
-            border: 'border-white/20',
-            hover: 'hover:border-white/40'
-        }
     }
 ];
 
-const ExchangeLink = ({ exchange, currentToken }) => {
+const ExchangeLink = ({ exchange, currentToken, showPrices }) => {
     const { name, url, colors } = exchange;
 
     return (
@@ -65,23 +45,23 @@ const ExchangeLink = ({ exchange, currentToken }) => {
             target="_blank"
             rel="noopener noreferrer"
             className={`
-                group flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all duration-300
+                group flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 rounded-lg border transition-all duration-300
                 ${colors.bg} ${colors.border} ${colors.hover}
             `}
         >
-            <div className="flex items-center gap-1.5">
-                <span className={`text-xs font-bold ${colors.text}`}>{name}</span>
-                <ExternalLink size={10} className={`${colors.text} opacity-60 group-hover:opacity-100 transition-opacity`} />
+            <div className="flex items-center gap-1">
+                <span className={`text-[10px] font-bold ${colors.text}`}>{name}</span>
+                <ExternalLink size={8} className={`${colors.text} opacity-60 group-hover:opacity-100 transition-opacity`} />
             </div>
 
-            {currentToken && (
-                <div className="flex items-center gap-1.5 text-[10px]">
+            {showPrices && currentToken && (
+                <div className="flex items-center gap-1 text-[9px]">
                     <span className="text-white/60 font-mono">{currentToken.symbol}</span>
                     <span className="text-white/90 font-mono font-semibold">
-                        ${currentToken.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${currentToken.price > 1000 ? currentToken.price.toLocaleString('en-US', { maximumFractionDigits: 0 }) : currentToken.price.toFixed(2)}
                     </span>
                     <span className={`font-mono font-medium ${currentToken.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {currentToken.change24h >= 0 ? '+' : ''}{currentToken.change24h.toFixed(2)}%
+                        {currentToken.change24h >= 0 ? '+' : ''}{currentToken.change24h.toFixed(1)}%
                     </span>
                 </div>
             )}
@@ -107,18 +87,19 @@ export default function ExchangeLinks() {
     // Silently handle errors - don't break the page
     if (error) {
         console.error('Token price error:', error);
-        // Still show exchange links even if token prices fail
     }
 
     const currentToken = tokens && tokens.length > 0 ? tokens[currentTokenIndex] : null;
+    const showPrices = !loading && !error && currentToken;
 
     return (
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-1.5">
             {EXCHANGES.map((exchange) => (
                 <ExchangeLink
                     key={exchange.name}
                     exchange={exchange}
                     currentToken={currentToken}
+                    showPrices={showPrices}
                 />
             ))}
         </div>
