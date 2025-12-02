@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useTokenPrices } from '../hooks/useTokenPrices';
 
 // Exchange configuration with branding - ALL 5 EXCHANGES
@@ -113,9 +114,22 @@ export default function ExchangeLinks() {
 
     return (
         <div className="hidden md:flex items-center gap-3">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider hidden xl:block">
-                Need an account?
-            </span>
+            <div className="hidden xl:flex flex-col items-end mr-1">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Need an account?
+                </span>
+                <div className="flex items-center gap-1">
+                    <span className="text-[9px] text-primary font-medium">
+                        Register here
+                    </span>
+                    <motion.div
+                        animate={{ x: [0, 4, 0] }}
+                        transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                    >
+                        <ArrowRight size={10} className="text-primary" />
+                    </motion.div>
+                </div>
+            </div>
             <div className="flex items-center gap-1.5">
                 {EXCHANGES.map((exchange) => (
                     <ExchangeLink
