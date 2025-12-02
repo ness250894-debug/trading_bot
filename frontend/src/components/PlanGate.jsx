@@ -6,7 +6,7 @@ import './PlanGate.css';
  * PlanGate component - Restricts access to features based on user plan
  * Shows a blurred overlay with upgrade message for Free plan users
  */
-const PlanGate = ({ feature, children }) => {
+function PlanGate({ feature, children }) {
     const [isRestricted, setIsRestricted] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -24,7 +24,6 @@ const PlanGate = ({ feature, children }) => {
                 return;
             }
 
-            // Get user info including subscription
             const response = await fetch('/api/user/me', {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -61,7 +60,7 @@ const PlanGate = ({ feature, children }) => {
     }
 
     if (!isRestricted) {
-        return <>{children}</>;
+        return <div>{children}</div>;
     }
 
     return (
@@ -80,7 +79,7 @@ const PlanGate = ({ feature, children }) => {
             </div>
         </div>
     );
-};
+}
 
 PlanGate.propTypes = {
     feature: PropTypes.string.isRequired,
