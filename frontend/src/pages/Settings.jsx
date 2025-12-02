@@ -8,11 +8,13 @@ import {
     AlertTriangle, Trash2, Save, Copy
 } from 'lucide-react';
 import { useToast } from '../components/ToastContext';
+import { useModal } from '../components/Modal';
 import { DEFAULT_EXCHANGES } from '../constants/exchanges';
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('profile');
     const toast = useToast();
+    const modal = useModal();
 
     // API Keys state
     const [apiKey, setApiKey] = useState('');
@@ -97,18 +99,26 @@ export default function Settings() {
         }
     };
 
-    const handleDeleteKeys = async () => {
-        if (!confirm('Are you sure you want to delete your API keys?')) return;
-        setLoading(true);
-        try {
-            await api.delete(`/api-keys/${exchange}`);
-            toast.success('API keys deleted successfully!');
-            setHasKey(false);
-        } catch (error) {
-            toast.error(error.response?.data?.detail || 'Failed to delete API keys');
-        } finally {
-            setLoading(false);
-        }
+    const handleDeleteKeys = () => {
+        modal.confirm({
+            title: 'Delete API Keys',
+            message: 'Are you sure you want to delete your API keys? This action cannot be undone.',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            type: 'danger',
+            onConfirm: async () => {
+                setLoading(true);
+                try {
+                    await api.delete(`/api-keys/${exchange}`);
+                    toast.success('API keys deleted successfully!');
+                    setHasKey(false);
+                } catch (error) {
+                    toast.error(error.response?.data?.detail || 'Failed to delete API keys');
+                } finally {
+                    setLoading(false);
+                }
+            }
+        });
     };
 
     const handleTelegramSave = async (e) => {
@@ -126,18 +136,26 @@ export default function Settings() {
         }
     };
 
-    const handleTelegramDelete = async () => {
-        if (!confirm('Are you sure you want to remove Telegram notifications?')) return;
-        setTelegramLoading(true);
-        try {
-            await api.post('/user/telegram', { chat_id: null });
-            toast.success('Telegram settings removed successfully!');
-            setHasTelegram(false);
-        } catch (error) {
-            toast.error(error.response?.data?.detail || 'Failed to remove Telegram settings');
-        } finally {
-            setTelegramLoading(false);
-        }
+    const handleTelegramDelete = () => {
+        modal.confirm({
+            title: 'Remove Telegram Notifications',
+            message: 'Are you sure you want to remove Telegram notifications? You can always set them up again later.',
+            confirmText: 'Remove',
+            cancelText: 'Cancel',
+            type: 'danger',
+            onConfirm: async () => {
+                setTelegramLoading(true);
+                try {
+                    await api.post('/user/telegram', { chat_id: null });
+                    toast.success('Telegram settings removed successfully!');
+                    setHasTelegram(false);
+                } catch (error) {
+                    toast.error(error.response?.data?.detail || 'Failed to remove Telegram settings');
+                } finally {
+                    setTelegramLoading(false);
+                }
+            }
+        });
     };
 
     const tabs = [
