@@ -5,6 +5,7 @@ import {
     TrendingUp, Rocket, ArrowRight, Users, DollarSign,
     CheckCircle, Star, Award
 } from 'lucide-react';
+import Testimonials from '../components/Testimonials';
 
 export default function Landing() {
     const navigate = useNavigate();
@@ -284,41 +285,7 @@ export default function Landing() {
             </section>
 
             {/* Testimonials */}
-            <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/[0.02]">
-                <div className="max-w-7xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl sm:text-5xl font-bold mb-4">
-                            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                                Trusted by Traders
-                            </span>
-                        </h2>
-                        <p className="text-xl text-muted-foreground">
-                            See what our community has to say
-                        </p>
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-6">
-                        {testimonials.map((testimonial, index) => (
-                            <div key={index} className="glass p-6 rounded-2xl border border-white/10">
-                                <div className="flex gap-1 mb-4">
-                                    {[...Array(testimonial.rating)].map((_, i) => (
-                                        <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                                    ))}
-                                </div>
-                                <p className="text-foreground mb-4 italic">"{testimonial.content}"</p>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                                        {testimonial.name[0]}
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-medium text-foreground">{testimonial.name}</div>
-                                        <div className="text-xs text-muted-foreground">{testimonial.role}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+            <Testimonials />
 
             {/* CTA Section */}
             <section className="py-20 px-4 sm:px-6 lg:px-8">
