@@ -112,6 +112,10 @@ app.include_router(sentiment.router, prefix="/api")
 from .api import marketplace
 app.include_router(marketplace.router, prefix="/api")
 
+# Market News
+from .api import news
+app.include_router(news.router, prefix="/api")
+
 # Serve Static Files (Frontend)
 import os
 from fastapi.staticfiles import StaticFiles

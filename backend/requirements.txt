@@ -16,3 +16,4 @@ requests
 slowapi
 pydantic[email]
 psutil
+feedparser

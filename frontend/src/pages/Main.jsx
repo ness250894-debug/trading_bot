@@ -126,9 +126,35 @@ export default function Main() {
         return botStatus.is_running ? 1 : 0;
     }, [botStatus]);
 
-    // News data - integrate with real API in future
-    // (e.g., CryptoCompare News API, NewsAPI, etc.)
-    const newsItems = [];
+    // News data - fetched from backend API
+    const [newsItems, setNewsItems] = useState([]);
+    const [newsLoading, setNewsLoading] = useState(true);
+
+    // Fetch news on mount and refresh with other data
+    const fetchNews = async () => {
+        try {
+            const res = await api.get('/news', {
+                params: {
+                    symbols: botStatus?.config?.symbol || 'BTC,ETH',
+                    limit: 10
+                }
+            });
+            if (res.data.success) {
+                setNewsItems(res.data.news || []);
+            }
+        } catch (err) {
+            // Silent fail - UI will show empty state
+        } finally {
+            setNewsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchNews();
+        // Refresh news every 5 minutes
+        const newsInterval = setInterval(fetchNews, 300000);
+        return () => clearInterval(newsInterval);
+    }, [botStatus?.config?.symbol]);
 
     if (loading) {
         return (
@@ -326,37 +352,46 @@ export default function Main() {
 
             {/* News Feed */}
             <div className="glass p-6 rounded-2xl">
-                <div className="flex items-center gap-2 mb-4">
-                    <Newspaper size={20} className="text-primary" />
-                    <h2 className="text-xl font-bold">Market News</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <Newspaper size={20} className="text-primary" />
+                        <h2 className="text-xl font-bold">Market News</h2>
+                    </div>
+                    <button
+                        onClick={fetchNews}
+                        disabled={newsLoading}
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-all"
+                        title="Refresh news"
+                    >
+                        <RefreshCw size={16} className={`text-muted-foreground ${newsLoading ? 'animate-spin' : ''}`} />
+                    </button>
                 </div>
                 <div className="space-y-3">
-                    {newsItems.length > 0 ? (
+                    {newsLoading ? (
+                        <div className="text-center py-12">
+                            <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                            <p className="text-muted-foreground text-sm">Loading news...</p>
+                        </div>
+                    ) : newsItems.length > 0 ? (
                         newsItems.map((item, idx) => (
                             <NewsItem key={idx} {...item} />
                         ))
                     ) : (
                         <div className="text-center py-12">
                             <Newspaper size={48} className="mx-auto text-muted-foreground/30 mb-4" />
-                            <p className="text-muted-foreground">News feed coming soon</p>
+                            <p className="text-muted-foreground font-medium">No news available</p>
                             <p className="text-sm text-muted-foreground/60 mt-1">
-                                We'll integrate live market news in a future update
+                                Configure API keys in .env to enable news sources
                             </p>
+                            <button
+                                onClick={fetchNews}
+                                className="mt-4 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-all"
+                            >
+                                Retry
+                            </button>
                         </div>
                     )}
                 </div>
-                {newsItems.length > 0 && (
-                    <div className="mt-4 text-center">
-                        <a
-                            href="https://cryptonews.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-primary hover:text-primary/80 inline-flex items-center gap-1"
-                        >
-                            View More News <TrendingUp size={14} />
-                        </a>
-                    </div>
-                )}
             </div>
 
             {/* Bot Instances Table */}
