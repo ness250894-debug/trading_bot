@@ -111,8 +111,10 @@ export default function Dashboard() {
         }
     }, [logs]);
 
-    // Calculate PnL for Chart
+    // Calculate PnL for Chart with deep comparison to avoid unnecessary recalculations
     const pnlData = React.useMemo(() => {
+        if (!trades || trades.length === 0) return [];
+
         let cumulative = 0;
         return trades.map((t, i) => {
             // Backend returns 'pnl', frontend was using 'profit_loss'
@@ -124,7 +126,7 @@ export default function Dashboard() {
                 cumulative: cumulative
             };
         });
-    }, [trades]);
+    }, [JSON.stringify(trades)]); // Deep comparison via JSON stringify
 
     const refreshTrades = async () => {
         try {

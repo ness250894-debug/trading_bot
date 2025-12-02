@@ -7,6 +7,7 @@ import {
     AlertTriangle, Trash2, Save, Copy
 } from 'lucide-react';
 import { useToast } from '../components/ToastContext';
+import { DEFAULT_EXCHANGES } from '../constants/exchanges';
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('profile');
@@ -58,13 +59,7 @@ export default function Settings() {
             const response = await api.get('/exchanges');
             setExchanges(response.data.exchanges || []);
         } catch (error) {
-            setExchanges([
-                { name: 'bybit', display_name: 'ByBit', supports_demo: true },
-                { name: 'binance', display_name: 'Binance', supports_demo: true },
-                { name: 'kraken', display_name: 'Kraken', supports_demo: true },
-                { name: 'okx', display_name: 'OKX', supports_demo: true },
-                { name: 'coinbase', display_name: 'Coinbase', supports_demo: false }
-            ]);
+            setExchanges(DEFAULT_EXCHANGES);
         } finally {
             setExchangesLoading(false);
         }

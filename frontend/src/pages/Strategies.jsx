@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
+import { DEFAULT_EXCHANGES } from '../constants/exchanges';
 import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity, Globe } from 'lucide-react';
 import { useModal } from '../components/Modal';
 import Disclaimer from '../components/Disclaimer';
@@ -91,7 +92,7 @@ export default function Strategies() {
         } catch (err) {
             // Silent fail - use fallback list
             // Default to bybit if API fails
-            setExchanges([{ name: 'bybit', display_name: 'Bybit' }]);
+            setExchanges([DEFAULT_EXCHANGES[0]]); // Just bybit as fallback
         } finally {
             setExchangesLoading(false);
         }
