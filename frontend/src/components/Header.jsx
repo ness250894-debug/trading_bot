@@ -26,45 +26,21 @@ export default function Header({ onLoginClick, onSignupClick }) {
                             Pricing
                         </Link>
 
-                        {/* CTA */}
-                        <div className="hidden lg:flex flex-col items-end">
+                        {/* Desktop buttons */}
+                        <div className="hidden lg:flex items-center gap-4">
                             <button
                                 onClick={onLoginClick}
-                                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                             >
                                 Sign In
                             </button>
                             <button
                                 onClick={onSignupClick}
-                                className="text-[10px] text-primary hover:text-primary/80 transition-colors"
+                                className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-primary/25"
                             >
-                                Don't have an account? Register here
+                                Get Started
                             </button>
                         </div>
-
-                        {/* Mobile buttons */}
-                        <div className="flex lg:hidden items-center gap-2">
-                            <button
-                                onClick={onLoginClick}
-                                className="text-muted-foreground hover:text-foreground transition-colors text-sm"
-                            >
-                                Sign In
-                            </button>
-                            <button
-                                onClick={onSignupClick}
-                                className="bg-primary hover:bg-primary/90 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all shadow-lg shadow-primary/25"
-                            >
-                                Register
-                            </button>
-                        </div>
-
-                        {/* Desktop button */}
-                        <button
-                            onClick={onSignupClick}
-                            className="hidden lg:block bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg font-medium transition-all shadow-lg shadow-primary/25"
-                        >
-                            Get Started
-                        </button>
                     </div>
                 </div>
             </div>

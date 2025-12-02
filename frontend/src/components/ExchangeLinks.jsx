@@ -71,7 +71,6 @@ const ExchangeLink = ({ exchange, currentToken, showPrices }) => {
         >
             <div className="flex items-center gap-1">
                 <span className={`text-[10px] font-bold ${colors.text}`}>{name}</span>
-                <ExternalLink size={8} className={`${colors.text} opacity-60 group-hover:opacity-100 transition-opacity`} />
             </div>
 
             {showPrices && currentToken && (
@@ -113,15 +112,20 @@ export default function ExchangeLinks() {
     const showPrices = !loading && !error && currentToken;
 
     return (
-        <div className="hidden md:flex items-center gap-1.5">
-            {EXCHANGES.map((exchange) => (
-                <ExchangeLink
-                    key={exchange.name}
-                    exchange={exchange}
-                    currentToken={currentToken}
-                    showPrices={showPrices}
-                />
-            ))}
+        <div className="hidden md:flex items-center gap-3">
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider hidden xl:block">
+                Need an account?
+            </span>
+            <div className="flex items-center gap-1.5">
+                {EXCHANGES.map((exchange) => (
+                    <ExchangeLink
+                        key={exchange.name}
+                        exchange={exchange}
+                        currentToken={currentToken}
+                        showPrices={showPrices}
+                    />
+                ))}
+            </div>
         </div>
     );
 }
