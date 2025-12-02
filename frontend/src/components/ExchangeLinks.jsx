@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { useTokenPrices } from '../hooks/useTokenPrices';
 
-// Exchange configuration with branding (reduced to 3 for space)
+// Exchange configuration with branding - ALL 5 EXCHANGES
 const EXCHANGES = [
     {
         name: 'Binance',
@@ -32,6 +32,26 @@ const EXCHANGES = [
             text: 'text-blue-400',
             border: 'border-blue-400/30',
             hover: 'hover:border-blue-400/60'
+        }
+    },
+    {
+        name: 'Coinbase',
+        url: 'https://www.coinbase.com/join/YOUR_COINBASE_REF_CODE',
+        colors: {
+            bg: 'bg-[#0052FF]',
+            text: 'text-white',
+            border: 'border-white/20',
+            hover: 'hover:border-white/40'
+        }
+    },
+    {
+        name: 'Kraken',
+        url: 'https://www.kraken.com/',
+        colors: {
+            bg: 'bg-[#5741D9]',
+            text: 'text-white',
+            border: 'border-white/20',
+            hover: 'hover:border-white/40'
         }
     }
 ];

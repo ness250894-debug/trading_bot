@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, DollarSign, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserDropdown from './UserDropdown';
+import ExchangeLinks from './ExchangeLinks';
 
 export default function Layout({ children }) {
     const [isAdmin, setIsAdmin] = React.useState(false);
@@ -43,7 +44,7 @@ export default function Layout({ children }) {
 
             {/* Top Bar */}
             <header className="h-16 px-4 md:px-8 flex items-center justify-between bg-transparent z-40 border-b border-white/5">
-                <NavLink to="/main" className="flex items-center gap-2">
+                <NavLink to="/main" className="flex items-center gap-2 flex-shrink-0">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
                         <Zap size={20} className="text-white" fill="currentColor" />
                     </div>
@@ -52,7 +53,10 @@ export default function Layout({ children }) {
                     </h1>
                 </NavLink>
 
-                <div className="flex items-center gap-4">
+                {/* Exchange Links */}
+                <ExchangeLinks />
+
+                <div className="flex items-center gap-4 flex-shrink-0">
                     <button className="p-2 rounded-full hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors relative">
                         <Bell size={20} />
                         <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background" />
