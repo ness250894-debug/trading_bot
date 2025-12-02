@@ -1,19 +1,32 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import Landing from './pages/Landing';
-import Main from './pages/Main';
-import Dashboard from './pages/Dashboard';
-import Strategies from './pages/Strategies';
-import StrategyBuilder from './pages/StrategyBuilder';
-import Marketplace from './pages/Marketplace';
-import Optimization from './pages/Optimization';
-import Backtest from './pages/Backtest';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Settings from './pages/Settings';
-import Pricing from './pages/Pricing';
-import AdminDashboard from './pages/AdminDashboard';
+import { ToastProvider } from './components/Toast';
+import { ModalProvider } from './components/Modal';
+import PublicLayout from './components/PublicLayout';
+import HybridLayout from './components/HybridLayout';
+
+// Lazy load pages for performance optimization
+const Landing = lazy(() => import('./pages/Landing'));
+const Main = lazy(() => import('./pages/Main'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Strategies = lazy(() => import('./pages/Strategies'));
+const StrategyBuilder = lazy(() => import('./pages/StrategyBuilder'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const Optimization = lazy(() => import('./pages/Optimization'));
+const Backtest = lazy(() => import('./pages/Backtest'));
+const Login = lazy(() => import('./pages/Login'));
+const Signup = lazy(() => import('./pages/Signup'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+
+// Loading component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+  </div>
+);
 import { ToastProvider } from './components/Toast';
 import { ModalProvider } from './components/Modal';
 import PublicLayout from './components/PublicLayout';
@@ -79,86 +92,88 @@ function App() {
       <Router>
         <ToastProvider>
           <ModalProvider>
-            <Routes>
-              {/* Public Routes - now use HybridLayout for auth-aware header */}
-              <Route element={<HybridLayout />}>
-                <Route path="/pricing" element={<Pricing />} />
-              </Route>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Public Routes - now use HybridLayout for auth-aware header */}
+                <Route element={<HybridLayout />}>
+                  <Route path="/pricing" element={<Pricing />} />
+                </Route>
 
-              <Route element={<PublicLayout />}>
-                <Route path="/" element={<Landing />} />
-                {/* <Route path="/login" element={<Login />} /> */}
-                <Route path="/signup" element={<Signup />} />
-              </Route>
+                <Route element={<PublicLayout />}>
+                  <Route path="/" element={<Landing />} />
+                  {/* <Route path="/login" element={<Login />} /> */}
+                  <Route path="/signup" element={<Signup />} />
+                </Route>
 
-              {/* Protected Routes */}
-              <Route path="/main" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Main />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/strategies" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Strategies />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/strategy-builder" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <StrategyBuilder />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/marketplace" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Marketplace />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/optimization" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Optimization />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/backtest" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Backtest />
-                  </Layout>
-                </ProtectedRoute>
-              } />
-              <Route path="/settings" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Settings />
-                  </Layout>
-                </ProtectedRoute>
-              } />
+                {/* Protected Routes */}
+                <Route path="/main" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Main />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Dashboard />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/strategies" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Strategies />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/strategy-builder" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <StrategyBuilder />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/marketplace" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Marketplace />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/optimization" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Optimization />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/backtest" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Backtest />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Settings />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/admin" element={
-                <ProtectedRoute>
-                  <Layout>
-                    <AdminDashboard />
-                  </Layout>
-                </ProtectedRoute>
-              } />
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <AdminDashboard />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
           </ModalProvider>
         </ToastProvider>
       </Router>
