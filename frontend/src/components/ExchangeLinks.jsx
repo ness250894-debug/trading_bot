@@ -95,21 +95,22 @@ export default function ExchangeLinks() {
 
     // Rotate through tokens every 3 seconds
     useEffect(() => {
-        if (tokens.length === 0) return;
+        if (!tokens || tokens.length === 0) return;
 
         const interval = setInterval(() => {
             setCurrentTokenIndex(prev => (prev + 1) % tokens.length);
         }, 3000);
 
         return () => clearInterval(interval);
-    }, [tokens.length]);
+    }, [tokens]);
 
+    // Silently handle errors - don't break the page
     if (error) {
         console.error('Token price error:', error);
         // Still show exchange links even if token prices fail
     }
 
-    const currentToken = tokens[currentTokenIndex];
+    const currentToken = tokens && tokens.length > 0 ? tokens[currentTokenIndex] : null;
 
     return (
         <div className="hidden lg:flex items-center gap-2">
