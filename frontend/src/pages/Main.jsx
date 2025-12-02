@@ -8,6 +8,7 @@ import {
 import SentimentWidget from '../components/SentimentWidget';
 import BotInstancesTable from '../components/BotInstancesTable';
 import Disclaimer from '../components/Disclaimer';
+import PlanGate from '../components/PlanGate';
 import { formatPlanName, formatStrategyName, formatLabel } from '../lib/utils';
 
 const InfoCard = ({ title, value, icon: Icon, subtext, trend }) => (
@@ -324,7 +325,9 @@ export default function Main() {
 
             {/* AI Sentiment */}
             <div>
-                <SentimentWidget />
+                <PlanGate feature="AI Sentiment Analysis">
+                    <SentimentWidget />
+                </PlanGate>
             </div>
 
             {/* News Feed */}
