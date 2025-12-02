@@ -145,6 +145,7 @@ export default function Strategies() {
     const [exchanges, setExchanges] = useState([]);
     const [exchangesLoading, setExchangesLoading] = useState(true);
     const [customSymbol, setCustomSymbol] = useState(false);
+    const [subscription, setSubscription] = useState(null);
 
 
     const fetchExchanges = async () => {
@@ -164,9 +165,19 @@ export default function Strategies() {
     const fetchConfig = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/status');
-            setConfig(response.data.config);
+            const [statusRes, subRes] = await Promise.all([
+                api.get('/status'),
+                api.get('/billing/status')
+            ]);
+
+            setConfig(statusRes.data.config);
+            setSubscription(subRes.data);
             setMessage(null);
+
+            // Force dry_run to true for free plan
+            if (subRes.data?.plan === 'free' && !statusRes.data.config.dry_run) {
+                setConfig(prev => ({ ...prev, dry_run: true }));
+            }
 
             const savedSuggestion = localStorage.getItem('suggested_strategy_params');
             if (savedSuggestion) {
@@ -591,15 +602,17 @@ export default function Strategies() {
 
                     <div className="pt-8 border-t border-white/5 flex items-center justify-between">
                         <label
-                            className="flex items-center gap-4 cursor-pointer group"
+                            className={`flex items-center gap-4 group ${subscription?.plan === 'free' ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
                             onClick={(e) => {
                                 e.preventDefault();
+                                if (subscription?.plan === 'free') return;
                                 handleChange('dry_run', !config.dry_run);
                             }}
                         >
                             <div className={`
                                 w-14 h-8 rounded-full p-1 transition-colors duration-300
                                 ${config.dry_run ? 'bg-primary' : 'bg-white/10'}
+                                ${subscription?.plan === 'free' ? 'opacity-50' : ''}
                             `}>
                                 <div className={`
                                     w-6 h-6 rounded-full bg-white shadow-lg transform transition-transform duration-300
@@ -609,6 +622,11 @@ export default function Strategies() {
                             <div>
                                 <span className="block font-medium text-foreground">Practice Mode</span>
                                 <span className="text-xs text-muted-foreground">Simulate trades without real money</span>
+                                {subscription?.plan === 'free' && (
+                                    <a href="/pricing" className="block text-xs text-primary mt-1 hover:underline">
+                                        Upgrade for Real Trading
+                                    </a>
+                                )}
                             </div>
                         </label>
 
