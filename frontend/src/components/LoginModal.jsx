@@ -41,7 +41,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
             if (onSuccess) {
                 onSuccess();
             } else {
-                navigate('/');
+                navigate('/main');
             }
         } catch (err) {
             setError(err.response?.data?.detail || 'Invalid email or password. Please try again.');

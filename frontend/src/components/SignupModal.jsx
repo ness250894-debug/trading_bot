@@ -39,7 +39,7 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
             if (onSuccess) {
                 onSuccess();
             } else {
-                navigate('/dashboard');
+                navigate('/main');
             }
         } catch (err) {
             setError(err.response?.data?.detail || 'Signup failed');
