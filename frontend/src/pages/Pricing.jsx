@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api from '../lib/api';
+import { useStaticData } from '../lib/swr';
 import styles from './Pricing.module.css';
 import { CheckCircle, Zap, Shield, TrendingUp, Crown } from 'lucide-react';
 

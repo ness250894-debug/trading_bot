@@ -55,6 +55,21 @@ export default function Main() {
     const [botStatus, setBotStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [pollingInterval, setPollingInterval] = useState(30000); // Start with 30s
+
+    // Smart polling: Reduce frequency when page is not visible
+    React.useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setPollingInterval(60000); // 1 min when inactive
+            } else {
+                setPollingInterval(30000); // 30s when active
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, []);
 
     const fetchData = async () => {
         try {
@@ -77,10 +92,10 @@ export default function Main() {
 
     useEffect(() => {
         fetchData();
-        // Refresh every 30 seconds
-        const interval = setInterval(fetchData, 30000);
+        // Refresh with dynamic interval based on page visibility  
+        const interval = setInterval(fetchData, pollingInterval);
         return () => clearInterval(interval);
-    }, []);
+    }, [pollingInterval]);
 
     const handleRefresh = () => {
         setRefreshing(true);

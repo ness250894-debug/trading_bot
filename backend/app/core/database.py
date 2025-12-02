@@ -222,6 +222,37 @@ class DuckDBHandler:
                 """)
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_visual_strategies_user_id ON visual_strategies(user_id)")
                 self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_visual_strategy_id START 1")
+
+                # Performance Optimization: Add indexes for frequently queried columns
+                logger.info("Creating performance indexes...")
+                
+                # Trades table indexes - optimize user queries and time-based filtering
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_user_timestamp ON trades(user_id, timestamp DESC)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trades_strategy ON trades(strategy)")
+                
+                # Backtest results indexes - optimize historical analysis
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_backtest_user_timestamp ON backtest_results(user_id, timestamp DESC)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_backtest_strategy ON backtest_results(strategy)")
+                
+                # Subscriptions indexes - optimize billing queries
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_subscriptions_user ON subscriptions(user_id)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_subscriptions_expires ON subscriptions(expires_at)")
+                
+                # Payments indexes - optimize transaction history
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_payments_charge ON payments(charge_code)")
+                
+                # API keys indexes - optimize key lookups
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_apikeys_user_exchange ON api_keys(user_id, exchange)")
+                
+                # Audit log indexes - optimize security monitoring
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_log(created_at DESC)")
+                
+                logger.info("Performance indexes created successfully")
                 logger.info("Visual strategies table created successfully")
                 
                 # Create public_strategies table for social trading/marketplace

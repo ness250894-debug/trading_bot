@@ -59,9 +59,9 @@ export default function Dashboard() {
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 5000); // Poll every 5s
+        const interval = setInterval(fetchData, pollingInterval); // Use dynamic interval
         return () => clearInterval(interval);
-    }, []);
+    }, [pollingInterval]); // Re-create interval when polling frequency changes
 
     const handleStartStop = async (symbol = null) => {
         try {

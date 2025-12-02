@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
+import { useStaticData } from '../lib/swr';
 import Disclaimer from '../components/Disclaimer';
 import {
     User, Key, Bell, Settings as SettingsIcon, Shield,
@@ -53,36 +54,30 @@ export default function Settings() {
         }
     }, []);
 
-    const fetchExchanges = useCallback(async () => {
-        setExchangesLoading(true);
-        try {
-            const response = await api.get('/exchanges');
-            setExchanges(response.data.exchanges || []);
-        } catch (error) {
-            setExchanges(DEFAULT_EXCHANGES);
-        } finally {
-            setExchangesLoading(false);
-        }
-    }, []);
+    // Use SWR for caching exchanges and user info (rarely changes)
+    const { data: exchangesData, isLoading: exchangesLoading } = useStaticData('/exchanges');
+    const { data: userInfoData, isLoading: userInfoLoading, mutate: mutateUserInfo } = useStaticData('/auth/me');
 
-    const fetchUserInfo = useCallback(async () => {
-        setUserInfoLoading(true);
-        try {
-            const response = await api.get('/auth/me');
-            setUserInfo(response.data);
-        } catch (error) {
-            // Silent fail - non-critical
-        } finally {
-            setUserInfoLoading(false);
+    // Set state from SWR data
+    React.useEffect(() => {
+        if (exchangesData?.exchanges) {
+            setExchanges(exchangesData.exchanges);
+        } else if (exchangesData === undefined && !exchangesLoading) {
+            // Fallback if API fails
+            setExchanges(DEFAULT_EXCHANGES);
         }
-    }, []);
+    }, [exchangesData, exchangesLoading]);
+
+    React.useEffect(() => {
+        if (userInfoData) {
+            setUserInfo(userInfoData);
+        }
+    }, [userInfoData]);
 
     useEffect(() => {
-        fetchExchanges();
-        fetchUserInfo();
         checkApiKeyStatus();
         checkTelegramStatus();
-    }, [exchange, fetchExchanges, fetchUserInfo, checkApiKeyStatus, checkTelegramStatus]);
+    }, [exchange, checkApiKeyStatus, checkTelegramStatus]);
 
     const handleSaveKeys = async (e) => {
         e.preventDefault();
