@@ -11,8 +11,9 @@ from ..core.strategies.mean_reversion import MeanReversion
 from ..core.strategies.sma_crossover import SMACrossover
 from ..core.strategies.macd import MACDStrategy
 from ..core.strategies.rsi import RSIStrategy
-
-from ..core.strategies.rsi import RSIStrategy
+from ..core.strategies.bollinger_breakout import BollingerBreakout
+from ..core.strategies.momentum import Momentum
+from ..core.strategies.dca_dip import DCADip
 from ..core import auth
 from fastapi import Depends
 
@@ -68,6 +69,12 @@ async def run_backtest(request: Request, backtest_data: BacktestRequest, current
             strategy_class = MACDStrategy
         elif backtest_data.strategy == "RSI":
             strategy_class = RSIStrategy
+        elif backtest_data.strategy == "Bollinger Breakout":
+            strategy_class = BollingerBreakout
+        elif backtest_data.strategy == "Momentum":
+            strategy_class = Momentum
+        elif backtest_data.strategy == "DCA Dip":
+            strategy_class = DCADip
         else:
             raise HTTPException(status_code=400, detail=f"Unknown strategy: {backtest_data.strategy}")
             
@@ -166,6 +173,12 @@ async def run_optimization(request: Request, optimize_data: OptimizeRequest, cur
             strategy_class = MACDStrategy
         elif optimize_data.strategy == "RSI":
             strategy_class = RSIStrategy
+        elif optimize_data.strategy == "Bollinger Breakout":
+            strategy_class = BollingerBreakout
+        elif optimize_data.strategy == "Momentum":
+            strategy_class = Momentum
+        elif optimize_data.strategy == "DCA Dip":
+            strategy_class = DCADip
         else:
             raise HTTPException(status_code=400, detail=f"Unknown strategy: {optimize_data.strategy}")
             
@@ -257,6 +270,12 @@ async def websocket_optimize(websocket: WebSocket):
                     strategy_class = MACDStrategy
                 elif request.strategy == "RSI":
                     strategy_class = RSIStrategy
+                elif request.strategy == "Bollinger Breakout":
+                    strategy_class = BollingerBreakout
+                elif request.strategy == "Momentum":
+                    strategy_class = Momentum
+                elif request.strategy == "DCA Dip":
+                    strategy_class = DCADip
                 else:
                     await websocket.send_json({"error": f"Unknown strategy: {request.strategy}"})
                     continue

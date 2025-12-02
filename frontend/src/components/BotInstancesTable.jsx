@@ -87,13 +87,13 @@ export default function BotInstancesTable({ instances, onStart, onStop, onStopAl
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="text-sm text-muted-foreground capitalize">
-                                            {instance.strategy?.replace(/_/g, ' ') || 'Unknown'}
+                                            {(instance.strategy || instance.config?.strategy || 'Unknown').replace(/_/g, ' ')}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${instance.is_running
-                                                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                                                : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+                                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                            : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                                             }`}>
                                             {instance.is_running ? 'Running' : 'Stopped'}
                                         </span>
