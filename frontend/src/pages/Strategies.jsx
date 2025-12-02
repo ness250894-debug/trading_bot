@@ -66,32 +66,50 @@ const STRATEGY_PRESETS = {
     mean_reversion: [
         { name: 'Conservative', params: { rsi_period: 14, rsi_overbought: 75, rsi_oversold: 25, bb_period: 20, bb_std: 2.5 } },
         { name: 'Moderate', params: { rsi_period: 14, rsi_overbought: 70, rsi_oversold: 30, bb_period: 20, bb_std: 2.0 } },
-        { name: 'Aggressive', params: { rsi_period: 7, rsi_overbought: 65, rsi_oversold: 35, bb_period: 14, bb_std: 1.5 } }
+        { name: 'Aggressive', params: { rsi_period: 7, rsi_overbought: 65, rsi_oversold: 35, bb_period: 14, bb_std: 1.5 } },
+        { name: 'Range Trading', params: { rsi_period: 14, rsi_overbought: 65, rsi_oversold: 35, bb_period: 20, bb_std: 2.0 } }
     ],
     sma_crossover: [
         { name: 'Scalping', params: { fast_period: 5, slow_period: 20 } },
         { name: 'Swing', params: { fast_period: 20, slow_period: 50 } },
-        { name: 'Trend', params: { fast_period: 50, slow_period: 200 } }
+        { name: 'Trend', params: { fast_period: 50, slow_period: 200 } },
+        { name: 'Trend Following', params: { fast_period: 20, slow_period: 100 } },
+        { name: 'Automated Execution', params: { fast_period: 10, slow_period: 50 } }
     ],
     macd: [
         { name: 'Standard', params: { fast_period: 12, slow_period: 26, signal_period: 9 } },
-        { name: 'Quick', params: { fast_period: 5, slow_period: 35, signal_period: 5 } }
+        { name: 'Quick', params: { fast_period: 5, slow_period: 35, signal_period: 5 } },
+        { name: 'Trend Analysis', params: { fast_period: 19, slow_period: 39, signal_period: 9 } }
     ],
     rsi: [
         { name: 'Standard', params: { period: 14, overbought: 70, oversold: 30 } },
-        { name: 'Sensitive', params: { period: 7, overbought: 80, oversold: 20 } }
+        { name: 'Sensitive', params: { period: 7, overbought: 80, oversold: 20 } },
+        { name: 'RSI Reversal', params: { period: 14, overbought: 80, oversold: 20 } }
     ],
     bollinger_breakout: [
         { name: 'Standard', params: { bb_period: 20, bb_std: 2.0, volume_factor: 1.5 } },
-        { name: 'Aggressive', params: { bb_period: 20, bb_std: 1.5, volume_factor: 1.2 } }
+        { name: 'Aggressive', params: { bb_period: 20, bb_std: 1.5, volume_factor: 1.2 } },
+        { name: 'Volume Breakout', params: { bb_period: 20, bb_std: 2.0, volume_factor: 2.0 } },
+        { name: 'Volatility Scalping', params: { bb_period: 10, bb_std: 1.5, volume_factor: 1.2 } }
     ],
     momentum: [
         { name: 'Standard', params: { roc_period: 10, rsi_period: 14, rsi_min: 50, rsi_max: 70 } },
-        { name: 'Quick', params: { roc_period: 5, rsi_period: 7, rsi_min: 45, rsi_max: 75 } }
+        { name: 'Quick', params: { roc_period: 5, rsi_period: 7, rsi_min: 45, rsi_max: 75 } },
+        { name: 'Rapid Scalping', params: { roc_period: 3, rsi_period: 5, rsi_min: 40, rsi_max: 80 } }
     ],
     dca_dip: [
         { name: 'Standard', params: { ema_long: 200, ema_short: 20 } },
-        { name: 'Aggressive', params: { ema_long: 100, ema_short: 10 } }
+        { name: 'Aggressive', params: { ema_long: 100, ema_short: 10 } },
+        { name: 'Smart DCA', params: { ema_long: 200, ema_short: 20 } },
+        { name: 'Compound Growth', params: { ema_long: 150, ema_short: 25 } },
+        { name: 'Secure HODL', params: { ema_long: 300, ema_short: 50 } }
+    ],
+    combined: [
+        { name: 'Standard', params: { rsi_period: 14, fast_sma: 10, slow_sma: 50 } },
+        { name: 'Market Neutral', params: { rsi_period: 14, fast_sma: 20, slow_sma: 50 } },
+        { name: 'Technical Analysis', params: { rsi_period: 14, fast_sma: 10, slow_sma: 100 } },
+        { name: 'Multi-Strategy', params: { rsi_period: 14, fast_sma: 20, slow_sma: 200 } },
+        { name: 'Dynamic Allocation', params: { rsi_period: 21, fast_sma: 50, slow_sma: 200 } }
     ]
 };
 

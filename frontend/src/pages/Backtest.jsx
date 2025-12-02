@@ -12,6 +12,9 @@ const STRATEGIES = [
     { name: 'SMA Crossover', params: { fast_period: 10, slow_period: 30 } },
     { name: 'MACD', params: { fast_period: 12, slow_period: 26, signal_period: 9 } },
     { name: 'RSI', params: { period: 14, overbought: 70, oversold: 30 } },
+    { name: 'Bollinger Breakout', params: { bb_period: 20, bb_std: 2.0, volume_factor: 1.5 } },
+    { name: 'Momentum', params: { roc_period: 10, rsi_period: 14, rsi_min: 50, rsi_max: 70 } },
+    { name: 'DCA Dip', params: { ema_long: 200, ema_short: 20 } }
 ];
 
 const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];

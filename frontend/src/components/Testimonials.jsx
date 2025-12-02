@@ -43,7 +43,7 @@ const TESTIMONIALS = [
         name: "Emma Wilson",
         role: "Forex Trader",
         content: "I've tried many bots before, but this one stands out. The support team is amazing and the community is very helpful.",
-        strategy: "Grid Trading",
+        strategy: "Range Trading",
         coin: "XRP/USDT",
         pnl: "+5.1%",
         profit: "$450"
@@ -61,7 +61,7 @@ const TESTIMONIALS = [
         name: "Lisa Wang",
         role: "HODLer",
         content: "I used to just hold, but now I'm generating passive income with the grid trading strategy. Highly recommended!",
-        strategy: "Spot Grid",
+        strategy: "Volatility Scalping",
         coin: "DOT/USDT",
         pnl: "+4.5%",
         profit: "$320"
@@ -88,7 +88,7 @@ const TESTIMONIALS = [
         name: "William Brown",
         role: "Crypto Analyst",
         content: "The analytics dashboard gives me insights I couldn't get anywhere else. It's become an essential part of my workflow.",
-        strategy: "Volume Profile",
+        strategy: "Volume Breakout",
         coin: "AVAX/USDT",
         pnl: "+14.3%",
         profit: "$2,100"
@@ -97,7 +97,7 @@ const TESTIMONIALS = [
         name: "Sophie Patel",
         role: "DeFi User",
         content: "Integration with major exchanges is seamless. I love how easy it is to manage my portfolio across different platforms.",
-        strategy: "Arbitrage",
+        strategy: "Market Neutral",
         coin: "UNI/USDT",
         pnl: "+3.2%",
         profit: "$180"
@@ -115,7 +115,7 @@ const TESTIMONIALS = [
         name: "Olivia Johnson",
         role: "New Trader",
         content: "As a beginner, the pre-built strategies were a lifesaver. I learned so much just by watching how the bot trades.",
-        strategy: "Copy Trading",
+        strategy: "Automated Execution",
         coin: "ETH/USDT",
         pnl: "+10.1%",
         profit: "$540"
@@ -124,7 +124,7 @@ const TESTIMONIALS = [
         name: "Daniel Lee",
         role: "Quant Developer",
         content: "I appreciate the API access. I built my own custom indicators and they work flawlessly with the bot's engine.",
-        strategy: "ML Prediction",
+        strategy: "Technical Analysis",
         coin: "DOGE/USDT",
         pnl: "+18.9%",
         profit: "$3,200"
@@ -133,7 +133,7 @@ const TESTIMONIALS = [
         name: "Emily Davis",
         role: "Investment Manager",
         content: "Managing client funds requires reliability. This platform delivers that and more. A game changer for my business.",
-        strategy: "Portfolio Rebalance",
+        strategy: "Dynamic Allocation",
         coin: "Mixed",
         pnl: "+8.7%",
         profit: "$12,400"
@@ -142,7 +142,7 @@ const TESTIMONIALS = [
         name: "Ryan White",
         role: "Scalper",
         content: "For high-frequency trading, speed is everything. This bot executes faster than I ever could manually.",
-        strategy: "HFT Scalping",
+        strategy: "Rapid Scalping",
         coin: "LTC/USDT",
         pnl: "+2.1%",
         profit: "$120"
@@ -151,7 +151,7 @@ const TESTIMONIALS = [
         name: "Jessica Garcia",
         role: "Social Trader",
         content: "I love sharing my results with the community. It's great to see others succeeding with the same tools.",
-        strategy: "Social Sentiment",
+        strategy: "Trend Analysis",
         coin: "SHIB/USDT",
         pnl: "+25.4%",
         profit: "$890"
@@ -169,7 +169,7 @@ const TESTIMONIALS = [
         name: "Amanda Thomas",
         role: "Passive Investor",
         content: "Set it and forget it. That's my style. This bot allows me to enjoy my life while my money works for me.",
-        strategy: "Yield Farming",
+        strategy: "Compound Growth",
         coin: "CAKE/USDT",
         pnl: "+12.8%",
         profit: "$1,150"
