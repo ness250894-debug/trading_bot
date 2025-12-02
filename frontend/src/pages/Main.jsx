@@ -345,7 +345,7 @@ export default function Main() {
 
             {/* AI Sentiment */}
             <div>
-                <PlanGate feature="AI Sentiment Analysis">
+                <PlanGate feature="AI Sentiment Analysis" explanation="Get real-time market sentiment analysis powered by AI to make smarter trading decisions.">
                     <SentimentWidget />
                 </PlanGate>
             </div>

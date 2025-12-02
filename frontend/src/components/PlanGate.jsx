@@ -6,7 +6,7 @@ import './PlanGate.css';
  * PlanGate component - Restricts access to features based on user plan
  * Shows a blurred overlay with upgrade message for Free plan users
  */
-function PlanGate({ feature, children }) {
+function PlanGate({ feature, explanation, children }) {
     const [isRestricted, setIsRestricted] = useState(false);
     const [loading, setLoading] = useState(true);
 
@@ -72,6 +72,7 @@ function PlanGate({ feature, children }) {
                 <div className="plan-gate-message">
                     <h2>🔒 Premium Feature</h2>
                     <p>{feature} is not available on the Free plan.</p>
+                    {explanation && <p className="explanation-text">{explanation}</p>}
                     <button className="upgrade-button" onClick={handleUpgradeClick}>
                         Upgrade to Pro
                     </button>
@@ -83,6 +84,7 @@ function PlanGate({ feature, children }) {
 
 PlanGate.propTypes = {
     feature: PropTypes.string.isRequired,
+    explanation: PropTypes.string,
     children: PropTypes.node.isRequired
 };
 

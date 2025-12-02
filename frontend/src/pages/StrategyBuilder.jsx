@@ -203,7 +203,7 @@ export default function StrategyBuilder() {
     ];
 
     return (
-        <PlanGate feature="Strategy Builder">
+        <PlanGate feature="Strategy Builder" explanation="Create and customize your own trading strategies with our visual editor.">
             <div className="max-w-6xl mx-auto space-y-8">
                 <div>
                     <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">

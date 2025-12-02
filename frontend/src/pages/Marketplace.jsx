@@ -62,7 +62,7 @@ export default function Marketplace() {
     };
 
     return (
-        <PlanGate feature="Social Trading">
+        <PlanGate feature="Social Trading" explanation="Copy top-performing strategies from other traders and automate your profits.">
             <div className="space-y-8">
                 <div>
                     <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">

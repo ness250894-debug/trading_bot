@@ -413,7 +413,7 @@ export default function Optimization() {
 
 
     return (
-        <PlanGate feature="Strategy Optimization">
+        <PlanGate feature="Strategy Optimization" explanation="Fine-tune your strategy parameters to maximize profitability using historical data.">
             <div className="max-w-7xl mx-auto space-y-8">
                 <style>{`
                 /* Hide number input spinners */
