@@ -10,6 +10,9 @@ const STRATEGY_OPTIONS = [
     { value: 'sma_crossover', label: 'SMA Crossover', desc: 'Trend following with moving average crosses.', icon: TrendingUp },
     { value: 'macd', label: 'MACD', desc: 'Momentum strategy using MACD histogram.', icon: BarChart2 },
     { value: 'rsi', label: 'RSI', desc: 'Simple overbought/oversold oscillator.', icon: Zap },
+    { value: 'bollinger_breakout', label: 'Bollinger Breakout', desc: 'Buy on upper band breakout with volume.', icon: TrendingUp },
+    { value: 'momentum', label: 'Momentum', desc: 'Trade based on Rate of Change and RSI.', icon: Zap },
+    { value: 'dca_dip', label: 'DCA Dip', desc: 'Accumulate on dips during uptrends.', icon: BarChart2 },
     { value: 'combined', label: 'Combined Strategy', desc: 'Multi-indicator confirmation setup.', icon: Activity }
 ];
 
@@ -37,6 +40,21 @@ const STRATEGY_PARAMS = {
         overbought: { label: 'Overbought', type: 'number', min: 50, max: 100, default: 70 },
         oversold: { label: 'Oversold', type: 'number', min: 0, max: 50, default: 30 }
     },
+    bollinger_breakout: {
+        bb_period: { label: 'Bollinger Period', type: 'number', min: 5, max: 50, default: 20 },
+        bb_std: { label: 'Bollinger Std Dev', type: 'number', min: 1, max: 5, step: 0.1, default: 2.0 },
+        volume_factor: { label: 'Volume Factor', type: 'number', min: 1, max: 5, step: 0.1, default: 1.5 }
+    },
+    momentum: {
+        roc_period: { label: 'ROC Period', type: 'number', min: 2, max: 50, default: 10 },
+        rsi_period: { label: 'RSI Period', type: 'number', min: 2, max: 50, default: 14 },
+        rsi_min: { label: 'RSI Min', type: 'number', min: 0, max: 50, default: 50 },
+        rsi_max: { label: 'RSI Max', type: 'number', min: 50, max: 100, default: 70 }
+    },
+    dca_dip: {
+        ema_long: { label: 'Long EMA', type: 'number', min: 50, max: 300, default: 200 },
+        ema_short: { label: 'Short EMA', type: 'number', min: 5, max: 50, default: 20 }
+    },
     combined: {
         rsi_period: { label: 'RSI Period', type: 'number', min: 2, max: 50, default: 14 },
         fast_sma: { label: 'Fast SMA', type: 'number', min: 2, max: 100, default: 10 },
@@ -62,6 +80,18 @@ const STRATEGY_PRESETS = {
     rsi: [
         { name: 'Standard', params: { period: 14, overbought: 70, oversold: 30 } },
         { name: 'Sensitive', params: { period: 7, overbought: 80, oversold: 20 } }
+    ],
+    bollinger_breakout: [
+        { name: 'Standard', params: { bb_period: 20, bb_std: 2.0, volume_factor: 1.5 } },
+        { name: 'Aggressive', params: { bb_period: 20, bb_std: 1.5, volume_factor: 1.2 } }
+    ],
+    momentum: [
+        { name: 'Standard', params: { roc_period: 10, rsi_period: 14, rsi_min: 50, rsi_max: 70 } },
+        { name: 'Quick', params: { roc_period: 5, rsi_period: 7, rsi_min: 45, rsi_max: 75 } }
+    ],
+    dca_dip: [
+        { name: 'Standard', params: { ema_long: 200, ema_short: 20 } },
+        { name: 'Aggressive', params: { ema_long: 100, ema_short: 10 } }
     ]
 };
 

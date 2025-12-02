@@ -184,6 +184,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
         'sma_crossover': ['fast_period', 'slow_period'],
         'macd': ['fast', 'slow', 'signal', 'fast_period', 'slow_period', 'signal_period'],
         'rsi': ['period', 'overbought', 'oversold', 'buy_threshold', 'sell_threshold'],
+        'bollinger_breakout': ['bb_period', 'bb_std', 'volume_factor'],
+        'momentum': ['roc_period', 'rsi_period', 'rsi_min', 'rsi_max'],
+        'dca_dip': ['ema_long', 'ema_short'],
         'combined': []  # Combined accepts any kwargs
     }
     
@@ -209,6 +212,15 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     elif strategy_name == 'rsi':
         from .strategies.rsi import RSIStrategy
         strategy = RSIStrategy(**filtered_params)
+    elif strategy_name == 'bollinger_breakout':
+        from .strategies.bollinger_breakout import BollingerBreakout
+        strategy = BollingerBreakout(**filtered_params)
+    elif strategy_name == 'momentum':
+        from .strategies.momentum import Momentum
+        strategy = Momentum(**filtered_params)
+    elif strategy_name == 'dca_dip':
+        from .strategies.dca_dip import DCADip
+        strategy = DCADip(**filtered_params)
     else:
         logger.warning(f"Unknown strategy '{strategy_name}' for user {user_id}. Using Mean Reversion.")
         from .strategies.mean_reversion import MeanReversion
@@ -460,6 +472,15 @@ def main():
     elif strategy_name == 'rsi':
         from .strategies.rsi import RSIStrategy
         strategy = RSIStrategy(**strategy_params)
+    elif strategy_name == 'bollinger_breakout':
+        from .strategies.bollinger_breakout import BollingerBreakout
+        strategy = BollingerBreakout(**strategy_params)
+    elif strategy_name == 'momentum':
+        from .strategies.momentum import Momentum
+        strategy = Momentum(**strategy_params)
+    elif strategy_name == 'dca_dip':
+        from .strategies.dca_dip import DCADip
+        strategy = DCADip(**strategy_params)
     else:
         logger.warning(f"Unknown strategy '{strategy_name}'. Defaulting to Mean Reversion.")
         from .strategies.mean_reversion import MeanReversion

@@ -210,6 +210,39 @@ class IndicatorLibrary:
         
         df['obv'] = obv
         return df
+
+    @staticmethod
+    def calculate_roc(df: pd.DataFrame, period: int = 10, source: str = 'close') -> pd.DataFrame:
+        """
+        Calculate Rate of Change.
+        
+        Args:
+            df: OHLCV dataframe
+            period: Lookback period
+            source: Column to calculate from
+            
+        Returns:
+            DataFrame with ROC column added
+        """
+        column_name = f'roc_{period}'
+        df[column_name] = df[source].pct_change(periods=period) * 100
+        return df
+
+    @staticmethod
+    def calculate_volume_ma(df: pd.DataFrame, period: int = 20) -> pd.DataFrame:
+        """
+        Calculate Volume Moving Average.
+        
+        Args:
+            df: OHLCV dataframe
+            period: Lookback period
+            
+        Returns:
+            DataFrame with Volume MA column added
+        """
+        column_name = f'volume_ma_{period}'
+        df[column_name] = df['volume'].rolling(window=period).mean()
+        return df
     
     @staticmethod
     def get_available_indicators() -> Dict[str, Dict[str, Any]]:
@@ -289,5 +322,20 @@ class IndicatorLibrary:
                 'name': 'On-Balance Volume',
                 'category': 'volume',
                 'params': {}
+            },
+            'roc': {
+                'name': 'Rate of Change',
+                'category': 'momentum',
+                'params': {
+                    'period': {'type': 'int', 'default': 10, 'min': 1, 'max': 50},
+                    'source': {'type': 'select', 'default': 'close', 'options': ['open', 'high', 'low', 'close']}
+                }
+            },
+            'volume_ma': {
+                'name': 'Volume Moving Average',
+                'category': 'volume',
+                'params': {
+                    'period': {'type': 'int', 'default': 20, 'min': 2, 'max': 200}
+                }
             }
         }
