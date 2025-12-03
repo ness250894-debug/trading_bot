@@ -3,13 +3,30 @@ import api from '../lib/api';
 import {
     User, CreditCard, Activity, TrendingUp, Bot, Zap,
     Calendar, Shield, Newspaper, RefreshCw, CheckCircle,
-    XCircle, Play, Square, Settings
+    XCircle, Play, Square, Settings, Plus, Trash2, Edit
 } from 'lucide-react';
 import SentimentWidget from '../components/SentimentWidget';
 import BotInstancesTable from '../components/BotInstancesTable';
 import Disclaimer from '../components/Disclaimer';
 import PlanGate from '../components/PlanGate';
 import { formatPlanName, formatStrategyName, formatLabel } from '../lib/utils';
+import { useToast } from '../components/ToastContext';
+
+const STRATEGY_OPTIONS = [
+    { value: 'mean_reversion', label: 'Mean Reversion' },
+    { value: 'sma_crossover', label: 'SMA Crossover' },
+    { value: 'macd', label: 'MACD' },
+    { value: 'rsi', label: 'RSI' },
+    { value: 'bollinger_breakout', label: 'Bollinger Breakout' },
+    { value: 'momentum', label: 'Momentum' },
+    { value: 'dca_dip', label: 'DCA Dip' },
+    { value: 'combined', label: 'Combined Strategy' }
+];
+
+const POPULAR_SYMBOLS = [
+    'BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT',
+    'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'MATIC/USDT'
+];
 
 const InfoCard = ({ title, value, icon: Icon, subtext, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group hover:border-primary/20 transition-all">
@@ -50,12 +67,20 @@ const NewsItem = ({ title, summary, source, time, url }) => (
 );
 
 export default function Main() {
+    const toast = useToast();
     const [user, setUser] = useState(null);
     const [subscription, setSubscription] = useState(null);
     const [botStatus, setBotStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [pollingInterval, setPollingInterval] = useState(30000); // Start with 30s
+
+    // Multi-bot configuration state
+    const [showAddBot, setShowAddBot] = useState(false);
+    const [newBotSymbol, setNewBotSymbol] = useState('BTC/USDT');
+    const [newBotStrategy, setNewBotStrategy] = useState('mean_reversion');
+    const [botConfigs, setBotConfigs] = useState([]);
+    const [startingBots, setStartingBots] = useState(new Set());
 
     // Smart polling: Reduce frequency when page is not visible
     React.useEffect(() => {
@@ -117,6 +142,64 @@ export default function Main() {
         }
     };
 
+    // Multi-bot handlers
+    const handleAddBot = () => {
+        // Check free plan limit
+        const isFree = !subscription || subscription.plan === 'free';
+        if (isFree && botConfigs.length >= 1) {
+            toast.error('Free plan is limited to 1 bot. Upgrade to add more bots.');
+            return;
+        }
+
+        const newConfig = {
+            symbol: newBotSymbol,
+            strategy: newBotStrategy,
+            id: `${newBotSymbol}-${Date.now()}`
+        };
+
+        setBotConfigs(prev => [...prev, newConfig]);
+        setShowAddBot(false);
+        setNewBotSymbol('BTC/USDT');
+        setNewBotStrategy('mean_reversion');
+        toast.success(`Added bot configuration for ${newBotSymbol}`);
+    };
+
+    const handleRemoveBot = (configId) => {
+        setBotConfigs(prev => prev.filter(c => c.id !== configId));
+        toast.success('Bot configuration removed');
+    };
+
+    const handleStartBot = async (symbol) => {
+        try {
+            setStartingBots(prev => new Set(prev).add(symbol));
+            await api.post('/start', null, { params: { symbol } });
+            toast.success(`Started bot for ${symbol}`);
+            // Refresh status
+            const res = await api.get('/status');
+            setBotStatus(res.data);
+        } catch (err) {
+            toast.error(err.response?.data?.detail || `Failed to start bot for ${symbol}`);
+        } finally {
+            setStartingBots(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(symbol);
+                return newSet;
+            });
+        }
+    };
+
+    const handleStopBot = async (symbol) => {
+        try {
+            await api.post('/stop', null, { params: { symbol } });
+            toast.success(`Stopped bot for ${symbol}`);
+            // Refresh status
+            const res = await api.get('/status');
+            setBotStatus(res.data);
+        } catch (err) {
+            toast.error(err.response?.data?.detail || `Failed to stop bot for ${symbol}`);
+        }
+    };
+
     // Count bot instances
     const botCount = React.useMemo(() => {
         if (!botStatus?.instances) return 0;
@@ -125,6 +208,15 @@ export default function Main() {
         }
         return botStatus.is_running ? 1 : 0;
     }, [botStatus]);
+
+    // Get running status for a specific symbol
+    const isBotRunning = (symbol) => {
+        if (!botStatus?.instances) return false;
+        if (typeof botStatus.instances === 'object') {
+            return botStatus.instances[symbol]?.is_running || false;
+        }
+        return false;
+    };
 
     // News data - fetched from backend API
     const [newsItems, setNewsItems] = useState([]);
@@ -366,7 +458,8 @@ export default function Main() {
                         <RefreshCw size={16} className={`text-muted-foreground ${newsLoading ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
-                <div className="space-y-3">
+                {/* Scrollable container showing 3 news items with ability to scroll through all 10 */}
+                <div className="max-h-[400px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20">
                     {newsLoading ? (
                         <div className="text-center py-12">
                             <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -394,11 +487,157 @@ export default function Main() {
                 </div>
             </div>
 
+            {/* Multi-Bot Configuration Manager */}
+            <div className="glass rounded-2xl overflow-hidden">
+                <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                    <div>
+                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                            <Bot size={20} className="text-primary" />
+                            Bot Configuration Manager
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Configure and manage multiple trading bots for different symbols
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => setShowAddBot(!showAddBot)}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-lg transition-all font-medium"
+                    >
+                        <Plus size={18} />
+                        Add Bot
+                    </button>
+                </div>
+
+                {/* Add Bot Form */}
+                {showAddBot && (
+                    <div className="p-6 bg-white/5 border-b border-white/5">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">Symbol</label>
+                                <select
+                                    value={newBotSymbol}
+                                    onChange={(e) => setNewBotSymbol(e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-primary/50 outline-none"
+                                >
+                                    {POPULAR_SYMBOLS.map(sym => (
+                                        <option key={sym} value={sym}>{sym}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">Strategy</label>
+                                <select
+                                    value={newBotStrategy}
+                                    onChange={(e) => setNewBotStrategy(e.target.value)}
+                                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-primary/50 outline-none"
+                                >
+                                    {STRATEGY_OPTIONS.map(opt => (
+                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex items-end gap-2">
+                                <button
+                                    onClick={handleAddBot}
+                                    className="flex-1 bg-primary text-white hover:bg-primary/90 rounded-lg px-4 py-2 font-medium transition-all"
+                                >
+                                    Add Configuration
+                                </button>
+                                <button
+                                    onClick={() => setShowAddBot(false)}
+                                    className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-all text-muted-foreground"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bot Configuration Cards */}
+                <div className="p-6">
+                    {botConfigs.length === 0 ? (
+                        <div className="text-center py-12">
+                            <Bot size={48} className="mx-auto text-muted-foreground/30 mb-4" />
+                            <p className="text-muted-foreground font-medium">No bot configurations yet</p>
+                            <p className="text-sm text-muted-foreground/60 mt-1">
+                                Click "Add Bot" to create your first trading bot configuration
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {botConfigs.map(config => {
+                                const isRunning = isBotRunning(config.symbol);
+                                const isStarting = startingBots.has(config.symbol);
+
+                                return (
+                                    <div key={config.id} className="glass rounded-xl p-4 border border-white/10 hover:border-primary/20 transition-all">
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
+                                                    }`} />
+                                                <h4 className="font-bold text-foreground font-mono">{config.symbol}</h4>
+                                            </div>
+                                            <button
+                                                onClick={() => handleRemoveBot(config.id)}
+                                                className="p-1 hover:bg-red-500/10 rounded text-red-400 transition-all"
+                                                title="Remove bot"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-2 mb-4">
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-muted-foreground">Strategy:</span>
+                                                <span className="text-foreground font-medium capitalize">
+                                                    {config.strategy.replace(/_/g, ' ')}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs">
+                                                <span className="text-muted-foreground">Status:</span>
+                                                <span className={`font-medium ${isRunning ? 'text-green-400' : 'text-gray-400'
+                                                    }`}>
+                                                    {isRunning ? 'Running' : 'Stopped'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {isRunning ? (
+                                            <button
+                                                onClick={() => handleStopBot(config.symbol)}
+                                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-all text-sm font-medium border border-red-500/20"
+                                            >
+                                                <Square size={14} fill="currentColor" />
+                                                Stop Bot
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleStartBot(config.symbol)}
+                                                disabled={isStarting}
+                                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-white hover:bg-primary/90 rounded-lg transition-all text-sm font-medium disabled:opacity-50"
+                                            >
+                                                {isStarting ? (
+                                                    <RefreshCw size={14} className="animate-spin" />
+                                                ) : (
+                                                    <Play size={14} fill="currentColor" />
+                                                )}
+                                                {isStarting ? 'Starting...' : 'Start Bot'}
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* Bot Instances Table */}
             <BotInstancesTable
                 instances={botStatus?.instances || botStatus || {}}
-                onStart={() => handleStartStop()}
-                onStop={() => handleStartStop()}
+                onStart={(symbol) => handleStartBot(symbol)}
+                onStop={(symbol) => handleStopBot(symbol)}
                 onStopAll={() => handleStartStop()}
                 loading={loading}
             />
