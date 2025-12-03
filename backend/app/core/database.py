@@ -298,6 +298,105 @@ class DuckDBHandler:
                 
                 logger.info("Social trading tables created successfully")
                 
+                # Create bot_configurations table for multi-bot support
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS bot_configurations (
+                        id INTEGER PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        symbol VARCHAR NOT NULL,
+                        strategy VARCHAR NOT NULL,
+                        timeframe VARCHAR NOT NULL,
+                        amount_usdt DOUBLE NOT NULL,
+                        take_profit_pct DOUBLE NOT NULL,
+                        stop_loss_pct DOUBLE NOT NULL,
+                        parameters VARCHAR,
+                        dry_run BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_bot_configs_user ON bot_configurations(user_id)")
+                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_bot_configs_user_symbol ON bot_configurations(user_id, symbol)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_bot_config_id START 1")
+                
+                logger.info("Bot configurations table created successfully")
+                
+                # Create trade_notes table for Trade Journal
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS trade_notes (
+                        id INTEGER PRIMARY KEY,
+                        trade_id INTEGER NOT NULL,
+                        user_id BIGINT NOT NULL,
+                        notes TEXT,
+                        tags VARCHAR,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trade_notes_trade ON trade_notes(trade_id)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trade_notes_user ON trade_notes(user_id)")
+                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_trade_notes_unique ON trade_notes(trade_id, user_id)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_trade_note_id START 1")
+                
+                logger.info("Trade notes table created successfully")
+                
+                # Create watchlists table
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS watchlists (
+                        id INTEGER PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        symbol VARCHAR NOT NULL,
+                        notes TEXT,
+                        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlists(user_id)")
+                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_watchlist_user_symbol ON watchlists(user_id, symbol)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_watchlist_id START 1")
+                
+                logger.info("Watchlists table created successfully")
+                
+                # Create price_alerts table
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS price_alerts (
+                        id INTEGER PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        symbol VARCHAR NOT NULL,
+                        condition VARCHAR NOT NULL,
+                        price_target DOUBLE NOT NULL,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        triggered_at TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_user ON price_alerts(user_id)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_active ON price_alerts(is_active)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_alert_id START 1")
+                
+                logger.info("Price alerts table created successfully")
+                
+                # Create dashboard_preferences table
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS dashboard_preferences (
+                        id INTEGER PRIMARY KEY,
+                        user_id BIGINT NOT NULL UNIQUE,
+                        theme VARCHAR DEFAULT 'dark',
+                        layout_config TEXT,
+                        widgets_enabled TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """)
+                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_prefs_user ON dashboard_preferences(user_id)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_pref_id START 1")
+                
+                logger.info("Dashboard preferences table created successfully")
+                
             except Exception as migration_error:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")
@@ -609,6 +708,476 @@ class DuckDBHandler:
         query = f"UPDATE user_strategies SET {', '.join(updates)} WHERE user_id = ?"
         self.conn.execute(query, params)
         return True
+
+    # Bot Configurations CRUD Methods
+    def get_bot_configs(self, user_id):
+        """Get all bot configurations for a user."""
+        try:
+            import json
+            rows = self.conn.execute(
+                "SELECT id, symbol, strategy, timeframe, amount_usdt, take_profit_pct, stop_loss_pct, parameters, dry_run, created_at, updated_at FROM bot_configurations WHERE user_id = ? ORDER BY created_at DESC",
+                [user_id]
+            ).fetchall()
+            
+            configs = []
+            for row in rows:
+                configs.append({
+                    'id': row[0],
+                    'symbol': row[1],
+                    'strategy': row[2],
+                    'timeframe': row[3],
+                    'amount_usdt': row[4],
+                    'take_profit_pct': row[5],
+                    'stop_loss_pct': row[6],
+                    'parameters': json.loads(row[7]) if row[7] else {},
+                    'dry_run': row[8],
+                    'created_at': row[9].isoformat() if row[9] else None,
+                    'updated_at': row[10].isoformat() if row[10] else None
+                })
+            return configs
+        except Exception as e:
+            logger.error(f"Error fetching bot configs: {e}")
+            return []
+
+    def get_bot_config(self, user_id, config_id):
+        """Get a specific bot configuration."""
+        try:
+            import json
+            row = self.conn.execute(
+                "SELECT id, symbol, strategy, timeframe, amount_usdt, take_profit_pct, stop_loss_pct, parameters, dry_run, created_at, updated_at FROM bot_configurations WHERE user_id = ? AND id = ?",
+                [user_id, config_id]
+            ).fetchone()
+            
+            if not row:
+                return None
+                
+            return {
+                'id': row[0],
+                'symbol': row[1],
+                'strategy': row[2],
+                'timeframe': row[3],
+                'amount_usdt': row[4],
+                'take_profit_pct': row[5],
+                'stop_loss_pct': row[6],
+                'parameters': json.loads(row[7]) if row[7] else {},
+                'dry_run': row[8],
+                'created_at': row[9].isoformat() if row[9] else None,
+                'updated_at': row[10].isoformat() if row[10] else None
+            }
+        except Exception as e:
+            logger.error(f"Error fetching bot config: {e}")
+            return None
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def create_bot_config(self, user_id, config):
+        """Create a new bot configuration.
+        
+        Args:
+            user_id: User ID
+            config: Dict with keys: symbol, strategy, timeframe, amount_usdt, take_profit_pct, stop_loss_pct, parameters (optional), dry_run
+            
+        Returns:
+            Created config ID or None if failed
+        """
+        try:
+            import json
+            from datetime import datetime
+            
+            query = """
+                INSERT INTO bot_configurations
+                (id, user_id, symbol, strategy, timeframe, amount_usdt, take_profit_pct, stop_loss_pct, parameters, dry_run, created_at, updated_at)
+                VALUES (nextval('seq_bot_config_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            
+            self.conn.execute(query, [
+                user_id,
+                config.get('symbol'),
+                config.get('strategy'),
+                config.get('timeframe'),
+                config.get('amount_usdt'),
+                config.get('take_profit_pct'),
+                config.get('stop_loss_pct'),
+                json.dumps(config.get('parameters', {})),
+                config.get('dry_run', True),
+                datetime.now(),
+                datetime.now()
+            ])
+            
+            # Get the created config ID
+            result = self.conn.execute(
+                "SELECT id FROM bot_configurations WHERE user_id = ? AND symbol = ?",
+                [user_id, config.get('symbol')]
+            ).fetchone()
+            
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error creating bot config: {e}")
+            return None
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def update_bot_config(self, user_id, config_id, config):
+        """Update an existing bot configuration."""
+        try:
+            import json
+            from datetime import datetime
+            
+            query = """
+                UPDATE bot_configurations
+                SET symbol = ?, strategy = ?, timeframe = ?, amount_usdt = ?,
+                    take_profit_pct = ?, stop_loss_pct = ?, parameters = ?, dry_run = ?, updated_at = ?
+                WHERE user_id = ? AND id = ?
+            """
+            
+            self.conn.execute(query, [
+                config.get('symbol'),
+                config.get('strategy'),
+                config.get('timeframe'),
+                config.get('amount_usdt'),
+                config.get('take_profit_pct'),
+                config.get('stop_loss_pct'),
+                json.dumps(config.get('parameters', {})),
+                config.get('dry_run', True),
+                datetime.now(),
+                user_id,
+                config_id
+            ])
+            return True
+        except Exception as e:
+            logger.error(f"Error updating bot config: {e}")
+            return False
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def delete_bot_config(self, user_id, config_id):
+        """Delete a bot configuration."""
+        try:
+            self.conn.execute(
+                "DELETE FROM bot_configurations WHERE user_id = ? AND id = ?",
+                [user_id, config_id]
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting bot config: {e}")
+            return False
+
+    # Trade Notes CRUD Methods
+    def get_trade_note(self, user_id, trade_id):
+        """Get note for a specific trade."""
+        try:
+            row = self.conn.execute(
+                "SELECT id, trade_id, notes, tags, created_at, updated_at FROM trade_notes WHERE user_id = ? AND trade_id = ?",
+                [user_id, trade_id]
+            ).fetchone()
+            
+            if not row:
+                return None
+                
+            return {
+                'id': row[0],
+                'trade_id': row[1],
+                'notes': row[2],
+                'tags': row[3],
+                'created_at': row[4].isoformat() if row[4] else None,
+                'updated_at': row[5].isoformat() if row[5] else None
+            }
+        except Exception as e:
+            logger.error(f"Error fetching trade note: {e}")
+            return None
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def save_trade_note(self, user_id, trade_id, notes, tags=None):
+        """Create or update a trade note.
+        
+        Args:
+            user_id: User ID
+            trade_id: Trade ID
+            notes: Note content
+            tags: Comma-separated tags (optional)
+            
+        Returns:
+            Note ID or None if failed
+        """
+        try:
+            from datetime import datetime
+            
+            # Check if note exists
+            existing = self.conn.execute(
+                "SELECT id FROM trade_notes WHERE user_id = ? AND trade_id = ?",
+                [user_id, trade_id]
+            ).fetchone()
+            
+            if existing:
+                # Update existing note
+                query = """
+                    UPDATE trade_notes
+                    SET notes = ?, tags = ?, updated_at = ?
+                    WHERE user_id = ? AND trade_id = ?
+                """
+                self.conn.execute(query, [notes, tags, datetime.now(), user_id, trade_id])
+                return existing[0]
+            else:
+                # Create new note
+                query = """
+                    INSERT INTO trade_notes
+                    (id, trade_id, user_id, notes, tags, created_at, updated_at)
+                    VALUES (nextval('seq_trade_note_id'), ?, ?, ?, ?, ?, ?)
+                """
+                self.conn.execute(query, [trade_id, user_id, notes, tags, datetime.now(), datetime.now()])
+                
+                # Get the created note ID
+                result = self.conn.execute(
+                    "SELECT id FROM trade_notes WHERE user_id = ? AND trade_id = ?",
+                    [user_id, trade_id]
+                ).fetchone()
+                
+                return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error saving trade note: {e}")
+            return None
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def delete_trade_note(self, user_id, note_id):
+        """Delete a trade note."""
+        try:
+            self.conn.execute(
+                "DELETE FROM trade_notes WHERE user_id = ? AND id = ?",
+                [user_id, note_id]
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting trade note: {e}")
+            return False
+
+    # Watchlist CRUD Methods
+    def get_watchlist(self, user_id):
+        """Get user's watchlist."""
+        try:
+            rows = self.conn.execute(
+                "SELECT id, symbol, notes, added_at FROM watchlists WHERE user_id = ? ORDER BY added_at DESC",
+                [user_id]
+            ).fetchall()
+            
+            watchlist = []
+            for row in rows:
+                watchlist.append({
+                    'id': row[0],
+                    'symbol': row[1],
+                    'notes': row[2],
+                    'added_at': row[3].isoformat() if row[3] else None
+                })
+            return watchlist
+        except Exception as e:
+            logger.error(f"Error fetching watchlist: {e}")
+            return []
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def add_to_watchlist(self, user_id, symbol, notes=None):
+        """Add symbol to watchlist."""
+        try:
+            from datetime import datetime
+            
+            query = """
+                INSERT INTO watchlists
+                (id, user_id, symbol, notes, added_at)
+                VALUES (nextval('seq_watchlist_id'), ?, ?, ?, ?)
+            """
+            self.conn.execute(query, [user_id, symbol, notes, datetime.now()])
+            
+            # Get the created watchlist item ID
+            result = self.conn.execute(
+                "SELECT id FROM watchlists WHERE user_id = ? AND symbol = ?",
+                [user_id, symbol]
+            ).fetchone()
+            
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error adding to watchlist: {e}")
+            return None
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def remove_from_watchlist(self, user_id, symbol):
+        """Remove symbol from watchlist."""
+        try:
+            self.conn.execute(
+                "DELETE FROM watchlists WHERE user_id = ? AND symbol = ?",
+                [user_id, symbol]
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error removing from watchlist: {e}")
+            return False
+
+    # Price Alerts CRUD Methods
+    def get_alerts(self, user_id, active_only=True):
+        """Get user's price alerts."""
+        try:
+            query = "SELECT id, symbol, condition, price_target, is_active, created_at, triggered_at FROM price_alerts WHERE user_id = ?"
+            params = [user_id]
+            
+            if active_only:
+                query += " AND is_active = TRUE"
+            
+            query += " ORDER BY created_at DESC"
+            
+            rows = self.conn.execute(query, params).fetchall()
+            
+            alerts = []
+            for row in rows:
+                alerts.append({
+                    'id': row[0],
+                    'symbol': row[1],
+                    'condition': row[2],
+                    'price_target': row[3],
+                    'is_active': row[4],
+                    'created_at': row[5].isoformat() if row[5] else None,
+                    'triggered_at': row[6].isoformat() if row[6] else None
+                })
+            return alerts
+        except Exception as e:
+            logger.error(f"Error fetching alerts: {e}")
+            return []
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def create_alert(self, user_id, symbol, condition, price_target):
+        """Create a price alert.
+        
+        Args:
+            user_id: User ID
+            symbol: Trading pair
+            condition: 'above' or 'below'
+            price_target: Target price
+        """
+        try:
+            from datetime import datetime
+            
+            query = """
+                INSERT INTO price_alerts
+                (id, user_id, symbol, condition, price_target, is_active, created_at)
+                VALUES (nextval('seq_alert_id'), ?, ?, ?, ?, TRUE, ?)
+            """
+            self.conn.execute(query, [user_id, symbol, condition, price_target, datetime.now()])
+            
+            # Get created alert ID
+            result = self.conn.execute(
+                "SELECT CURRVAL('seq_alert_id')"
+            ).fetchone()
+            
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error creating alert: {e}")
+            return None
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def delete_alert(self, user_id, alert_id):
+        """Delete a price alert."""
+        try:
+            self.conn.execute(
+                "DELETE FROM price_alerts WHERE user_id = ? AND id = ?",
+                [user_id, alert_id]
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting alert: {e}")
+            return False
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def trigger_alert(self, alert_id):
+        """Mark alert as triggered."""
+        try:
+            from datetime import datetime
+            self.conn.execute(
+                "UPDATE price_alerts SET is_active = FALSE, triggered_at = ? WHERE id = ?",
+                [datetime.now(), alert_id]
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error triggering alert: {e}")
+            return False
+
+    # Dashboard Preferences CRUD Methods
+    def get_preferences(self, user_id):
+        """Get user's dashboard preferences."""
+        try:
+            import json
+            row = self.conn.execute(
+                "SELECT theme, layout_config, widgets_enabled, updated_at FROM dashboard_preferences WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if not row:
+                # Return default preferences
+                return {
+                    'theme': 'dark',
+                    'layout_config': {},
+                    'widgets_enabled': ['balance', 'status', 'trades', 'bots'],
+                    'updated_at': None
+                }
+            
+            return {
+                'theme': row[0] or 'dark',
+                'layout_config': json.loads(row[1]) if row[1] else {},
+                'widgets_enabled': json.loads(row[2]) if row[2] else [],
+                'updated_at': row[3].isoformat() if row[3] else None
+            }
+        except Exception as e:
+            logger.error(f"Error fetching preferences: {e}")
+            return {'theme': 'dark', 'layout_config': {}, 'widgets_enabled': []}
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def save_preferences(self, user_id, theme=None, layout_config=None, widgets_enabled=None):
+        """Save user's dashboard preferences."""
+        try:
+            import json
+            from datetime import datetime
+            
+            # Check if preferences exist
+            existing = self.conn.execute(
+                "SELECT 1 FROM dashboard_preferences WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if existing:
+                # Build dynamic update
+                updates = []
+                params = []
+                
+                if theme is not None:
+                    updates.append("theme = ?")
+                    params.append(theme)
+                
+                if layout_config is not None:
+                    updates.append("layout_config = ?")
+                    params.append(json.dumps(layout_config))
+                
+                if widgets_enabled is not None:
+                    updates.append("widgets_enabled = ?")
+                    params.append(json.dumps(widgets_enabled))
+                
+                updates.append("updated_at = ?")
+                params.append(datetime.now())
+                params.append(user_id)
+                
+                if updates:
+                    query = f"UPDATE dashboard_preferences SET {', '.join(updates)} WHERE user_id = ?"
+                    self.conn.execute(query, params)
+            else:
+                # Create new preferences
+                query = """
+                    INSERT INTO dashboard_preferences
+                    (id, user_id, theme, layout_config, widgets_enabled, updated_at)
+                    VALUES (nextval('seq_pref_id'), ?, ?, ?, ?, ?)
+                """
+                self.conn.execute(query, [
+                    user_id,
+                    theme or 'dark',
+                    json.dumps(layout_config or {}),
+                    json.dumps(widgets_enabled or []),
+                    datetime.now()
+                ])
+            
+            return True
+        except Exception as e:
+            logger.error(f"Error saving preferences: {e}")
+            return False
 
     def get_recent_trades(self, limit=10, user_id=None):
         """

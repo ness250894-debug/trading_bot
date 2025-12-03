@@ -251,6 +251,7 @@ async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(
             "balance": balance_info,
             "total_pnl": total_pnl,
             "active_trades": bot_status.get('active_trades', 0) if bot_status and isinstance(bot_status, dict) else 0,
+            "instances": bot_status if bot_status and isinstance(bot_status, dict) else {},
             "config": strategy_config
         }
         
@@ -263,6 +264,7 @@ async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(
             "balance": {"total": 0.0, "free": 0.0, "used": 0.0},
             "total_pnl": 0.0,
             "active_trades": 0,
+            "instances": {},
             "config": {},
             "error": "Failed to fetch status"
         }
@@ -355,3 +357,334 @@ async def restart_bot(request: Request, symbol: Optional[str] = None, current_us
     except Exception as e:
         logger.error(f"Error restarting bot: {e}")
         raise HTTPException(status_code=500, detail="Failed to restart bot")
+
+# Bot Configurations Endpoints
+class BotConfigCreate(BaseModel):
+    symbol: str
+    strategy: str
+    timeframe: str
+    amount_usdt: float
+    take_profit_pct: float
+    stop_loss_pct: float
+    parameters: Optional[Dict[str, Any]] = {}
+    dry_run: bool = True
+    
+    @validator('symbol')
+    def symbol_must_be_valid(cls, v):
+        if '/' not in v:
+            raise ValueError('symbol must contain /')
+        return v
+    
+    @validator('amount_usdt')
+    def amount_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('amount_usdt must be positive')
+        if v > 10000:
+            raise ValueError('amount_usdt cannot exceed 10000')
+        return v
+
+@router.get("/bot-configs")
+@limiter.limit("60/minute")
+async def get_bot_configs(request: Request, current_user: dict = Depends(auth.get_current_user)):
+    """Get all bot configurations for current user."""
+    try:
+        configs = db.get_bot_configs(current_user['id'])
+        return {"configs": configs}
+    except Exception as e:
+        logger.error(f"Error getting bot configs: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch bot configurations")
+
+@router.post("/bot-configs")
+@limiter.limit("20/minute")
+async def create_bot_config(request: Request, config: BotConfigCreate, current_user: dict = Depends(auth.get_current_user)):
+    """Create a new bot configuration."""
+    try:
+        config_id = db.create_bot_config(current_user['id'], config.dict())
+        
+        if config_id:
+            # Get the created config
+            created_config = db.get_bot_config(current_user['id'], config_id)
+            return {"status": "success", "config": created_config}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to create bot configuration. Symbol may already exist.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating bot config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/bot-configs/{config_id}")
+@limiter.limit("20/minute")
+async def update_bot_config(request: Request, config_id: int, config: BotConfigCreate, current_user: dict = Depends(auth.get_current_user)):
+    """Update a bot configuration."""
+    try:
+        # Verify config belongs to user
+        existing = db.get_bot_config(current_user['id'], config_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Bot configuration not found")
+        
+        success = db.update_bot_config(current_user['id'], config_id, config.dict())
+        
+        if success:
+            updated_config = db.get_bot_config(current_user['id'], config_id)
+            return {"status": "success", "config": updated_config}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update bot configuration")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating bot config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/bot-configs/{config_id}")
+@limiter.limit("20/minute")
+async def delete_bot_config(request: Request, config_id: int, current_user: dict = Depends(auth.get_current_user)):
+    """Delete a bot configuration."""
+    try:
+        # Verify config belongs to user
+        existing = db.get_bot_config(current_user['id'], config_id)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Bot configuration not found")
+        
+        # Stop bot if running for this symbol
+        symbol = existing['symbol']
+        bot_status = bot_manager.get_status(current_user['id'], symbol)
+        if bot_status and bot_status.get('is_running'):
+            bot_manager.stop_bot(current_user['id'], symbol)
+        
+        success = db.delete_bot_config(current_user['id'], config_id)
+        
+        if success:
+            return {"status": "success", "message": "Bot configuration deleted"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete bot configuration")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting bot config: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Trade Journal Endpoints
+class TradeNoteCreate(BaseModel):
+    notes: str
+    tags: Optional[str] = None
+
+@router.get("/trades/{trade_id}/notes")
+@limiter.limit("60/minute")
+async def get_trade_note(request: Request, trade_id: int, current_user: dict = Depends(auth.get_current_user)):
+    """Get note for a specific trade."""
+    try:
+        note = db.get_trade_note(current_user['id'], trade_id)
+        if note:
+            return {"note": note}
+        else:
+            return {"note": None}
+    except Exception as e:
+        logger.error(f"Error getting trade note: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch trade note")
+
+@router.post("/trades/{trade_id}/notes")
+@limiter.limit("20/minute")
+async def save_trade_note(request: Request, trade_id: int, note_data: TradeNoteCreate, current_user: dict = Depends(auth.get_current_user)):
+    """Create or update note for a trade."""
+    try:
+        note_id = db.save_trade_note(current_user['id'], trade_id, note_data.notes, note_data.tags)
+        
+        if note_id:
+            note = db.get_trade_note(current_user['id'], trade_id)
+            return {"status": "success", "note": note}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to save trade note")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error saving trade note: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/trades/notes/{note_id}")
+@limiter.limit("20/minute")
+async def delete_trade_note(request: Request, note_id: int, current_user: dict = Depends(auth.get_current_user)):
+    """Delete a trade note."""
+    try:
+        success = db.delete_trade_note(current_user['id'], note_id)
+        
+        if success:
+            return {"status": "success", "message": "Trade note deleted"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete trade note")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting trade note: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Watchlist Endpoints
+class WatchlistAdd(BaseModel):
+    symbol: str
+    notes: Optional[str] = None
+    
+    @validator('symbol')
+    def symbol_must_be_valid(cls, v):
+        if '/' not in v:
+            raise ValueError('symbol must contain /')
+        return v
+
+@router.get("/watchlist")
+@limiter.limit("60/minute")
+async def get_watchlist(request: Request, current_user: dict = Depends(auth.get_current_user)):
+    """Get user's watchlist."""
+    try:
+        watchlist = db.get_watchlist(current_user['id'])
+        return {"watchlist": watchlist}
+    except Exception as e:
+        logger.error(f"Error getting watchlist: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch watchlist")
+
+@router.post("/watchlist")
+@limiter.limit("20/minute")
+async def add_to_watchlist_endpoint(request: Request, data: WatchlistAdd, current_user: dict = Depends(auth.get_current_user)):
+    """Add symbol to watchlist."""
+    try:
+        watchlist_id = db.add_to_watchlist(current_user['id'], data.symbol, data.notes)
+        
+        if watchlist_id:
+            return {"status": "success", "message": f"Added {data.symbol} to watchlist"}
+        else:
+            raise HTTPException(status_code=400, detail="Symbol may already be in watchlist")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding to watchlist: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/watchlist/{symbol}")
+@limiter.limit("20/minute")
+async def remove_from_watchlist_endpoint(request: Request, symbol: str, current_user: dict = Depends(auth.get_current_user)):
+    """Remove symbol from watchlist."""
+    try:
+        success = db.remove_from_watchlist(current_user['id'], symbol)
+        
+        if success:
+            return {"status": "success", "message": f"Removed {symbol} from watchlist"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to remove from watchlist")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error removing from watchlist: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Price Alerts Endpoints
+class AlertCreate(BaseModel):
+    symbol: str
+    condition: str
+    price_target: float
+    
+    @validator('symbol')
+    def symbol_must_be_valid(cls, v):
+        if '/' not in v:
+            raise ValueError('symbol must contain /')
+        return v
+    
+    @validator('condition')
+    def condition_must_be_valid(cls, v):
+        if v not in ['above', 'below']:
+            raise ValueError('condition must be "above" or "below"')
+        return v
+    
+    @validator('price_target')
+    def price_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError('price_target must be positive')
+        return v
+
+@router.get("/alerts")
+@limiter.limit("60/minute")
+async def get_alerts(request: Request, active_only: bool = True, current_user: dict = Depends(auth.get_current_user)):
+    """Get user's price alerts."""
+    try:
+        alerts = db.get_alerts(current_user['id'], active_only=active_only)
+        return {"alerts": alerts}
+    except Exception as e:
+        logger.error(f"Error getting alerts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch alerts")
+
+@router.post("/alerts")
+@limiter.limit("20/minute")
+async def create_alert(request: Request, data: AlertCreate, current_user: dict = Depends(auth.get_current_user)):
+    """Create a price alert."""
+    try:
+        alert_id = db.create_alert(current_user['id'], data.symbol, data.condition, data.price_target)
+        
+        if alert_id:
+            return {"status": "success", "alert_id": alert_id, "message": f"Alert created for {data.symbol}"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create alert")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating alert: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/alerts/{alert_id}")
+@limiter.limit("20/minute")
+async def delete_alert(request: Request, alert_id: int, current_user: dict = Depends(auth.get_current_user)):
+    """Delete a price alert."""
+    try:
+        success = db.delete_alert(current_user['id'], alert_id)
+        
+        if success:
+            return {"status": "success", "message": "Alert deleted"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete alert")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting alert: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Dashboard Preferences Endpoints
+class PreferencesUpdate(BaseModel):
+    theme: Optional[str] = None
+    layout_config: Optional[Dict[str, Any]] = None
+    widgets_enabled: Optional[list] = None
+    
+    @validator('theme')
+    def theme_must_be_valid(cls, v):
+        if v and v not in ['dark', 'light']:
+            raise ValueError('theme must be "dark" or "light"')
+        return v
+
+@router.get("/preferences")
+@limiter.limit("60/minute")
+async def get_preferences(request: Request, current_user: dict = Depends(auth.get_current_user)):
+    """Get user's dashboard preferences."""
+    try:
+        prefs = db.get_preferences(current_user['id'])
+        return {"preferences": prefs}
+    except Exception as e:
+        logger.error(f"Error getting preferences: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch preferences")
+
+@router.put("/preferences")
+@limiter.limit("20/minute")
+async def update_preferences(request: Request, data: PreferencesUpdate, current_user: dict = Depends(auth.get_current_user)):
+    """Update user's dashboard preferences."""
+    try:
+        success = db.save_preferences(
+            current_user['id'],
+            theme=data.theme,
+            layout_config=data.layout_config,
+            widgets_enabled=data.widgets_enabled
+        )
+        
+        if success:
+            prefs = db.get_preferences(current_user['id'])
+            return {"status": "success", "preferences": prefs}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update preferences")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating preferences: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

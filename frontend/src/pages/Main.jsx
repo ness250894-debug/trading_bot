@@ -60,20 +60,22 @@ export default function Main() {
     const [pollingInterval, setPollingInterval] = useState(30000); // Start with 30s
 
     // Multi-bot configuration state
-    const [botConfigs, setBotConfigs] = useState(() => {
-        try {
-            const saved = localStorage.getItem('bot_configs');
-            return saved ? JSON.parse(saved) : [];
-        } catch (e) {
-            return [];
-        }
-    });
+    const [botConfigs, setBotConfigs] = useState([]);
     const [startingBots, setStartingBots] = useState(new Set());
 
-    // Persist bot configs
+    // Fetch bot configs from API
     useEffect(() => {
-        localStorage.setItem('bot_configs', JSON.stringify(botConfigs));
-    }, [botConfigs]);
+        const fetchBotConfigs = async () => {
+            try {
+                const response = await api.get('/bot-configs');
+                setBotConfigs(response.data.configs || []);
+            } catch (err) {
+                console.error('Failed to fetch bot configs:', err);
+                setBotConfigs([]);
+            }
+        };
+        fetchBotConfigs();
+    }, []);
 
     // Smart polling: Reduce frequency when page is not visible
     React.useEffect(() => {
@@ -155,38 +157,50 @@ export default function Main() {
 
     // Multi-bot handlers
     const handleRemoveBot = async (symbol, configId) => {
-        // Stop if running
-        if (isBotRunning(symbol)) {
-            try {
-                await api.post('/stop', null, { params: { symbol } });
-                toast.success(`Stopped bot ${symbol}`);
-                // Refresh status
-                const res = await api.get('/status');
-                setBotStatus(res.data);
-            } catch (err) {
-                toast.error(`Failed to stop bot ${symbol}`);
-            }
-        }
-
-        // Remove from localStorage if has config
-        if (configId) {
-            setBotConfigs(prev => prev.filter(c => c.id !== configId));
-        }
-
-        // Always refresh status to update UI
         try {
+            // Delete from API if has config ID
+            if (configId) {
+                await api.delete(`/bot-configs/${configId}`);
+                // Remove from local state
+                setBotConfigs(prev => prev.filter(c => c.id !== configId));
+            } else {
+                // No config ID means it's a running bot without saved config
+                // Just stop it
+                if (isBotRunning(symbol)) {
+                    await api.post('/stop', null, { params: { symbol } });
+                }
+            }
+
+            // Always refresh status to update UI
             const res = await api.get('/status');
             setBotStatus(res.data);
-        } catch (err) {
-            console.error('Failed to refresh status:', err);
-        }
 
-        toast.success('Bot removed');
+            toast.success('Bot removed');
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Failed to remove bot');
+        }
     };
 
-    const handleBulkRemove = (symbols) => {
-        setBotConfigs(prev => prev.filter(c => !symbols.includes(c.symbol)));
-        toast.success(`Removed ${symbols.length} bot configurations`);
+    const handleBulkRemove = async (symbols) => {
+        try {
+            // Find configs for these symbols and delete them
+            const configsToDelete = botConfigs.filter(c => symbols.includes(c.symbol));
+
+            for (const config of configsToDelete) {
+                await api.delete(`/bot-configs/${config.id}`);
+            }
+
+            // Update local state
+            setBotConfigs(prev => prev.filter(c => !symbols.includes(c.symbol)));
+
+            // Refresh status
+            const res = await api.get('/status');
+            setBotStatus(res.data);
+
+            toast.success(`Removed ${symbols.length} bot configurations`);
+        } catch (err) {
+            toast.error('Failed to remove some bot configurations');
+        }
     };
 
     const handleStartBot = async (symbol) => {
@@ -498,7 +512,7 @@ export default function Main() {
 
             {/* Bot Instances Table */}
             <BotInstancesTable
-                instances={botStatus?.instances || botStatus || {}}
+                instances={botStatus?.instances || {}}
                 botConfigs={botConfigs}
                 onRemoveBot={handleRemoveBot}
                 onBulkRemove={handleBulkRemove}

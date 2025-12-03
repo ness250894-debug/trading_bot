@@ -286,24 +286,12 @@ export default function Strategies() {
                 parameters: config.parameters || {}
             };
 
-            // Save to backend
-            await api.post('/config', configForBackend);
-
-            // 2. Save to localStorage for Multi-Bot UI
-            const newBotConfig = {
-                ...config,
-                id: Date.now().toString(),
-                addedAt: new Date().toISOString()
-            };
-
-            const existing = JSON.parse(localStorage.getItem('bot_configs') || '[]');
-            // Filter out existing config for same symbol to avoid duplicates/conflicts
-            const filtered = existing.filter(c => c.symbol !== config.symbol);
-            localStorage.setItem('bot_configs', JSON.stringify([...filtered, newBotConfig]));
+            // Save to API
+            await api.post('/bot-configs', configForBackend);
 
             toast.success('Bot configuration added successfully');
 
-            // 3. Redirect to Main page
+            // Redirect to Main page
             navigate('/main');
         } catch (err) {
             const errorMsg = err.response?.data?.detail || 'Failed to add bot configuration.';
