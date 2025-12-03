@@ -173,6 +173,14 @@ export default function Main() {
             setBotConfigs(prev => prev.filter(c => c.id !== configId));
         }
 
+        // Always refresh status to update UI
+        try {
+            const res = await api.get('/status');
+            setBotStatus(res.data);
+        } catch (err) {
+            console.error('Failed to refresh status:', err);
+        }
+
         toast.success('Bot removed');
     };
 
