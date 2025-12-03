@@ -866,7 +866,8 @@ class DuckDBHandler:
             if isinstance(expires_at, str):
                 try:
                     expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-                except:
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Failed to parse expiration date '{expires_at}': {e}")
                     return False
             
             # Check if not expired

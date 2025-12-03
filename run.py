@@ -67,8 +67,9 @@ def main():
     time.sleep(2)
     try:
         webbrowser.open("http://localhost:5173")
-    except:
-        pass
+    except Exception as e:
+        print(f"⚠️ Could not open browser automatically: {e}")
+        print("   Please open http://localhost:5173 manually")
 
     try:
         while True:

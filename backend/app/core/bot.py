@@ -25,6 +25,69 @@ logging.basicConfig(
 )
 logger = logging.getLogger("TradingBot")
 
+def create_strategy(strategy_name: str, strategy_params: dict, user_id: int = None):
+    """
+    Factory function to create strategy instances.
+    
+    Args:
+        strategy_name: Name of the strategy
+        strategy_params: Strategy parameters
+        user_id: Optional user ID for logging
+    
+    Returns:
+        Strategy instance
+    """
+    # Define valid parameters for each strategy
+    strategy_param_map = {
+        'mean_reversion': ['bb_period', 'bb_std', 'rsi_period', 'rsi_oversold', 'rsi_overbought'],
+        'sma_crossover': ['fast_period', 'slow_period'],
+        'macd': ['fast', 'slow', 'signal', 'fast_period', 'slow_period', 'signal_period'],
+        'rsi': ['period', 'overbought', 'oversold', 'buy_threshold', 'sell_threshold'],
+        'bollinger_breakout': ['bb_period', 'bb_std', 'volume_factor'],
+        'momentum': ['roc_period', 'rsi_period', 'rsi_min', 'rsi_max'],
+        'dca_dip': ['ema_long', 'ema_short'],
+        'combined': []  # Combined accepts any kwargs
+    }
+    
+    # Filter parameters to only include valid ones for the selected strategy
+    valid_params = strategy_param_map.get(strategy_name, [])
+    if valid_params:  # If not combined strategy
+        filtered_params = {k: v for k, v in strategy_params.items() if k in valid_params}
+        logger.info(f"Filtered params for {strategy_name}: {filtered_params}")
+    else:
+        filtered_params = strategy_params  # Combined strategy accepts all
+    
+    # Import and instantiate the appropriate strategy
+    if strategy_name == 'mean_reversion':
+        from .strategies.mean_reversion import MeanReversion
+        return MeanReversion(**filtered_params)
+    elif strategy_name == 'sma_crossover':
+        return SMACrossover(**filtered_params)
+    elif strategy_name == 'combined':
+        from .strategies.combined import CombinedStrategy
+        return CombinedStrategy(**filtered_params)
+    elif strategy_name == 'macd':
+        from .strategies.macd import MACDStrategy
+        return MACDStrategy(**filtered_params)
+    elif strategy_name == 'rsi':
+        from .strategies.rsi import RSIStrategy
+        return RSIStrategy(**filtered_params)
+    elif strategy_name == 'bollinger_breakout':
+        from .strategies.bollinger_breakout import BollingerBreakout
+        return BollingerBreakout(**filtered_params)
+    elif strategy_name == 'momentum':
+        from .strategies.momentum import Momentum
+        return Momentum(**filtered_params)
+    elif strategy_name == 'dca_dip':
+        from .strategies.dca_dip import DCADip
+        return DCADip(**filtered_params)
+    else:
+        user_msg = f" for user {user_id}" if user_id else ""
+        logger.warning(f"Unknown strategy '{strategy_name}'{user_msg}. Using Mean Reversion.")
+        from .strategies.mean_reversion import MeanReversion
+        return MeanReversion(**filtered_params)
+
+
 def run_bot_instance(user_id: int, strategy_config: dict, running_event: threading.Event, runtime_state: dict = None):
     """
     Run a bot instance for a specific user.
@@ -49,16 +112,13 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     # Load Persistent State
     position_start_time = strategy_config.get('position_start_time')
     if position_start_time:
-        # Convert string to timestamp if needed (DuckDB might return datetime object)
-        if isinstance(position_start_time, str):
-             # Parse if string (simplified)
-             pass
         logger.info(f"Loaded persisted position start time: {position_start_time}")
         # Convert to float timestamp for logic
         try:
             position_start_time = position_start_time.timestamp()
-        except:
-            pass # Already float or None
+        except (AttributeError, TypeError):
+            # Already a float timestamp or cannot be converted
+            logger.debug(f"Position start time already in correct format: {type(position_start_time)}")
 
     active_order_id = strategy_config.get('active_order_id')
     open_order = None
@@ -177,54 +237,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     
     # Initialize Strategy
     logger.info(f"Initializing strategy '{strategy_name}' for user {user_id}")
-    
-    # Define valid parameters for each strategy
-    strategy_param_map = {
-        'mean_reversion': ['bb_period', 'bb_std', 'rsi_period', 'rsi_oversold', 'rsi_overbought'],
-        'sma_crossover': ['fast_period', 'slow_period'],
-        'macd': ['fast', 'slow', 'signal', 'fast_period', 'slow_period', 'signal_period'],
-        'rsi': ['period', 'overbought', 'oversold', 'buy_threshold', 'sell_threshold'],
-        'bollinger_breakout': ['bb_period', 'bb_std', 'volume_factor'],
-        'momentum': ['roc_period', 'rsi_period', 'rsi_min', 'rsi_max'],
-        'dca_dip': ['ema_long', 'ema_short'],
-        'combined': []  # Combined accepts any kwargs
-    }
-    
-    # Filter parameters to only include valid ones for the selected strategy
-    valid_params = strategy_param_map.get(strategy_name, [])
-    if valid_params:  # If not combined strategy
-        filtered_params = {k: v for k, v in strategy_params.items() if k in valid_params}
-        logger.info(f"Filtered params for {strategy_name}: {filtered_params}")
-    else:
-        filtered_params = strategy_params  # Combined strategy accepts all
-    
-    if strategy_name == 'mean_reversion':
-        from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion(**filtered_params)
-    elif strategy_name == 'sma_crossover':
-        strategy = SMACrossover(**filtered_params)
-    elif strategy_name == 'combined':
-        from .strategies.combined import CombinedStrategy
-        strategy = CombinedStrategy(**filtered_params)
-    elif strategy_name == 'macd':
-        from .strategies.macd import MACDStrategy
-        strategy = MACDStrategy(**filtered_params)
-    elif strategy_name == 'rsi':
-        from .strategies.rsi import RSIStrategy
-        strategy = RSIStrategy(**filtered_params)
-    elif strategy_name == 'bollinger_breakout':
-        from .strategies.bollinger_breakout import BollingerBreakout
-        strategy = BollingerBreakout(**filtered_params)
-    elif strategy_name == 'momentum':
-        from .strategies.momentum import Momentum
-        strategy = Momentum(**filtered_params)
-    elif strategy_name == 'dca_dip':
-        from .strategies.dca_dip import DCADip
-        strategy = DCADip(**filtered_params)
-    else:
-        logger.warning(f"Unknown strategy '{strategy_name}' for user {user_id}. Using Mean Reversion.")
-        from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion(**filtered_params)
+    strategy = create_strategy(strategy_name, strategy_params, user_id)
 
     # Initialize Notifier
     from .notifier import TelegramNotifier
@@ -437,8 +450,12 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     logger.info(f"Bot instance for user {user_id} terminated")
 
 
-def main():
-    """Original main function - kept for backward compatibility."""
+def main(user_id: int = 0):
+    """Original main function - kept for backward compatibility.
+    
+    Args:
+        user_id: User ID (default 0 for standalone mode)
+    """
     logger.info("Starting Trading Bot...")
     
     # Initialize Exchange Client
@@ -456,35 +473,7 @@ def main():
     strategy_name = getattr(config, 'STRATEGY', 'mean_reversion')
     strategy_params = getattr(config, 'STRATEGY_PARAMS', {})
     logger.info(f"Selected Strategy: {strategy_name} with params: {strategy_params}")
-
-    if strategy_name == 'mean_reversion':
-        from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion(**strategy_params)
-    elif strategy_name == 'sma_crossover':
-        from .strategies.sma_crossover import SMACrossover
-        strategy = SMACrossover(**strategy_params)
-    elif strategy_name == 'combined':
-        from .strategies.combined import CombinedStrategy
-        strategy = CombinedStrategy(**strategy_params)
-    elif strategy_name == 'macd':
-        from .strategies.macd import MACDStrategy
-        strategy = MACDStrategy(**strategy_params)
-    elif strategy_name == 'rsi':
-        from .strategies.rsi import RSIStrategy
-        strategy = RSIStrategy(**strategy_params)
-    elif strategy_name == 'bollinger_breakout':
-        from .strategies.bollinger_breakout import BollingerBreakout
-        strategy = BollingerBreakout(**strategy_params)
-    elif strategy_name == 'momentum':
-        from .strategies.momentum import Momentum
-        strategy = Momentum(**strategy_params)
-    elif strategy_name == 'dca_dip':
-        from .strategies.dca_dip import DCADip
-        strategy = DCADip(**strategy_params)
-    else:
-        logger.warning(f"Unknown strategy '{strategy_name}'. Defaulting to Mean Reversion.")
-        from .strategies.mean_reversion import MeanReversion
-        strategy = MeanReversion(**strategy_params)
+    strategy = create_strategy(strategy_name, strategy_params)
 
     # Initialize Trend Filter with error handling
     try:
@@ -564,7 +553,8 @@ def main():
                         
                         # Update State: Order Filled -> Position Open
                         position_start_time = time.time()
-                        db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(position_start_time), active_order_id=None)
+                        if user_id:
+                            db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(position_start_time), active_order_id=None)
                         
                         continue
                 except Exception as e:
@@ -611,7 +601,8 @@ def main():
                             'fee': fee,
                             'leverage': config.LEVERAGE
                         }
-                        db.save_trade(trade_data, user_id=user_id)
+                        if user_id:
+                            db.save_trade(trade_data, user_id=user_id)
                         notifier.send_trade_alert(trade_data)
                         
                         # Reset
@@ -675,9 +666,6 @@ def main():
                 # Update Position Start Time
                 if current_pos_size > 0 and position_start_time is None:
                     position_start_time = time.time() # Start tracking
-                # Update Position Start Time
-                if current_pos_size > 0 and position_start_time is None:
-                    position_start_time = time.time() # Start tracking
                 elif current_pos_size == 0:
                     position_start_time = None # Reset
                 
@@ -690,7 +678,7 @@ def main():
                 # --- Edge Positioning Check ---
                 # Only check if we are looking to open a new position (size == 0)
                 if current_pos_size == 0 and edge.enabled:
-                    if not edge.check_edge(db, user_id=user_id):
+                    if not edge.check_edge(db, user_id=user_id if user_id else None):
                         logger.info("⛔ Edge is negative. Skipping new trade entries.")
                         # We continue the loop but we must ensure we don't enter new trades.
                         # We can set signal to HOLD to prevent entry.
