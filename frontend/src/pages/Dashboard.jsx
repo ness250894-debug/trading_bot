@@ -50,7 +50,7 @@ export default function Dashboard() {
                 ]);
                 setStatus(statusRes.data);
                 setIsRunning(statusRes.data.is_running);
-                setTrades(tradesRes.data);
+                setTrades(tradesRes.data.trades || []);
             } catch (err) {
                 const errorMsg = err.response?.data?.detail || 'Failed to connect to bot';
                 setError(errorMsg);
@@ -114,7 +114,7 @@ export default function Dashboard() {
 
     // Calculate PnL for Chart with deep comparison to avoid unnecessary recalculations
     const pnlData = React.useMemo(() => {
-        if (!trades || trades.length === 0) return [];
+        if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
 
         let cumulative = 0;
         return trades.map((t, i) => {
@@ -132,7 +132,7 @@ export default function Dashboard() {
     const refreshTrades = async () => {
         try {
             const tradesRes = await api.get('/trades');
-            setTrades(tradesRes.data);
+            setTrades(tradesRes.data.trades || []);
             // Also refresh status to update total PnL
             const statusRes = await api.get('/status');
             setStatus(statusRes.data);
