@@ -274,8 +274,20 @@ export default function Strategies() {
         setSaving(true);
         setMessage(null);
         try {
-            // 1. Save to backend (as current global config)
-            await api.post('/config', config);
+            // 1. Prepare config for backend (only fields expected by ConfigUpdate model)
+            const configForBackend = {
+                symbol: config.symbol,
+                timeframe: config.timeframe,
+                amount_usdt: config.amount_usdt,
+                strategy: config.strategy,
+                dry_run: config.dry_run,
+                take_profit_pct: config.take_profit_pct,
+                stop_loss_pct: config.stop_loss_pct,
+                parameters: config.parameters || {}
+            };
+
+            // Save to backend
+            await api.post('/config', configForBackend);
 
             // 2. Save to localStorage for Multi-Bot UI
             const newBotConfig = {
@@ -294,7 +306,8 @@ export default function Strategies() {
             // 3. Redirect to Main page
             navigate('/main');
         } catch (err) {
-            setMessage({ type: 'error', text: 'Failed to add bot configuration.' });
+            const errorMsg = err.response?.data?.detail || 'Failed to add bot configuration.';
+            setMessage({ type: 'error', text: errorMsg });
             setSaving(false);
         }
     };
@@ -314,7 +327,7 @@ export default function Strategies() {
         <div className="max-w-5xl mx-auto space-y-8">
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Strategy Manager</h2>
+                    <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Bot Management</h2>
                     <p className="text-muted-foreground mt-1">Configure your bot's trading logic and risk parameters.</p>
                 </div>
                 <button

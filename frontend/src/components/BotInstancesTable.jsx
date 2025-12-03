@@ -265,10 +265,9 @@ export default function BotInstancesTable({
 
                                                 {/* Delete Button */}
                                                 <button
-                                                    onClick={() => config ? onRemoveBot(config.id) : null}
-                                                    disabled={!config}
-                                                    className="p-1.5 hover:bg-red-500/10 rounded text-red-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                                                    title="Remove bot configuration"
+                                                    onClick={() => onRemoveBot(bot.symbol, config?.id)}
+                                                    className="p-1.5 hover:bg-red-500/10 rounded text-red-400 transition-all"
+                                                    title="Delete bot"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>

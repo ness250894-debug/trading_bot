@@ -154,25 +154,26 @@ export default function Main() {
     };
 
     // Multi-bot handlers
-    const handleRemoveBot = async (configId) => {
-        const config = botConfigs.find(c => c.id === configId);
-        if (config) {
-            // Check if running and stop it
-            const running = isBotRunning(config.symbol);
-            if (running) {
-                try {
-                    await api.post('/stop', null, { params: { symbol: config.symbol } });
-                    toast.success(`Stopped bot ${config.symbol}`);
-                    // Refresh status
-                    const res = await api.get('/status');
-                    setBotStatus(res.data);
-                } catch (err) {
-                    toast.error(`Failed to stop bot ${config.symbol}`);
-                }
+    const handleRemoveBot = async (symbol, configId) => {
+        // Stop if running
+        if (isBotRunning(symbol)) {
+            try {
+                await api.post('/stop', null, { params: { symbol } });
+                toast.success(`Stopped bot ${symbol}`);
+                // Refresh status
+                const res = await api.get('/status');
+                setBotStatus(res.data);
+            } catch (err) {
+                toast.error(`Failed to stop bot ${symbol}`);
             }
         }
-        setBotConfigs(prev => prev.filter(c => c.id !== configId));
-        toast.success('Bot configuration removed');
+
+        // Remove from localStorage if has config
+        if (configId) {
+            setBotConfigs(prev => prev.filter(c => c.id !== configId));
+        }
+
+        toast.success('Bot removed');
     };
 
     const handleBulkRemove = (symbols) => {
