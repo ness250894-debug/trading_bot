@@ -35,6 +35,19 @@ export default function Settings() {
     // Preferences state
     const [theme, setTheme] = useState('dark');
     const [currency, setCurrency] = useState('USD');
+    const [widgetsEnabled, setWidgetsEnabled] = useState(['balance', 'status', 'trades', 'bots']);
+    const [prefsLoading, setPrefsLoading] = useState(false);
+
+    // Risk Profile state
+    const [riskProfile, setRiskProfile] = useState({
+        max_daily_loss: '',
+        max_drawdown: '',
+        max_position_size: '',
+        max_open_positions: '',
+        stop_trading_on_breach: true
+    });
+    const [riskLoading, setRiskLoading] = useState(false);
+
 
     const checkApiKeyStatus = useCallback(async () => {
         try {
@@ -74,10 +87,37 @@ export default function Settings() {
         }
     }, [userInfoData]);
 
+    // Load preferences 
+    const loadPreferences = useCallback(async () => {
+        try {
+            const response = await api.get('/preferences');
+            const prefs = response.data.preferences;
+            setTheme(prefs.theme || 'dark');
+            if (prefs.widgets_enabled) {
+                setWidgetsEnabled(prefs.widgets_enabled);
+            }
+        } catch (error) {
+            // Silent fail - use defaults
+        }
+    }, []);
+
+    const loadRiskProfile = useCallback(async () => {
+        try {
+            const response = await api.get('/risk-profile');
+            if (response.data.profile) {
+                setRiskProfile(response.data.profile);
+            }
+        } catch (error) {
+            // Silent fail
+        }
+    }, []);
+
     useEffect(() => {
         checkApiKeyStatus();
         checkTelegramStatus();
-    }, [exchange, checkApiKeyStatus, checkTelegramStatus]);
+        loadPreferences();
+        loadRiskProfile();
+    }, [exchange, checkApiKeyStatus, checkTelegramStatus, loadPreferences, loadRiskProfile]);
 
     const handleSaveKeys = async (e) => {
         e.preventDefault();
@@ -136,6 +176,43 @@ export default function Settings() {
         }
     };
 
+    // Save preferences
+    const handleSavePreferences = async () => {
+        setPrefsLoading(true);
+        try {
+            await api.put('/preferences', {
+                theme,
+                widgets_enabled: widgetsEnabled
+            });
+            toast.success('Preferences saved successfully');
+        } catch (error) {
+            toast.error('Failed to save preferences');
+        } finally {
+            setPrefsLoading(false);
+        }
+    };
+
+    const handleSaveRiskProfile = async (e) => {
+        e.preventDefault();
+        setRiskLoading(true);
+        try {
+            await api.put('/risk-profile', riskProfile);
+            toast.success('Risk profile saved successfully');
+        } catch (error) {
+            toast.error('Failed to save risk profile');
+        } finally {
+            setRiskLoading(false);
+        }
+    };
+
+    const toggleWidget = (widget) => {
+        setWidgetsEnabled(prev =>
+            prev.includes(widget)
+                ? prev.filter(w => w !== widget)
+                : [...prev, widget]
+        );
+    };
+
     const handleTelegramDelete = () => {
         modal.confirm({
             title: 'Remove Telegram Notifications',
@@ -162,6 +239,7 @@ export default function Settings() {
         { id: 'profile', label: 'Profile', icon: User },
         { id: 'trading', label: 'Trading', icon: Key },
         { id: 'notifications', label: 'Notifications', icon: Bell },
+        { id: 'risk', label: 'Risk Management', icon: AlertTriangle },
         { id: 'preferences', label: 'Preferences', icon: SettingsIcon },
     ];
 
@@ -419,6 +497,100 @@ export default function Settings() {
                         </div>
                     )}
 
+
+
+                    {/* Risk Management Tab */}
+                    {activeTab === 'risk' && (
+                        <div className="glass rounded-xl p-6">
+                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <AlertTriangle size={20} className="text-primary" />
+                                Risk Management
+                            </h3>
+
+                            <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl mb-6">
+                                <h4 className="text-sm font-semibold text-yellow-500 mb-2">Global Risk Limits</h4>
+                                <p className="text-sm text-muted-foreground">
+                                    These settings apply to all your active bots. If any limit is breached, the system can automatically stop trading to protect your capital.
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleSaveRiskProfile} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Max Daily Loss ($)</label>
+                                        <input
+                                            type="number"
+                                            value={riskProfile.max_daily_loss || ''}
+                                            onChange={(e) => setRiskProfile({ ...riskProfile, max_daily_loss: parseFloat(e.target.value) })}
+                                            className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 outline-none"
+                                            placeholder="e.g. 100.00"
+                                            step="0.01"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Max Drawdown (%)</label>
+                                        <input
+                                            type="number"
+                                            value={riskProfile.max_drawdown || ''}
+                                            onChange={(e) => setRiskProfile({ ...riskProfile, max_drawdown: parseFloat(e.target.value) })}
+                                            className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 outline-none"
+                                            placeholder="e.g. 5.0"
+                                            step="0.1"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Max Position Size ($)</label>
+                                        <input
+                                            type="number"
+                                            value={riskProfile.max_position_size || ''}
+                                            onChange={(e) => setRiskProfile({ ...riskProfile, max_position_size: parseFloat(e.target.value) })}
+                                            className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 outline-none"
+                                            placeholder="e.g. 1000.00"
+                                            step="0.01"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-1">Max Open Positions</label>
+                                        <input
+                                            type="number"
+                                            value={riskProfile.max_open_positions || ''}
+                                            onChange={(e) => setRiskProfile({ ...riskProfile, max_open_positions: parseInt(e.target.value) })}
+                                            className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 outline-none"
+                                            placeholder="e.g. 3"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                                    <div>
+                                        <div className="font-medium">Stop Trading on Breach</div>
+                                        <div className="text-sm text-muted-foreground">Automatically stop all bots if any limit is reached</div>
+                                    </div>
+                                    <div className="relative inline-flex items-center cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={riskProfile.stop_trading_on_breach}
+                                            onChange={(e) => setRiskProfile({ ...riskProfile, stop_trading_on_breach: e.target.checked })}
+                                        />
+                                        <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        type="submit"
+                                        disabled={riskLoading}
+                                        className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        <Save size={18} />
+                                        {riskLoading ? 'Saving...' : 'Save Risk Profile'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
                     {/* Preferences Tab */}
                     {activeTab === 'preferences' && (
                         <div className="glass rounded-xl p-6">
@@ -507,6 +679,45 @@ export default function Settings() {
                                             </svg>
                                         </div>
                                     </div>
+                                </div>
+
+
+                                <div className="p-4 bg-white/5 rounded-xl">
+                                    <h4 className="font-medium mb-4">Dashboard Widgets</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {[
+                                            { id: 'balance', label: 'Portfolio Balance' },
+                                            { id: 'status', label: 'Bot Status' },
+                                            { id: 'trades', label: 'Recent Trades' },
+                                            { id: 'bots', label: 'Active Bots' },
+                                            { id: 'watchlist', label: 'Watchlist' },
+                                            { id: 'alerts', label: 'Price Alerts' }
+                                        ].map(widget => (
+                                            <label key={widget.id} className="flex items-center justify-between p-3 bg-black/20 rounded-lg cursor-pointer hover:bg-black/30 transition-all">
+                                                <span className="text-sm font-medium">{widget.label}</span>
+                                                <div className="relative inline-flex items-center cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="sr-only peer"
+                                                        checked={widgetsEnabled.includes(widget.id)}
+                                                        onChange={() => toggleWidget(widget.id)}
+                                                    />
+                                                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-4">
+                                    <button
+                                        onClick={handleSavePreferences}
+                                        disabled={prefsLoading}
+                                        className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50"
+                                    >
+                                        <Save size={18} />
+                                        {prefsLoading ? 'Saving...' : 'Save Preferences'}
+                                    </button>
                                 </div>
                             </div>
                         </div>

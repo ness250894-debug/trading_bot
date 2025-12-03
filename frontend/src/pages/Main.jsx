@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import SentimentWidget from '../components/SentimentWidget';
 import BotInstancesTable from '../components/BotInstancesTable';
+import WatchlistWidget from '../components/WatchlistWidget';
+import PriceAlertsWidget from '../components/PriceAlertsWidget';
+import RecentTradesWidget from '../components/RecentTradesWidget';
 import Disclaimer from '../components/Disclaimer';
 import PlanGate from '../components/PlanGate';
 import { formatPlanName, formatStrategyName, formatLabel } from '../lib/utils';
@@ -458,11 +461,29 @@ export default function Main() {
                 )}
             </div>
 
-            {/* AI Sentiment */}
-            <div>
-                <PlanGate feature="AI Sentiment Analysis" explanation="Get real-time market sentiment analysis powered by AI to make smarter trading decisions.">
-                    <SentimentWidget />
-                </PlanGate>
+            {/* Market Tools Grid */}
+            <div className="grid md:grid-cols-2 gap-6">
+                {/* Watchlist */}
+                <div className="h-[400px]">
+                    <WatchlistWidget />
+                </div>
+
+                {/* Price Alerts */}
+                <div className="h-[400px]">
+                    <PriceAlertsWidget />
+                </div>
+
+                {/* AI Sentiment */}
+                <div className="h-[400px]">
+                    <PlanGate feature="AI Sentiment Analysis" explanation="Get real-time market sentiment analysis powered by AI to make smarter trading decisions.">
+                        <SentimentWidget />
+                    </PlanGate>
+                </div>
+
+                {/* Recent Trades (Journal) */}
+                <div className="h-[400px]">
+                    <RecentTradesWidget />
+                </div>
             </div>
 
             {/* News Feed */}

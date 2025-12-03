@@ -144,6 +144,15 @@ class DuckDBHandler:
                     created_at TIMESTAMP,
                     updated_at TIMESTAMP
                 );
+                CREATE TABLE IF NOT EXISTS risk_profiles (
+                    user_id BIGINT PRIMARY KEY,
+                    max_daily_loss DOUBLE,
+                    max_drawdown DOUBLE,
+                    max_position_size DOUBLE,
+                    max_open_positions INTEGER,
+                    stop_trading_on_breach BOOLEAN DEFAULT TRUE,
+                    updated_at TIMESTAMP
+                );
             """)
             
             # Run migrations for existing tables
@@ -397,6 +406,25 @@ class DuckDBHandler:
                 
                 logger.info("Dashboard preferences table created successfully")
                 
+                # Create backtest_templates table
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS backtest_templates (
+                        id INTEGER PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        name VARCHAR NOT NULL,
+                        symbol VARCHAR NOT NULL,
+                        timeframe VARCHAR NOT NULL,
+                        strategy VARCHAR NOT NULL,
+                        parameters TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_templates_user ON backtest_templates(user_id)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_template_id START 1")
+                
+                logger.info("Backtest templates table created successfully")
+                
             except Exception as migration_error:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")
@@ -508,7 +536,14 @@ class DuckDBHandler:
         """Get trades for a user."""
         try:
             return self.conn.execute(
-                "SELECT * FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+                """
+                SELECT t.*, n.notes, n.tags 
+                FROM trades t 
+                LEFT JOIN trade_notes n ON t.id = n.trade_id 
+                WHERE t.user_id = ? 
+                ORDER BY t.timestamp DESC 
+                LIMIT ? OFFSET ?
+                """,
                 [user_id, limit, offset]
             ).fetchdf()
         except Exception as e:
@@ -1179,6 +1214,77 @@ class DuckDBHandler:
             logger.error(f"Error saving preferences: {e}")
             return False
 
+    # Backtest Templates CRUD Methods
+    def get_templates(self, user_id):
+        """Get user's backtest templates."""
+        try:
+            import json
+            rows = self.conn.execute(
+                "SELECT id, name, symbol, timeframe, strategy, parameters, created_at FROM backtest_templates WHERE user_id = ? ORDER BY created_at DESC",
+                [user_id]
+            ).fetchall()
+            
+            templates = []
+            for row in rows:
+                templates.append({
+                    'id': row[0],
+                    'name': row[1],
+                    'symbol': row[2],
+                    'timeframe': row[3],
+                    'strategy': row[4],
+                    'parameters': json.loads(row[5]) if row[5] else {},
+                    'created_at': row[6].isoformat() if row[6] else None
+                })
+            return templates
+        except Exception as e:
+            logger.error(f"Error fetching templates: {e}")
+            return []
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def create_template(self, user_id, name, symbol, timeframe, strategy, parameters=None):
+        """Create a backtest template."""
+        try:
+            import json
+            from datetime import datetime
+            
+            query = """
+                INSERT INTO backtest_templates
+                (id, user_id, name, symbol, timeframe, strategy, parameters, created_at)
+                VALUES (nextval('seq_template_id'), ?, ?, ?, ?, ?, ?, ?)
+            """
+            self.conn.execute(query, [
+                user_id,
+                name,
+                symbol,
+                timeframe,
+                strategy,
+                json.dumps(parameters or {}),
+                datetime.now()
+            ])
+            
+            # Get created template ID
+            result = self.conn.execute(
+                "SELECT CURRVAL('seq_template_id')"
+            ).fetchone()
+            
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error creating template: {e}")
+            return None
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def delete_template(self, user_id, template_id):
+        """Delete a backtest template."""
+        try:
+            self.conn.execute(
+                "DELETE FROM backtest_templates WHERE user_id = ? AND id = ?",
+                [user_id, template_id]
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting template: {e}")
+            return False
+
     def get_recent_trades(self, limit=10, user_id=None):
         """
         Fetch the most recent trades.
@@ -1728,6 +1834,76 @@ class DuckDBHandler:
             return True
         except Exception as e:
             logger.error(f"Error setting admin status: {e}")
+            return False
+            
+    def get_risk_profile(self, user_id):
+        """Get risk profile for a user."""
+        try:
+            result = self.conn.execute(
+                "SELECT * FROM risk_profiles WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if result:
+                return {
+                    "user_id": result[0],
+                    "max_daily_loss": result[1],
+                    "max_drawdown": result[2],
+                    "max_position_size": result[3],
+                    "max_open_positions": result[4],
+                    "stop_trading_on_breach": result[5],
+                    "updated_at": result[6]
+                }
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching risk profile: {e}")
+            return None
+
+    def update_risk_profile(self, user_id, profile_data):
+        """Update risk profile for a user."""
+        try:
+            # Check if profile exists
+            existing = self.get_risk_profile(user_id)
+            
+            if existing:
+                self.conn.execute(
+                    """
+                    UPDATE risk_profiles 
+                    SET max_daily_loss = ?, max_drawdown = ?, max_position_size = ?, 
+                        max_open_positions = ?, stop_trading_on_breach = ?, updated_at = ?
+                    WHERE user_id = ?
+                    """,
+                    [
+                        profile_data.get('max_daily_loss'),
+                        profile_data.get('max_drawdown'),
+                        profile_data.get('max_position_size'),
+                        profile_data.get('max_open_positions'),
+                        profile_data.get('stop_trading_on_breach', True),
+                        datetime.now(),
+                        user_id
+                    ]
+                )
+            else:
+                self.conn.execute(
+                    """
+                    INSERT INTO risk_profiles (
+                        user_id, max_daily_loss, max_drawdown, max_position_size, 
+                        max_open_positions, stop_trading_on_breach, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    [
+                        user_id,
+                        profile_data.get('max_daily_loss'),
+                        profile_data.get('max_drawdown'),
+                        profile_data.get('max_position_size'),
+                        profile_data.get('max_open_positions'),
+                        profile_data.get('stop_trading_on_breach', True),
+                        datetime.now()
+                    ]
+                )
+            return True
+        except Exception as e:
+            logger.error(f"Error updating risk profile: {e}")
             return False
     
     def close(self):

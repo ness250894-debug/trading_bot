@@ -39,6 +39,13 @@ class ConfigUpdate(BaseModel):
             raise ValueError('symbol must contain /')
         return v
 
+class RiskProfileUpdate(BaseModel):
+    max_daily_loss: Optional[float] = None
+    max_drawdown: Optional[float] = None
+    max_position_size: Optional[float] = None
+    max_open_positions: Optional[int] = None
+    stop_trading_on_breach: bool = True
+
 @router.get("/balance")
 async def get_balance(current_user: dict = Depends(auth.get_current_user)):
     """Get exchange balance."""
@@ -469,6 +476,25 @@ class TradeNoteCreate(BaseModel):
     notes: str
     tags: Optional[str] = None
 
+@router.get("/trades")
+async def get_trades(limit: int = 100, offset: int = 0, current_user: dict = Depends(auth.get_current_user)):
+    """Get user's trade history with notes."""
+    try:
+        trades_df = db.get_trades(current_user['id'], limit, offset)
+        if trades_df.empty:
+            return {"trades": []}
+        
+        # Convert timestamps to string
+        trades = trades_df.to_dict(orient='records')
+        for trade in trades:
+            if isinstance(trade.get('timestamp'), (datetime, pd.Timestamp)):
+                trade['timestamp'] = trade['timestamp'].isoformat()
+                
+        return {"trades": trades}
+    except Exception as e:
+        logger.error(f"Error fetching trades: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch trades")
+
 @router.get("/trades/{trade_id}/notes")
 @limiter.limit("60/minute")
 async def get_trade_note(request: Request, trade_id: int, current_user: dict = Depends(auth.get_current_user)):
@@ -687,4 +713,97 @@ async def update_preferences(request: Request, data: PreferencesUpdate, current_
         raise
     except Exception as e:
         logger.error(f"Error updating preferences: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Backtest Templates Endpoints
+class TemplateCreate(BaseModel):
+    name: str
+    symbol: str
+    timeframe: str
+    strategy: str
+    parameters: Optional[Dict[str, Any]] = {}
+    
+    @validator('symbol')
+    def symbol_must_be_valid(cls, v):
+        if '/' not in v:
+            raise ValueError('symbol must contain /')
+        return v
+
+@router.get("/backtest-templates")
+@limiter.limit("60/minute")
+async def get_templates(request: Request, current_user: dict = Depends(auth.get_current_user)):
+    """Get user's backtest templates."""
+    try:
+        templates = db.get_templates(current_user['id'])
+        return {"templates": templates}
+    except Exception as e:
+        logger.error(f"Error getting templates: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch templates")
+
+@router.post("/backtest-templates")
+@limiter.limit("20/minute")
+async def create_template(request: Request, data: TemplateCreate, current_user: dict = Depends(auth.get_current_user)):
+    """Create a backtest template."""
+    try:
+        template_id = db.create_template(
+            current_user['id'],
+            data.name,
+            data.symbol,
+            data.timeframe,
+            data.strategy,
+            data.parameters
+        )
+        
+        if template_id:
+            return {"status": "success", "template_id": template_id, "message": f"Template '{data.name}' created"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to create template")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating template: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/backtest-templates/{template_id}")
+@limiter.limit("20/minute")
+async def delete_template(request: Request, template_id: int, current_user: dict = Depends(auth.get_current_user)):
+    """Delete a backtest template."""
+    try:
+        success = db.delete_template(current_user['id'], template_id)
+        
+        if success:
+            return {"status": "success", "message": "Template deleted"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete template")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting template: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/risk-profile")
+async def get_risk_profile(current_user: dict = Depends(auth.get_current_user)):
+    """Get user's risk profile."""
+    try:
+        profile = db.get_risk_profile(current_user['id'])
+        return {"profile": profile}
+    except Exception as e:
+        logger.error(f"Error fetching risk profile: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch risk profile")
+
+@router.put("/risk-profile")
+@limiter.limit("10/minute")
+async def update_risk_profile(request: Request, profile_data: RiskProfileUpdate, current_user: dict = Depends(auth.get_current_user)):
+    """Update user's risk profile."""
+    try:
+        success = db.update_risk_profile(current_user['id'], profile_data.dict(exclude_unset=True))
+        
+        if success:
+            return {"status": "success", "message": "Risk profile updated"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to update risk profile")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating risk profile: {e}")
         raise HTTPException(status_code=500, detail=str(e))
