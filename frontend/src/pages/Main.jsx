@@ -60,8 +60,20 @@ export default function Main() {
     const [pollingInterval, setPollingInterval] = useState(30000); // Start with 30s
 
     // Multi-bot configuration state
-    const [botConfigs, setBotConfigs] = useState([]);
+    const [botConfigs, setBotConfigs] = useState(() => {
+        try {
+            const saved = localStorage.getItem('bot_configs');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    });
     const [startingBots, setStartingBots] = useState(new Set());
+
+    // Persist bot configs
+    useEffect(() => {
+        localStorage.setItem('bot_configs', JSON.stringify(botConfigs));
+    }, [botConfigs]);
 
     // Smart polling: Reduce frequency when page is not visible
     React.useEffect(() => {
@@ -137,6 +149,13 @@ export default function Main() {
     const handleStartBot = async (symbol) => {
         try {
             setStartingBots(prev => new Set(prev).add(symbol));
+
+            // Restore config for this bot if available
+            const config = botConfigs.find(c => c.symbol === symbol);
+            if (config) {
+                await api.post('/config', config);
+            }
+
             await api.post('/start', null, { params: { symbol } });
             toast.success(`Started bot for ${symbol}`);
             // Refresh status

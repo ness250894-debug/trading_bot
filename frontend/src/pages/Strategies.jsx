@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { DEFAULT_EXCHANGES } from '../constants/exchanges';
-import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity, Globe } from 'lucide-react';
+import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity, Globe, Plus } from 'lucide-react';
 import { useModal } from '../components/Modal';
 import Disclaimer from '../components/Disclaimer';
+import { useToast } from '../components/ToastContext';
 
 const STRATEGY_OPTIONS = [
     { value: 'mean_reversion', label: 'Mean Reversion', desc: 'Buy low, sell high using Bollinger Bands & RSI.', icon: Activity },
@@ -135,11 +137,12 @@ const RISK_PRESETS = [
 ];
 
 export default function Strategies() {
+    const navigate = useNavigate();
+    const toast = useToast();
     const modal = useModal();
     const [config, setConfig] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [restarting, setRestarting] = useState(false);
     const [message, setMessage] = useState(null);
     const [suggestion, setSuggestion] = useState(null);
     const [exchanges, setExchanges] = useState([]);
@@ -267,46 +270,33 @@ export default function Strategies() {
         setSuggestion(null);
     };
 
-    const handleSave = async () => {
-        modal.confirm({
-            title: 'Restart Bot',
-            message: 'Saving will restart the bot to apply changes. Continue?',
-            confirmText: 'Save & Restart',
-            cancelText: 'Cancel',
-            type: 'warning',
-            onConfirm: async () => {
-                setSaving(true);
-                setMessage(null);
-                try {
-                    await api.post('/config', config);
-                    setMessage({ type: 'success', text: 'Configuration saved. Restarting bot...' });
-                    await api.post('/restart');
-                    setRestarting(true);
-                    let retries = 0;
-                    const interval = setInterval(async () => {
-                        try {
-                            await api.get('/status');
-                            clearInterval(interval);
-                            setRestarting(false);
-                            setSaving(false);
-                            setMessage({ type: 'success', text: 'Bot restarted successfully!' });
-                            fetchConfig();
-                        } catch {
-                            retries++;
-                            if (retries > 20) {
-                                clearInterval(interval);
-                                setRestarting(false);
-                                setSaving(false);
-                                setMessage({ type: 'error', text: 'Restart timed out.' });
-                            }
-                        }
-                    }, 1000);
-                } catch {
-                    setMessage({ type: 'error', text: 'Failed to save configuration.' });
-                    setSaving(false);
-                }
-            }
-        });
+    const handleAddBot = async () => {
+        setSaving(true);
+        setMessage(null);
+        try {
+            // 1. Save to backend (as current global config)
+            await api.post('/config', config);
+
+            // 2. Save to localStorage for Multi-Bot UI
+            const newBotConfig = {
+                ...config,
+                id: Date.now().toString(),
+                addedAt: new Date().toISOString()
+            };
+
+            const existing = JSON.parse(localStorage.getItem('bot_configs') || '[]');
+            // Filter out existing config for same symbol to avoid duplicates/conflicts
+            const filtered = existing.filter(c => c.symbol !== config.symbol);
+            localStorage.setItem('bot_configs', JSON.stringify([...filtered, newBotConfig]));
+
+            toast.success('Bot configuration added successfully');
+
+            // 3. Redirect to Main page
+            navigate('/main');
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to add bot configuration.' });
+            setSaving(false);
+        }
     };
 
     if (loading) return (
@@ -631,12 +621,12 @@ export default function Strategies() {
                         </label>
 
                         <button
-                            onClick={handleSave}
-                            disabled={saving || restarting}
+                            onClick={handleAddBot}
+                            disabled={saving}
                             className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {saving ? <RefreshCw className="animate-spin" size={20} /> : <Save size={20} />}
-                            Update Configuration
+                            {saving ? <RefreshCw className="animate-spin" size={20} /> : <Plus size={20} />}
+                            Add Bot
                         </button>
                     </div>
                 </div>
