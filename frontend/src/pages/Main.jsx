@@ -135,8 +135,42 @@ export default function Main() {
         }
     };
 
+    // Count bot instances
+    const botCount = React.useMemo(() => {
+        if (!botStatus?.instances) return 0;
+        if (typeof botStatus.instances === 'object') {
+            return Object.keys(botStatus.instances).length;
+        }
+        return botStatus.is_running ? 1 : 0;
+    }, [botStatus]);
+
+    // Get running status for a specific symbol
+    const isBotRunning = (symbol) => {
+        if (!botStatus?.instances) return false;
+        if (typeof botStatus.instances === 'object') {
+            return botStatus.instances[symbol]?.is_running || false;
+        }
+        return false;
+    };
+
     // Multi-bot handlers
-    const handleRemoveBot = (configId) => {
+    const handleRemoveBot = async (configId) => {
+        const config = botConfigs.find(c => c.id === configId);
+        if (config) {
+            // Check if running and stop it
+            const running = isBotRunning(config.symbol);
+            if (running) {
+                try {
+                    await api.post('/stop', null, { params: { symbol: config.symbol } });
+                    toast.success(`Stopped bot ${config.symbol}`);
+                    // Refresh status
+                    const res = await api.get('/status');
+                    setBotStatus(res.data);
+                } catch (err) {
+                    toast.error(`Failed to stop bot ${config.symbol}`);
+                }
+            }
+        }
         setBotConfigs(prev => prev.filter(c => c.id !== configId));
         toast.success('Bot configuration removed');
     };
@@ -182,24 +216,6 @@ export default function Main() {
         } catch (err) {
             toast.error(err.response?.data?.detail || `Failed to stop bot for ${symbol}`);
         }
-    };
-
-    // Count bot instances
-    const botCount = React.useMemo(() => {
-        if (!botStatus?.instances) return 0;
-        if (typeof botStatus.instances === 'object') {
-            return Object.keys(botStatus.instances).length;
-        }
-        return botStatus.is_running ? 1 : 0;
-    }, [botStatus]);
-
-    // Get running status for a specific symbol
-    const isBotRunning = (symbol) => {
-        if (!botStatus?.instances) return false;
-        if (typeof botStatus.instances === 'object') {
-            return botStatus.instances[symbol]?.is_running || false;
-        }
-        return false;
     };
 
     // News data - fetched from backend API
