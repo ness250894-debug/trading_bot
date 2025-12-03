@@ -1,0 +1,22 @@
+export const POPULAR_SYMBOLS = [
+    'BTC/USDT',
+    'ETH/USDT',
+    'SOL/USDT',
+    'BNB/USDT',
+    'XRP/USDT',
+    'ADA/USDT',
+    'DOGE/USDT',
+    'AVAX/USDT',
+    'DOT/USDT',
+    'MATIC/USDT',
+    'LTC/USDT',
+    'LINK/USDT',
+    'UNI/USDT',
+    'ATOM/USDT',
+    'ETC/USDT',
+    'XLM/USDT',
+    'FIL/USDT',
+    'NEAR/USDT',
+    'ALGO/USDT',
+    'APE/USDT'
+];

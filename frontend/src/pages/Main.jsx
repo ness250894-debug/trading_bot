@@ -307,48 +307,15 @@ export default function Main() {
                     >
                         <RefreshCw size={20} className={`text-muted-foreground ${refreshing ? 'animate-spin' : ''}`} />
                     </button>
-                    <button
-                        onClick={handleStartStop}
-                        className={`
-                            flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-300 shadow-lg
-                            ${botStatus?.is_running
-                                ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 shadow-red-500/10'
-                                : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/25 hover:shadow-primary/40'
-                            }
-                        `}
-                    >
-                        {botStatus?.is_running ? <><Square size={18} fill="currentColor" /> Stop Bot</> : <><Play size={18} fill="currentColor" /> Start Bot</>}
-                    </button>
                 </div>
 
                 {/* Disclaimer */}
-                <Disclaimer compact />
+                <div className="w-full flex justify-center">
+                    <Disclaimer compact />
+                </div>
             </div>
 
-            {/* Subscription & Bot Status Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                <InfoCard
-                    title="Subscription Plan"
-                    value={formatPlanName(subscription?.plan) || 'Free'}
-                    icon={CreditCard}
-                    subtext={subscription?.status === 'active' ? '✓ Active' : subscription?.status === 'expired' ? '✗ Expired' : 'No subscription'}
-                    trend={subscription?.status === 'active' ? 'up' : 'down'}
-                />
-                <InfoCard
-                    title="Bot Status"
-                    value={botStatus?.is_running ? 'Running' : 'Stopped'}
-                    icon={Bot}
-                    subtext={`${botCount} instance(s)`}
-                    trend={botStatus?.is_running ? 'up' : 'down'}
-                />
-                <InfoCard
-                    title="Active Positions"
-                    value={botStatus?.active_trades || 0}
-                    icon={Activity}
-                    subtext="Currently open"
-                />
-            </div>
 
             {/* Subscription Details Card */}
             <div className="glass p-6 rounded-2xl">
@@ -404,62 +371,7 @@ export default function Main() {
                 </div>
             </div>
 
-            {/* Active Strategy Card */}
-            <div className="glass p-6 rounded-2xl">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <Zap size={20} className="text-primary" />
-                        <h2 className="text-xl font-bold">Active Strategy</h2>
-                    </div>
-                    <a
-                        href="/strategies"
-                        className="text-sm text-primary hover:text-primary/80 inline-flex items-center gap-1"
-                    >
-                        <Settings size={14} /> Configure
-                    </a>
-                </div>
-                <div className="grid md:grid-cols-3 gap-4">
-                    <div>
-                        <p className="text-sm text-muted-foreground mb-1">Strategy Type</p>
-                        <p className="text-lg font-semibold text-foreground">
-                            {formatStrategyName(botStatus?.config?.strategy) || 'None'}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-muted-foreground mb-1">Trading Mode</p>
-                        <div className="flex items-center gap-2">
-                            {botStatus?.config?.dry_run ? (
-                                <span className="px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded text-xs font-medium">
-                                    ⚠️ Practice Mode
-                                </span>
-                            ) : (
-                                <span className="px-2 py-1 bg-green-500/10 text-green-400 rounded text-xs font-medium">
-                                    🚀 Live Trading
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                    <div>
-                        <p className="text-sm text-muted-foreground mb-1">Symbol</p>
-                        <p className="text-lg font-semibold text-foreground">
-                            {botStatus?.config?.symbol || 'N/A'}
-                        </p>
-                    </div>
-                </div>
-                {botStatus?.config?.parameters && Object.keys(botStatus.config.parameters).length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-white/5">
-                        <p className="text-sm text-muted-foreground mb-2">Strategy Parameters</p>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            {Object.entries(botStatus.config.parameters).map(([key, value]) => (
-                                <div key={key} className="text-xs">
-                                    <span className="text-muted-foreground capitalize">{formatLabel(key)}: </span>
-                                    <span className="text-foreground font-medium">{value}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
+
 
             {/* Market Tools Grid */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -474,9 +386,20 @@ export default function Main() {
                 </div>
 
                 {/* AI Sentiment */}
-                <div className="h-[400px]">
+                <div className="h-[400px] flex flex-col gap-6">
                     <PlanGate feature="AI Sentiment Analysis" explanation="Get real-time market sentiment analysis powered by AI to make smarter trading decisions.">
                         <SentimentWidget />
+                    </PlanGate>
+
+                    {/* New Widget Placeholder */}
+                    <PlanGate feature="Advanced Sentiment Metrics" explanation="Deep dive into sentiment analysis with advanced metrics and historical data.">
+                        <div className="glass p-6 rounded-xl h-full flex flex-col items-center justify-center text-center">
+                            <Activity size={48} className="text-primary mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">Advanced Sentiment</h3>
+                            <p className="text-muted-foreground text-sm">
+                                Detailed breakdown of market sentiment indicators.
+                            </p>
+                        </div>
                     </PlanGate>
                 </div>
 

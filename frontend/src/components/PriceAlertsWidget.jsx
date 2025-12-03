@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import api from '../lib/api';
 import { useToast } from './ToastContext';
+import { POPULAR_SYMBOLS } from '../constants/symbols';
 
 export default function PriceAlertsWidget() {
     const [alerts, setAlerts] = useState([]);
@@ -82,13 +83,16 @@ export default function PriceAlertsWidget() {
 
             <form onSubmit={handleAddAlert} className="space-y-2 mb-4">
                 <div className="flex gap-2">
-                    <input
-                        type="text"
+                    <select
                         value={symbol}
                         onChange={(e) => setSymbol(e.target.value)}
-                        placeholder="Symbol (e.g. BTC)"
-                        className="w-1/3 bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:border-primary/50 outline-none uppercase"
-                    />
+                        className="w-1/3 bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:border-primary/50 outline-none appearance-none cursor-pointer"
+                    >
+                        <option value="">Symbol</option>
+                        {POPULAR_SYMBOLS.map(sym => (
+                            <option key={sym} value={sym}>{sym}</option>
+                        ))}
+                    </select>
                     <select
                         value={condition}
                         onChange={(e) => setCondition(e.target.value)}

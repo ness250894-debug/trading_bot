@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, TrendingUp, TrendingDown, Star } from 'lucide-react';
 import api from '../lib/api';
 import { useToast } from './ToastContext';
+import { POPULAR_SYMBOLS } from '../constants/symbols';
 
 export default function WatchlistWidget() {
     const [watchlist, setWatchlist] = useState([]);
@@ -44,7 +45,7 @@ export default function WatchlistWidget() {
 
     const handleRemoveSymbol = async (symbol) => {
         try {
-            await api.delete(`/watchlist/${symbol}`);
+            await api.delete('/watchlist/remove', { params: { symbol } });
             setWatchlist(prev => prev.filter(item => item.symbol !== symbol));
             toast.success('Symbol removed from watchlist');
         } catch (error) {
@@ -67,13 +68,16 @@ export default function WatchlistWidget() {
             </div>
 
             <form onSubmit={handleAddSymbol} className="flex gap-2 mb-4">
-                <input
-                    type="text"
+                <select
                     value={newSymbol}
                     onChange={(e) => setNewSymbol(e.target.value)}
-                    placeholder="Add symbol (e.g. BTC/USDT)"
-                    className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:border-primary/50 outline-none uppercase"
-                />
+                    className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:border-primary/50 outline-none appearance-none cursor-pointer"
+                >
+                    <option value="">Select Symbol</option>
+                    {POPULAR_SYMBOLS.map(sym => (
+                        <option key={sym} value={sym}>{sym}</option>
+                    ))}
+                </select>
                 <button
                     type="submit"
                     disabled={adding || !newSymbol}

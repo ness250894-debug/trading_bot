@@ -30,7 +30,9 @@ export const formatLabel = (text) => {
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ')
         .replace(/\s+tier$/i, '') // Remove "Tier" suffix
-        .replace(/\s+plan$/i, ''); // Remove "Plan" suffix
+        .replace(/\s+plan$/i, '') // Remove "Plan" suffix
+        .replace(/\s+monthly$/i, '') // Remove "Monthly" suffix
+        .replace(/\s+yearly$/i, ''); // Remove "Yearly" suffix
 };
 
 /**

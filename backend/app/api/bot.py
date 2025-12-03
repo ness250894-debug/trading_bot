@@ -583,7 +583,7 @@ async def add_to_watchlist_endpoint(request: Request, data: WatchlistAdd, curren
         logger.error(f"Error adding to watchlist: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/watchlist/{symbol}")
+@router.delete("/watchlist/remove")
 @limiter.limit("20/minute")
 async def remove_from_watchlist_endpoint(request: Request, symbol: str, current_user: dict = Depends(auth.get_current_user)):
     """Remove symbol from watchlist."""
