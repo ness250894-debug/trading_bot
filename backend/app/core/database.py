@@ -322,7 +322,7 @@ class DuckDBHandler:
                         dry_run BOOLEAN DEFAULT TRUE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        FOREIGN KEY (user_id) REFERENCES users(id)
                     )
                 """)
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_bot_configs_user ON bot_configurations(user_id)")
@@ -341,8 +341,8 @@ class DuckDBHandler:
                         tags VARCHAR,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        FOREIGN KEY (trade_id) REFERENCES trades(id),
+                        FOREIGN KEY (user_id) REFERENCES users(id)
                     )
                 """)
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_trade_notes_trade ON trade_notes(trade_id)")
@@ -360,7 +360,7 @@ class DuckDBHandler:
                         symbol VARCHAR NOT NULL,
                         notes TEXT,
                         added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        FOREIGN KEY (user_id) REFERENCES users(id)
                     )
                 """)
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_watchlist_user ON watchlists(user_id)")
@@ -380,7 +380,7 @@ class DuckDBHandler:
                         is_active BOOLEAN DEFAULT TRUE,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         triggered_at TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        FOREIGN KEY (user_id) REFERENCES users(id)
                     )
                 """)
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_alerts_user ON price_alerts(user_id)")
@@ -398,7 +398,7 @@ class DuckDBHandler:
                         layout_config TEXT,
                         widgets_enabled TEXT,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        FOREIGN KEY (user_id) REFERENCES users(id)
                     )
                 """)
                 self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_prefs_user ON dashboard_preferences(user_id)")
@@ -417,7 +417,7 @@ class DuckDBHandler:
                         strategy VARCHAR NOT NULL,
                         parameters TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                        FOREIGN KEY (user_id) REFERENCES users(id)
                     )
                 """)
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_templates_user ON backtest_templates(user_id)")
