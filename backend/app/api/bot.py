@@ -66,26 +66,43 @@ from datetime import datetime
 
 @router.post("/start")
 @limiter.limit("5/minute")
-async def start_bot(request: Request, symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
-    """Start user's bot instance for a specific symbol (or default from config)."""
+async def start_bot(request: Request, symbol: Optional[str] = None, config_id: Optional[int] = None, current_user: dict = Depends(auth.get_current_user)):
+    """Start user's bot instance for a specific symbol or config."""
     try:
         user_id = current_user['id']
         
-        # Load user's strategy from database
-        strategy_config = db.get_user_strategy(user_id)
-        
-        # If no strategy in DB, use config.json as default
-        if not strategy_config:
-            strategy_config = {
-                "SYMBOL": config.SYMBOL,
-                "TIMEFRAME": config.TIMEFRAME,
-                "AMOUNT_USDT": config.AMOUNT_USDT,
-                "STRATEGY": getattr(config, 'STRATEGY', 'mean_reversion'),
-                "STRATEGY_PARAMS": getattr(config, 'STRATEGY_PARAMS', {}),
-                "DRY_RUN": getattr(config, 'DRY_RUN', True),
-                "TAKE_PROFIT_PCT": config.TAKE_PROFIT_PCT,
-                "STOP_LOSS_PCT": config.STOP_LOSS_PCT,
-            }
+        # If config_id is provided, load that specific config
+        if config_id:
+            strategy_config = db.get_bot_config(user_id, config_id)
+            if not strategy_config:
+                raise HTTPException(status_code=404, detail="Bot configuration not found")
+            
+            # Map DB keys to what bot expects
+            strategy_config['SYMBOL'] = strategy_config['symbol']
+            strategy_config['TIMEFRAME'] = strategy_config['timeframe']
+            strategy_config['AMOUNT_USDT'] = strategy_config['amount_usdt']
+            strategy_config['STRATEGY'] = strategy_config['strategy']
+            strategy_config['STRATEGY_PARAMS'] = strategy_config.get('parameters', {})
+            strategy_config['DRY_RUN'] = strategy_config['dry_run']
+            strategy_config['TAKE_PROFIT_PCT'] = strategy_config['take_profit_pct']
+            strategy_config['STOP_LOSS_PCT'] = strategy_config['stop_loss_pct']
+            
+        else:
+            # Legacy fallback: Load user's strategy from old table or config.json
+            strategy_config = db.get_user_strategy(user_id)
+            
+            # If no strategy in DB, use config.json as default
+            if not strategy_config:
+                strategy_config = {
+                    "SYMBOL": config.SYMBOL,
+                    "TIMEFRAME": config.TIMEFRAME,
+                    "AMOUNT_USDT": config.AMOUNT_USDT,
+                    "STRATEGY": getattr(config, 'STRATEGY', 'mean_reversion'),
+                    "STRATEGY_PARAMS": getattr(config, 'STRATEGY_PARAMS', {}),
+                    "DRY_RUN": getattr(config, 'DRY_RUN', True),
+                    "TAKE_PROFIT_PCT": config.TAKE_PROFIT_PCT,
+                    "STOP_LOSS_PCT": config.STOP_LOSS_PCT,
+                }
             
         # Enforce Billing for Live Trading
         is_dry_run = strategy_config.get("DRY_RUN", True)
@@ -125,29 +142,21 @@ async def start_bot(request: Request, symbol: Optional[str] = None, current_user
             
             # 2. Force Default Strategy
             if strategy_config.get("STRATEGY") != 'mean_reversion':
-                # We could force it here, but better to fail if they try to run something else
-                # Or just override it silently? User asked to "cannot choose strategy".
-                # Let's override it to be safe, but maybe warn?
-                # Actually, let's just enforce it.
                 strategy_config["STRATEGY"] = 'mean_reversion'
-                # Also reset params to default? Maybe not strictly necessary if strategy is fixed.
             
             # 3. Limit to 1 Bot
             # Check if any bot is already running
             running_bots = bot_manager.get_status(user_id)
             if running_bots:
-                # running_bots can be a dict of {symbol: status} or a single status dict
-                # If it's a dict of dicts, check if any is running
                 any_running = False
                 if isinstance(running_bots, dict):
-                    # Check if it's a multi-instance response (keys are symbols)
-                    # A single instance status also has keys like 'user_id', 'is_running'
+                    # Check if it's a multi-instance response
                     if 'is_running' in running_bots:
                          if running_bots['is_running']:
                              any_running = True
                     else:
-                        # It's a dict of symbols
-                        for sym, status in running_bots.items():
+                        # It's a dict of instances keyed by config_id
+                        for key, status in running_bots.items():
                             if status.get('is_running'):
                                 any_running = True
                                 break
@@ -156,8 +165,8 @@ async def start_bot(request: Request, symbol: Optional[str] = None, current_user
                      raise HTTPException(status_code=403, detail="Free plan is limited to 1 active bot.")
 
         
-        # Start bot instance with optional symbol parameter
-        success = bot_manager.start_bot(user_id, strategy_config, symbol=symbol)
+        # Start bot instance
+        success = bot_manager.start_bot(user_id, strategy_config, config_id=config_id)
         
         if success:
             logger.info(f"Bot started for user {user_id}")
@@ -169,13 +178,14 @@ async def start_bot(request: Request, symbol: Optional[str] = None, current_user
         logger.error(f"Error starting bot: {e}")
         raise HTTPException(status_code=500, detail="Failed to start bot")
 
+
 @router.post("/stop")
 @limiter.limit("10/minute")
-async def stop_bot(request: Request, symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
+async def stop_bot(request: Request, symbol: Optional[str] = None, config_id: Optional[int] = None, current_user: dict = Depends(auth.get_current_user)):
     """Stop user's bot instance. If symbol is None, stops all instances."""
     try:
         user_id = current_user['id']
-        success = bot_manager.stop_bot(user_id, symbol=symbol)
+        success = bot_manager.stop_bot(user_id, config_id=config_id, symbol=symbol)
         
         if success:
             logger.info(f"Bot stopped for user {user_id}")

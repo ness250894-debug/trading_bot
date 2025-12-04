@@ -8,8 +8,9 @@ logger = logging.getLogger("BotManager")
 class BotInstance:
     """Represents a single user's bot instance."""
     
-    def __init__(self, user_id: int, strategy_config: dict):
+    def __init__(self, user_id: int, config_id: int, strategy_config: dict):
         self.user_id = user_id
+        self.config_id = config_id
         self.strategy_config = strategy_config
         self.thread: Optional[threading.Thread] = None
         self.running_event = threading.Event()
@@ -26,6 +27,7 @@ class BotInstance:
         """Get current status of this bot instance."""
         return {
             "user_id": self.user_id,
+            "config_id": self.config_id,
             "is_running": self.is_running(),
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "stopped_at": self.stopped_at.isoformat() if self.stopped_at else None,
@@ -53,12 +55,12 @@ class BotManager:
         if self._initialized:
             return
         
-        # Changed: Support multiple instances per user (one per symbol)
-        # instances[user_id][symbol] = BotInstance
-        self.instances: Dict[int, Dict[str, BotInstance]] = {}
+        # Changed: Support multiple instances per user (keyed by config_id)
+        # instances[user_id][config_id] = BotInstance
+        self.instances: Dict[int, Dict[int, BotInstance]] = {}
         self.instances_lock = threading.Lock()
         self._initialized = True
-        logger.info("BotManager initialized with multi-instance support")
+        logger.info("BotManager initialized with multi-instance support (config_id keyed)")
     
     @classmethod
     def get_instance(cls):
@@ -67,34 +69,36 @@ class BotManager:
             cls()
         return cls._instance
     
-    def start_bot(self, user_id: int, strategy_config: dict, symbol: str = None) -> bool:
+    def start_bot(self, user_id: int, strategy_config: dict, config_id: int = None) -> bool:
         """
-        Start a bot instance for a user and symbol.
+        Start a bot instance for a user and config.
         
         Args:
             user_id: User ID
             strategy_config: Strategy configuration dict
-            symbol: Trading symbol (e.g., 'BTC/USDT'). If None, uses config['SYMBOL']
+            config_id: Configuration ID. If None, assumes legacy single-bot mode (use 0)
         
         Returns:
             True if successful
         """
-        # Extract symbol from config if not provided
-        if symbol is None:
-            symbol = strategy_config.get('SYMBOL', 'BTC/USDT')
+        # If config_id not provided, use 0 (legacy/default)
+        if config_id is None:
+            config_id = 0
+            
+        symbol = strategy_config.get('SYMBOL', 'BTC/USDT')
         
         with self.instances_lock:
             # Initialize user's instances dict if needed
             if user_id not in self.instances:
                 self.instances[user_id] = {}
             
-            # Stop existing instance for this symbol if running
-            if symbol in self.instances[user_id]:
-                logger.info(f"Stopping existing bot for user {user_id}, symbol {symbol}")
-                self._stop_bot_internal(user_id, symbol)
+            # Stop existing instance for this config if running
+            if config_id in self.instances[user_id]:
+                logger.info(f"Stopping existing bot for user {user_id}, config {config_id}")
+                self._stop_bot_internal(user_id, config_id)
             
             # Create new instance
-            instance = BotInstance(user_id, strategy_config)
+            instance = BotInstance(user_id, config_id, strategy_config)
             
             # Import here to avoid circular dependency
             from .bot import run_bot_instance
@@ -107,7 +111,7 @@ class BotManager:
                     # Pass runtime_state to the bot loop
                     run_bot_instance(user_id, strategy_config, instance.running_event, instance.runtime_state)
                 except Exception as e:
-                    logger.error(f"Bot instance for user {user_id}, symbol {symbol} crashed: {e}")
+                    logger.error(f"Bot instance for user {user_id}, config {config_id} crashed: {e}")
                     import traceback
                     traceback.print_exc()
                 finally:
@@ -116,27 +120,27 @@ class BotManager:
             
             instance.thread = threading.Thread(
                 target=bot_thread_wrapper,
-                name=f"Bot-User-{user_id}-{symbol.replace('/', '-')}",
+                name=f"Bot-User-{user_id}-Config-{config_id}",
                 daemon=True
             )
             instance.thread.start()
             
-            self.instances[user_id][symbol] = instance
-            logger.info(f"Started bot instance for user {user_id}, symbol {symbol}")
+            self.instances[user_id][config_id] = instance
+            logger.info(f"Started bot instance for user {user_id}, config {config_id} ({symbol})")
             return True
     
     
-    def _stop_bot_internal(self, user_id: int, symbol: str) -> bool:
+    def _stop_bot_internal(self, user_id: int, config_id: int) -> bool:
         """Internal method to stop a specific bot instance (must be called with lock held)."""
-        if user_id not in self.instances or symbol not in self.instances[user_id]:
+        if user_id not in self.instances or config_id not in self.instances[user_id]:
             return False
         
-        instance = self.instances[user_id][symbol]
+        instance = self.instances[user_id][config_id]
         
         if not instance.is_running():
-            logger.info(f"Bot instance for user {user_id}, symbol {symbol} already stopped")
+            logger.info(f"Bot instance for user {user_id}, config {config_id} already stopped")
             # Clean up non-running instance
-            del self.instances[user_id][symbol]
+            del self.instances[user_id][config_id]
             if not self.instances[user_id]:
                 del self.instances[user_id]
             return True
@@ -150,22 +154,24 @@ class BotManager:
             instance.thread.join(timeout=5.0)
         
         # Remove instance
-        del self.instances[user_id][symbol]
+        del self.instances[user_id][config_id]
         
         # Clean up user entry if no instances left
         if not self.instances[user_id]:
             del self.instances[user_id]
         
-        logger.info(f"Stopped bot instance for user {user_id}, symbol {symbol}")
+        logger.info(f"Stopped bot instance for user {user_id}, config {config_id}")
         return True
     
-    def stop_bot(self, user_id: int, symbol: str = None) -> bool:
+    def stop_bot(self, user_id: int, config_id: int = None, symbol: str = None) -> bool:
         """
-        Stop a bot instance for a user and symbol.
+        Stop a bot instance for a user.
         
         Args:
             user_id: User ID
-            symbol: Trading symbol. If None, stops ALL instances for this user
+            config_id: Configuration ID. If None, checks symbol.
+            symbol: Trading symbol (Legacy support). If provided and config_id is None, stops all bots with this symbol.
+                    If both None, stops ALL instances for this user.
         
         Returns:
             True if successful
@@ -175,46 +181,52 @@ class BotManager:
                 logger.warning(f"No bot instances found for user {user_id}")
                 return False
             
-            # If symbol not specified, stop all instances for user
-            if symbol is None:
-                symbols_to_stop = list(self.instances[user_id].keys())
-                logger.info(f"Stopping all {len(symbols_to_stop)} bot instances for user {user_id}")
-                for sym in symbols_to_stop:
-                    self._stop_bot_internal(user_id, sym)
-                return True
+            # If config_id specified, stop that specific bot
+            if config_id is not None:
+                if config_id not in self.instances[user_id]:
+                    logger.warning(f"No bot instance found for user {user_id}, config {config_id}")
+                    return False
+                return self._stop_bot_internal(user_id, config_id)
             
-            # Stop specific symbol
-            if symbol not in self.instances[user_id]:
-                logger.warning(f"No bot instance found for user {user_id}, symbol {symbol}")
-                return False
+            # If symbol specified (legacy support), stop all bots with that symbol
+            if symbol is not None:
+                stopped_any = False
+                # Create list to avoid runtime error during iteration
+                configs_to_check = list(self.instances[user_id].items())
+                for cid, instance in configs_to_check:
+                    if instance.strategy_config.get('SYMBOL') == symbol:
+                        if self._stop_bot_internal(user_id, cid):
+                            stopped_any = True
+                return stopped_any
             
-            return self._stop_bot_internal(user_id, symbol)
+            # If neither specified, stop all instances for user
+            configs_to_stop = list(self.instances[user_id].keys())
+            logger.info(f"Stopping all {len(configs_to_stop)} bot instances for user {user_id}")
+            for cid in configs_to_stop:
+                self._stop_bot_internal(user_id, cid)
+            return True
     
     
-    def restart_bot(self, user_id: int, strategy_config: dict, symbol: str = None) -> bool:
+    def restart_bot(self, user_id: int, strategy_config: dict, config_id: int = None, symbol: str = None) -> bool:
         """
         Restart a bot instance with new configuration.
-        
-        Args:
-            user_id: User ID
-            strategy_config: New strategy configuration
-            symbol: Trading symbol. If None, uses config['SYMBOL']
         """
-        if symbol is None:
-            symbol = strategy_config.get('SYMBOL', 'BTC/USDT')
-        
-        logger.info(f"Restarting bot for user {user_id}, symbol {symbol}")
-        self.stop_bot(user_id, symbol)
-        return self.start_bot(user_id, strategy_config, symbol)
+        if config_id is None:
+            config_id = 0
+            
+        logger.info(f"Restarting bot for user {user_id}, config {config_id}")
+        self.stop_bot(user_id, config_id=config_id)
+        return self.start_bot(user_id, strategy_config, config_id=config_id)
     
     
-    def get_status(self, user_id: int, symbol: str = None) -> Optional[dict]:
+    def get_status(self, user_id: int, config_id: int = None, symbol: str = None) -> Optional[dict]:
         """
         Get status of a specific user's bot instance(s).
         
         Args:
             user_id: User ID
-            symbol: Trading symbol. If None, returns status for all symbols
+            config_id: Config ID. If provided, returns status for that bot.
+            symbol: Symbol (Legacy). If provided, returns status for all bots with that symbol.
         
         Returns:
             Dict with status, or None if no instances found
@@ -223,16 +235,24 @@ class BotManager:
             if user_id not in self.instances:
                 return None
             
-            # If symbol specified, return status for that symbol only
-            if symbol is not None:
-                if symbol not in self.instances[user_id]:
+            # If config_id specified, return status for that config
+            if config_id is not None:
+                if config_id not in self.instances[user_id]:
                     return None
-                return self.instances[user_id][symbol].get_status()
+                return self.instances[user_id][config_id].get_status()
             
-            # Return status for all symbols
+            # If symbol specified, return dict of statuses for that symbol
+            if symbol is not None:
+                statuses = {}
+                for cid, instance in self.instances[user_id].items():
+                    if instance.strategy_config.get('SYMBOL') == symbol:
+                        statuses[cid] = instance.get_status()
+                return statuses if statuses else None
+            
+            # Return status for all instances (keyed by config_id)
             return {
-                sym: instance.get_status()
-                for sym, instance in self.instances[user_id].items()
+                cid: instance.get_status()
+                for cid, instance in self.instances[user_id].items()
             }
     
     
@@ -241,36 +261,30 @@ class BotManager:
         with self.instances_lock:
             all_instances = []
             for user_id, user_instances in self.instances.items():
-                for symbol, instance in user_instances.items():
+                for config_id, instance in user_instances.items():
                     if instance.is_running():
                         all_instances.append(instance.get_status())
             return all_instances
     
     
-    def get_running_event(self, user_id: int, symbol: str = None) -> Optional[threading.Event]:
+    def get_running_event(self, user_id: int, config_id: int = None) -> Optional[threading.Event]:
         """
         Get the running event for a user's bot (for pause/resume).
-        
-        Args:
-            user_id: User ID
-            symbol: Trading symbol. If None and user has only one instance, returns that.
-                   If None and user has multiple instances, returns None.
         """
         with self.instances_lock:
             if user_id not in self.instances:
                 return None
             
-            # If symbol specified, return event for that symbol
-            if symbol is not None:
-                if symbol in self.instances[user_id]:
-                    return self.instances[user_id][symbol].running_event
+            # If config_id specified, return event for that config
+            if config_id is not None:
+                if config_id in self.instances[user_id]:
+                    return self.instances[user_id][config_id].running_event
                 return None
             
             # If only one instance, return it
             if len(self.instances[user_id]) == 1:
                 return list(self.instances[user_id].values())[0].running_event
             
-            # Multiple instances, symbol required
             return None
 
 

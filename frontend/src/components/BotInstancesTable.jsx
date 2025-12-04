@@ -23,80 +23,119 @@ export default function BotInstancesTable({
 
     // Handle multi-instance response format - combine with botConfigs
     const allBots = React.useMemo(() => {
-        const runningBots = [];
+        const botMap = new Map();
 
-        // Parse running instances
+        // 1. Add all configured bots first
+        botConfigs?.forEach(config => {
+            const id = config.id; // config_id
+            botMap.set(id, {
+                ...config,
+                config_id: id,
+                is_running: false, // Default, will be overridden if running
+                source: 'config'
+            });
+        });
+
+        // 2. Merge running instances
         if (instances && typeof instances === 'object' && !Array.isArray(instances)) {
+            // Check if it's a single instance response (legacy)
             if ('is_running' in instances) {
-                runningBots.push({
-                    symbol: instances.symbol || 'BTC/USDT',
-                    ...instances
-                });
+                const status = instances;
+                const configId = status.config_id;
+                const symbol = status.symbol || 'BTC/USDT';
+
+                // If we have a configId, merge with existing or add new
+                if (configId) {
+                    const existing = botMap.get(configId) || {};
+                    botMap.set(configId, { ...existing, ...status, config_id: configId, source: 'running' });
+                } else {
+                    // Legacy: try to match by symbol or add as "legacy-{symbol}"
+                    // This is tricky if we have multiple configs for same symbol.
+                    // But legacy usually implies single bot.
+                    // Let's just add it with a special key if not found
+                    const foundConfig = botConfigs?.find(c => c.symbol === symbol);
+                    if (foundConfig) {
+                        botMap.set(foundConfig.id, { ...foundConfig, ...status, config_id: foundConfig.id });
+                    } else {
+                        botMap.set(`legacy-${symbol}`, { ...status, symbol, source: 'running_legacy' });
+                    }
+                }
             } else {
-                Object.entries(instances).forEach(([symbol, status]) => {
-                    runningBots.push({
-                        symbol,
-                        ...status
-                    });
+                // Dict of instances {config_id: status}
+                Object.entries(instances).forEach(([key, status]) => {
+                    const configId = status.config_id || parseInt(key); // key might be string "1"
+
+                    if (configId) {
+                        const existing = botMap.get(configId) || {};
+                        botMap.set(configId, { ...existing, ...status, config_id: configId, source: 'running' });
+                    } else {
+                        // Fallback for purely symbol-keyed legacy maps (if any)
+                        const symbol = status.symbol || key;
+                        botMap.set(`legacy-${symbol}`, { ...status, symbol, source: 'running_legacy' });
+                    }
                 });
             }
         }
 
-        // Merge with bot configs - show all configured bots
-        const allBotsMap = new Map();
-
-        // Add running bots
-        runningBots.forEach(bot => {
-            allBotsMap.set(bot.symbol, bot);
-        });
-
-        // Add configured bots (not yet started)
-        botConfigs?.forEach(config => {
-            if (!allBotsMap.has(config.symbol)) {
-                allBotsMap.set(config.symbol, {
-                    ...config,
-                    is_running: false,
-                    strategy: config.strategy
-                });
-            }
-        });
-
-        return Array.from(allBotsMap.values());
+        return Array.from(botMap.values());
     }, [instances, botConfigs]);
 
     const handleSelectAll = (checked) => {
         if (checked) {
-            setSelectedBots(new Set(allBots.map(b => b.symbol)));
+            setSelectedBots(new Set(allBots.map(b => b.config_id || b.symbol)));
         } else {
             setSelectedBots(new Set());
         }
     };
 
-    const handleSelectBot = (symbol, checked) => {
+    const handleSelectBot = (id, checked) => {
         const newSelected = new Set(selectedBots);
         if (checked) {
-            newSelected.add(symbol);
+            newSelected.add(id);
         } else {
-            newSelected.delete(symbol);
+            newSelected.delete(id);
         }
         setSelectedBots(newSelected);
     };
 
     const handleStartSelected = async () => {
-        for (const symbol of selectedBots) {
-            await onStart(symbol);
+        for (const id of selectedBots) {
+            const bot = allBots.find(b => (b.config_id || b.symbol) === id);
+            if (bot) {
+                await onStart(bot.symbol, bot.config_id);
+            }
         }
     };
 
     const handleStopSelected = async () => {
-        for (const symbol of selectedBots) {
-            await onStop(symbol);
+        for (const id of selectedBots) {
+            const bot = allBots.find(b => (b.config_id || b.symbol) === id);
+            if (bot) {
+                await onStop(bot.symbol, bot.config_id);
+            }
         }
     };
 
     const handleBulkDelete = async () => {
         if (onBulkRemove) {
-            await onBulkRemove(Array.from(selectedBots));
+            // We need to pass symbols for bulk remove? Or IDs?
+            // The API expects IDs for configs.
+            // But handleBulkRemove in Main.jsx currently expects symbols.
+            // I should update Main.jsx handleBulkRemove to accept IDs too, or just loop here.
+
+            // Actually, let's just use onRemoveBot for each selected item for now to be safe,
+            // or update Main.jsx. 
+            // Main.jsx handleBulkRemove: const configsToDelete = botConfigs.filter(c => symbols.includes(c.symbol));
+            // It filters by symbol. This is bad for multiple bots.
+
+            // Let's assume we can't easily bulk remove by ID with current Main.jsx without changing it.
+            // But wait, I can just call onRemoveBot for each.
+            for (const id of selectedBots) {
+                const bot = allBots.find(b => (b.config_id || b.symbol) === id);
+                if (bot) {
+                    await onRemoveBot(bot.symbol, bot.config_id);
+                }
+            }
             setSelectedBots(new Set());
         }
     };
@@ -193,29 +232,32 @@ export default function BotInstancesTable({
                         <tbody className="divide-y divide-white/5">
                             {allBots.map((bot) => {
                                 const isRunning = bot.is_running || false;
-                                const isStarting = startingBots?.has(bot.symbol);
-                                const isSelected = selectedBots.has(bot.symbol);
-                                const config = botConfigs?.find(c => c.symbol === bot.symbol);
+                                const uniqueId = bot.config_id || bot.symbol; // Use config_id if available
+                                const isStarting = startingBots?.has(bot.symbol) || startingBots?.has(`${bot.symbol}-${bot.config_id}`);
+                                const isSelected = selectedBots.has(uniqueId);
 
                                 return (
-                                    <tr key={bot.symbol} className="hover:bg-white/5 transition-colors">
+                                    <tr key={uniqueId} className="hover:bg-white/5 transition-colors">
                                         <td className="px-6 py-4">
                                             <input
                                                 type="checkbox"
                                                 checked={isSelected}
-                                                onChange={(e) => handleSelectBot(bot.symbol, e.target.checked)}
+                                                onChange={(e) => handleSelectBot(uniqueId, e.target.checked)}
                                                 className="w-4 h-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
                                             />
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
-                                                <span className="font-mono font-bold text-foreground">{bot.symbol}</span>
+                                                <div>
+                                                    <span className="font-mono font-bold text-foreground block">{bot.symbol}</span>
+                                                    {bot.config_id && <span className="text-xs text-muted-foreground">ID: {bot.config_id}</span>}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-sm text-muted-foreground capitalize">
-                                                {(bot.strategy || bot.config?.strategy || 'Unknown').replace(/_/g, ' ')}
+                                                {(bot.strategy || 'Unknown').replace(/_/g, ' ')}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
@@ -242,7 +284,7 @@ export default function BotInstancesTable({
 
                                                 {isRunning ? (
                                                     <button
-                                                        onClick={() => onStop(bot.symbol)}
+                                                        onClick={() => onStop(bot.symbol, bot.config_id)}
                                                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors text-sm font-medium border border-red-500/20"
                                                     >
                                                         <Square size={14} fill="currentColor" />
@@ -250,7 +292,7 @@ export default function BotInstancesTable({
                                                     </button>
                                                 ) : (
                                                     <button
-                                                        onClick={() => onStart(bot.symbol)}
+                                                        onClick={() => onStart(bot.symbol, bot.config_id)}
                                                         disabled={isStarting}
                                                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors text-sm font-medium border border-primary/20 disabled:opacity-50"
                                                     >
@@ -265,7 +307,7 @@ export default function BotInstancesTable({
 
                                                 {/* Delete Button */}
                                                 <button
-                                                    onClick={() => onRemoveBot(bot.symbol, config?.id)}
+                                                    onClick={() => onRemoveBot(bot.symbol, bot.config_id)}
                                                     className="p-1.5 hover:bg-red-500/10 rounded text-red-400 transition-all"
                                                     title="Delete bot"
                                                 >

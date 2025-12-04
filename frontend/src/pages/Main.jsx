@@ -207,17 +207,22 @@ export default function Main() {
         }
     };
 
-    const handleStartBot = async (symbol) => {
+    const handleStartBot = async (symbol, configId) => {
         try {
-            setStartingBots(prev => new Set(prev).add(symbol));
+            const key = configId ? `${symbol}-${configId}` : symbol;
+            setStartingBots(prev => new Set(prev).add(key));
 
-            // Restore config for this bot if available
-            const config = botConfigs.find(c => c.symbol === symbol);
-            if (config) {
-                await api.post('/config', config);
+            if (configId) {
+                await api.post('/start', null, { params: { config_id: configId } });
+            } else {
+                // Legacy support
+                const config = botConfigs.find(c => c.symbol === symbol);
+                if (config) {
+                    await api.post('/config', config);
+                }
+                await api.post('/start', null, { params: { symbol } });
             }
 
-            await api.post('/start', null, { params: { symbol } });
             toast.success(`Started bot for ${symbol}`);
             // Refresh status
             const res = await api.get('/status');
@@ -225,17 +230,23 @@ export default function Main() {
         } catch (err) {
             toast.error(err.response?.data?.detail || `Failed to start bot for ${symbol}`);
         } finally {
+            const key = configId ? `${symbol}-${configId}` : symbol;
             setStartingBots(prev => {
                 const newSet = new Set(prev);
-                newSet.delete(symbol);
+                newSet.delete(key);
                 return newSet;
             });
         }
     };
 
-    const handleStopBot = async (symbol) => {
+    const handleStopBot = async (symbol, configId) => {
         try {
-            await api.post('/stop', null, { params: { symbol } });
+            if (configId) {
+                await api.post('/stop', null, { params: { config_id: configId } });
+            } else {
+                await api.post('/stop', null, { params: { symbol } });
+            }
+
             toast.success(`Stopped bot for ${symbol}`);
             // Refresh status
             const res = await api.get('/status');
