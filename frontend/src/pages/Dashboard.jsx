@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { Activity, DollarSign, TrendingUp, Clock, AlertCircle, PieChart as PieChartIcon, BarChart2 } from 'lucide-react';
@@ -6,13 +6,14 @@ import TradeHistory from '../components/TradeHistory';
 import TradingGoalsWidget from '../components/TradingGoalsWidget';
 import Disclaimer from '../components/Disclaimer';
 import { formatStrategyName } from '../lib/utils';
+import { ToastContext } from '../components/ToastContext';
 
 const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
     const isPracticeMode = status?.config?.dry_run;
     const hasApiConnected = status?.balance?.total !== undefined && status?.balance?.total !== null;
 
     return (
-        <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1 md:col-span-2 lg:col-span-1">
+        <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1 md:col-span-4">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                 <DollarSign size={120} />
             </div>
@@ -150,6 +151,7 @@ const PnLCard = ({ trades, totalPnl }) => {
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#6366f1'];
 
 export default function Dashboard() {
+    const toast = useContext(ToastContext);
     const [status, setStatus] = useState(null);
     const [trades, setTrades] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -278,9 +280,9 @@ export default function Dashboard() {
             await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
             const statusRes = await api.get('/status');
             setStatus(statusRes.data);
-            alert('Practice balance has been reset to $10,000!');
+            toast.success('Practice balance has been reset to $10,000!');
         } catch (err) {
-            alert('Failed to refresh balance. Please try again.');
+            toast.error('Failed to refresh balance. Please try again.');
         } finally {
             setRefreshingBalance(false);
         }
