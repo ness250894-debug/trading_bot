@@ -4,6 +4,8 @@ import api from '../lib/api';
 import { useToast } from './ToastContext';
 import { POPULAR_SYMBOLS } from '../constants/symbols';
 
+import Combobox from './Combobox';
+
 export default function WatchlistWidget() {
     const [watchlist, setWatchlist] = useState([]);
     const [newSymbol, setNewSymbol] = useState('');
@@ -68,16 +70,13 @@ export default function WatchlistWidget() {
             </div>
 
             <form onSubmit={handleAddSymbol} className="flex gap-2 mb-4">
-                <select
+                <Combobox
+                    options={POPULAR_SYMBOLS}
                     value={newSymbol}
-                    onChange={(e) => setNewSymbol(e.target.value)}
-                    className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:border-primary/50 outline-none appearance-none cursor-pointer"
-                >
-                    <option value="">Select Symbol</option>
-                    {POPULAR_SYMBOLS.map(sym => (
-                        <option key={sym} value={sym}>{sym}</option>
-                    ))}
-                </select>
+                    onChange={setNewSymbol}
+                    placeholder="Symbol (e.g. BTC/USDT)"
+                    className="flex-1"
+                />
                 <button
                     type="submit"
                     disabled={adding || !newSymbol}

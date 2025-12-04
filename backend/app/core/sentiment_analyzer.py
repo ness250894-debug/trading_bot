@@ -145,8 +145,6 @@ class SentimentAnalyzer:
                 'score': 50,
                 'confidence': 0,
                 'summary': 'AI analysis unavailable'
-            }
-        
         try:
             # Prepare prompt for Gemini
             news_text = "\n".join([f"- {item}" for item in news_items[:15]])
@@ -156,45 +154,42 @@ Analyze the market sentiment for {symbol} cryptocurrency based on the following 
 
 {news_text}
 
-Please provide:
-1. Overall sentiment (bullish, bearish, or neutral)
-2. Sentiment score (0-100, where 0 is extremely bearish, 50 is neutral, 100 is extremely bullish)
-3. Confidence level (0-100)
-4. Brief 1-sentence summary
+Please provide a detailed analysis in JSON format with the following fields:
+1. "sentiment": "bullish", "bearish", or "neutral"
+2. "score": 0-100 (0=bearish, 100=bullish)
+3. "confidence": 0-100
+4. "summary": Brief 1-sentence summary
+5. "signal_strength": "strong", "moderate", or "weak"
+6. "topics": List of top 3 key topics or drivers (e.g., ["ETF Approval", "Regulatory Concerns", "Tech Upgrade"])
 
-Format your response as:
-Sentiment: [bullish/bearish/neutral]
-Score: [number]
-Confidence: [number]
-Summary: [one sentence]
+Output ONLY valid JSON.
 """
             
             response = self.model.generate_content(prompt)
             text = response.text
             
-            # Parse Gemini response
-            sentiment = 'neutral'
-            score = 50
-            confidence = 50
-            summary = ''
+            # Clean up response to ensure valid JSON
+            text = text.replace('```json', '').replace('```', '').strip()
             
-            for line in text.split('\n'):
-                line = line.strip()
-                if line.startswith('Sentiment:'):
-                    sentiment = line.split(':', 1)[1].strip().lower()
-                elif line.startswith('Score:'):
-                    try:
-                        score = int(line.split(':', 1)[1].strip())
-                    except (ValueError, IndexError) as e:
-                        logger.debug(f"Failed to parse score: {e}")
-                elif line.startswith('Confidence:'):
-                    try:
-                        confidence = int(line.split(':', 1)[1].strip())
-                    except (ValueError, IndexError) as e:
-                        logger.debug(f"Failed to parse confidence: {e}")
-                elif line.startswith('Summary:'):
-                    summary = line.split(':', 1)[1].strip()
-            
+            import json
+            try:
+                data = json.loads(text)
+                sentiment = data.get('sentiment', 'neutral').lower()
+                score = int(data.get('score', 50))
+                confidence = int(data.get('confidence', 50))
+                summary = data.get('summary', 'No summary available')
+                signal_strength = data.get('signal_strength', 'moderate')
+                topics = data.get('topics', [])
+            except json.JSONDecodeError:
+                logger.error(f"Failed to parse Gemini JSON response: {text}")
+                # Fallback parsing
+                sentiment = 'neutral'
+                score = 50
+                confidence = 0
+                summary = "Failed to parse AI response"
+                signal_strength = "weak"
+                topics = []
+
             # Ensure score is in valid range
             score = max(0, min(100, score))
             confidence = max(0, min(100, confidence))
@@ -204,6 +199,8 @@ Summary: [one sentence]
                 'score': score,
                 'confidence': confidence,
                 'summary': summary,
+                'signal_strength': signal_strength,
+                'topics': topics,
                 'analyzed_at': datetime.now().isoformat()
             }
             
@@ -216,7 +213,9 @@ Summary: [one sentence]
                 'sentiment': 'neutral',
                 'score': 50,
                 'confidence': 0,
-                'summary': f'Analysis error: {str(e)}'
+                'summary': f'Analysis error: {str(e)}',
+                'signal_strength': 'weak',
+                'topics': []
             }
     
     def get_sentiment(self, symbol: str, use_cache: bool = True) -> Dict[str, Any]:
@@ -264,12 +263,15 @@ Summary: [one sentence]
         analysis = self.analyze_with_gemini(symbol, news_items)
         
         # Build complete result
+        # Build complete result
         result = {
             'symbol': symbol,
             'sentiment': analysis['sentiment'],
             'score': analysis['score'],
             'confidence': analysis['confidence'],
             'summary': analysis['summary'],
+            'signal_strength': analysis.get('signal_strength', 'moderate'),
+            'topics': analysis.get('topics', []),
             'news_count': len(news_items),
             'sources': ['CryptoPanic', 'Reddit'],
             'recent_news': cryptopanic_news[:5],  # Top 5 news items

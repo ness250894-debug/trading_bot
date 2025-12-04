@@ -6,6 +6,7 @@ import {
     XCircle, Play, Square, Settings, Plus, Trash2, Edit
 } from 'lucide-react';
 import SentimentWidget from '../components/SentimentWidget';
+import AdvancedSentimentWidget from '../components/AdvancedSentimentWidget';
 import BotInstancesTable from '../components/BotInstancesTable';
 import WatchlistWidget from '../components/WatchlistWidget';
 import PriceAlertsWidget from '../components/PriceAlertsWidget';
@@ -376,35 +377,29 @@ export default function Main() {
             {/* Market Tools Grid */}
             <div className="grid md:grid-cols-2 gap-6">
                 {/* Watchlist */}
-                <div className="h-[400px]">
+                <div className="h-[500px]">
                     <WatchlistWidget />
                 </div>
 
                 {/* Price Alerts */}
-                <div className="h-[400px]">
+                <div className="h-[500px]">
                     <PriceAlertsWidget />
                 </div>
 
                 {/* AI Sentiment */}
-                <div className="h-[400px] flex flex-col gap-6">
+                <div className="h-[500px] flex flex-col gap-6">
                     <PlanGate feature="AI Sentiment Analysis" explanation="Get real-time market sentiment analysis powered by AI to make smarter trading decisions.">
                         <SentimentWidget />
                     </PlanGate>
 
-                    {/* New Widget Placeholder */}
+                    {/* Advanced Sentiment Widget */}
                     <PlanGate feature="Advanced Sentiment Metrics" explanation="Deep dive into sentiment analysis with advanced metrics and historical data.">
-                        <div className="glass p-6 rounded-xl h-full flex flex-col items-center justify-center text-center">
-                            <Activity size={48} className="text-primary mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">Advanced Sentiment</h3>
-                            <p className="text-muted-foreground text-sm">
-                                Detailed breakdown of market sentiment indicators.
-                            </p>
-                        </div>
+                        <AdvancedSentimentWidget />
                     </PlanGate>
                 </div>
 
                 {/* Recent Trades (Journal) */}
-                <div className="h-[400px]">
+                <div className="h-[500px]">
                     <RecentTradesWidget />
                 </div>
             </div>

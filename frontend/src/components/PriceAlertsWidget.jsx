@@ -4,6 +4,8 @@ import api from '../lib/api';
 import { useToast } from './ToastContext';
 import { POPULAR_SYMBOLS } from '../constants/symbols';
 
+import Combobox from './Combobox';
+
 export default function PriceAlertsWidget() {
     const [alerts, setAlerts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -83,16 +85,13 @@ export default function PriceAlertsWidget() {
 
             <form onSubmit={handleAddAlert} className="space-y-2 mb-4">
                 <div className="flex gap-2">
-                    <select
+                    <Combobox
+                        options={POPULAR_SYMBOLS}
                         value={symbol}
-                        onChange={(e) => setSymbol(e.target.value)}
-                        className="w-1/3 bg-black/20 border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:border-primary/50 outline-none appearance-none cursor-pointer"
-                    >
-                        <option value="">Symbol</option>
-                        {POPULAR_SYMBOLS.map(sym => (
-                            <option key={sym} value={sym}>{sym}</option>
-                        ))}
-                    </select>
+                        onChange={setSymbol}
+                        placeholder="Symbol"
+                        className="w-1/3"
+                    />
                     <select
                         value={condition}
                         onChange={(e) => setCondition(e.target.value)}
