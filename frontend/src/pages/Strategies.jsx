@@ -254,11 +254,13 @@ export default function Strategies() {
             // Redirect to Main page
             navigate('/main');
         } catch (err) {
-            const errorMsg = err.response?.data?.detail || 'Failed to add bot configuration.';
+            // API returns: {error: {code: 403, message: "..."}}
+            const errorData = err.response?.data;
+            const errorMsg = errorData?.error?.message || errorData?.detail || 'Failed to add bot configuration.';
             const statusCode = err.response?.status;
 
-            // Show upgrade modal for plan limits
-            if (statusCode === 403 && errorMsg.toLowerCase().includes('upgrade')) {
+            // Show upgrade modal for plan limits (403 errors with free plan)
+            if (statusCode === 403) {
                 modal.show({
                     title: '🚀 Upgrade Your Plan',
                     content: (
