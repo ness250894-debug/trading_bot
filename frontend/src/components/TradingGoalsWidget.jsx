@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Target, Plus, Edit2, Trash2, Check, X, Calendar } from 'lucide-react';
 import api from '../lib/api';
 
@@ -212,7 +213,7 @@ export default function TradingGoalsWidget() {
             )}
 
             {/* Add/Edit Modal */}
-            {showAddModal && (
+            {showAddModal && ReactDOM.createPortal(
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={handleCloseModal}>
                     <div className="glass rounded-2xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-6">
@@ -288,7 +289,8 @@ export default function TradingGoalsWidget() {
                             </div>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

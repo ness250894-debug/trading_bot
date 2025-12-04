@@ -12,21 +12,21 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
 
     return (
         <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1 md:col-span-2 lg:col-span-1">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <DollarSign size={80} />
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                <DollarSign size={120} />
             </div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4 relative z-10">
                 <div className="flex items-center gap-3">
                     <div className="p-3 rounded-lg bg-primary/10 text-primary">
                         <DollarSign size={24} />
                     </div>
                     <h3 className="text-base font-medium text-muted-foreground">Account Balance</h3>
                 </div>
-                {isPracticeMode && (
+                {isPracticeMode && hasApiConnected && (
                     <button
                         onClick={onRefreshBalance}
                         disabled={refreshing}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm disabled:opacity-50"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm disabled:opacity-50 relative z-20"
                         title="Reset practice balance to $10,000"
                     >
                         {refreshing ? (
@@ -40,65 +40,111 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
                     </button>
                 )}
             </div>
-            <div className="text-4xl font-bold text-foreground tracking-tight mb-3">
-                ${status?.balance?.total?.toFixed(2) || '0.00'}
-            </div>
-            <div className="space-y-2">
-                {isPracticeMode ? (
-                    <>
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Practice Balance:</span>
-                            <span className="font-semibold text-yellow-400">${status?.balance?.free?.toFixed(2) || '0.00'}</span>
+
+            {!hasApiConnected ? (
+                <div className="py-8 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted-foreground/10 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <h4 className="text-lg font-semibold mb-2">Connect Your API Keys</h4>
+                    <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                        To view your account balance and start trading, please connect your exchange API keys in Settings.
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                        <div>
+                            <div className="text-sm text-muted-foreground mb-2">Total Balance</div>
+                            <div className="text-5xl font-bold text-foreground tracking-tight mb-1">
+                                ${status?.balance?.total?.toFixed(2) || '0.00'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">USDT</div>
                         </div>
-                        <div className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                            <p className="text-xs text-yellow-400 flex items-center gap-1">
-                                <span>⚠️</span>
-                                <span>Practice Mode - No real money</span>
-                            </p>
+
+                        <div>
+                            <div className="text-sm text-muted-foreground mb-2">Available Balance</div>
+                            <div className="text-5xl font-bold text-green-400 tracking-tight mb-1">
+                                ${status?.balance?.free?.toFixed(2) || '0.00'}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Free to trade</div>
                         </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Available:</span>
-                            <span className="font-semibold text-green-400">${status?.balance?.free?.toFixed(2) || '0.00'}</span>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-4 text-sm">
+                            <div>
+                                <span className="text-muted-foreground">In Orders: </span>
+                                <span className="font-semibold">${((status?.balance?.total || 0) - (status?.balance?.free || 0)).toFixed(2)}</span>
+                            </div>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">In Orders:</span>
-                            <span className="font-semibold">${((status?.balance?.total || 0) - (status?.balance?.free || 0)).toFixed(2)}</span>
-                        </div>
-                        <div className="px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg">
-                            <p className="text-xs text-green-400 flex items-center gap-1">
-                                <span>🚀</span>
-                                <span>Live Trading Active</span>
-                            </p>
-                        </div>
-                    </>
-                )}
-            </div>
+                        {isPracticeMode ? (
+                            <div className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                <p className="text-xs text-yellow-400 flex items-center gap-1">
+                                    <span>⚠️</span>
+                                    <span>Practice Mode - No real money</span>
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg">
+                                <p className="text-xs text-green-400 flex items-center gap-1">
+                                    <span>🚀</span>
+                                    <span>Live Trading Active</span>
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
         </div>
     );
 };
 
-const StatCard = ({ title, value, subtext, icon: Icon, trend }) => (
-    <div className="glass p-6 rounded-2xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Icon size={64} />
-        </div>
-        <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                <Icon size={20} />
+const PnLCard = ({ trades, totalPnl }) => {
+    const winningTrades = trades.filter(t => (t.pnl !== undefined ? t.pnl : t.profit_loss) > 0);
+    const losingTrades = trades.filter(t => (t.pnl !== undefined ? t.pnl : t.profit_loss) < 0);
+    const winRate = trades.length > 0 ? (winningTrades.length / trades.length * 100) : 0;
+
+    return (
+        <div className="glass p-6 rounded-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <TrendingUp size={64} />
             </div>
-            <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
+            <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                    <TrendingUp size={20} />
+                </div>
+                <h3 className="text-sm font-medium text-muted-foreground">Total PnL</h3>
+            </div>
+            <div className="text-3xl font-bold text-foreground tracking-tight mb-3">
+                ${totalPnl?.toFixed(2) || '0.00'} USDT
+            </div>
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Win Rate:</span>
+                    <span className="font-semibold text-green-400">{winRate.toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Winning Trades:</span>
+                    <span className="font-semibold text-green-400">{winningTrades.length}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Losing Trades:</span>
+                    <span className="font-semibold text-red-400">{losingTrades.length}</span>
+                </div>
+                <div className={`px-3 py-1.5 rounded-lg ${totalPnl >= 0 ? 'bg-green-500/10 border border-green-500/20' : 'bg-red-500/10 border border-red-500/20'}`}>
+                    <p className={`text-xs flex items-center gap-1 ${totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        <span>{totalPnl >= 0 ? '📈' : '📉'}</span>
+                        <span>{totalPnl >= 0 ? 'Profitable' : 'Loss'}</span>
+                    </p>
+                </div>
+            </div>
         </div>
-        <div className="text-2xl font-bold text-foreground tracking-tight">{value}</div>
-        {subtext && (
-            <p className={`text-xs mt-1 font-medium ${trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400' : 'text-muted-foreground'}`}>
-                {subtext}
-            </p>
-        )}
-    </div>
-);
+    );
+};
 
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#6366f1'];
 
