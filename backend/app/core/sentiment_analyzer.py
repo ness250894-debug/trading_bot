@@ -145,6 +145,8 @@ class SentimentAnalyzer:
                 'score': 50,
                 'confidence': 0,
                 'summary': 'AI analysis unavailable'
+            }
+        
         try:
             # Prepare prompt for Gemini
             news_text = "\n".join([f"- {item}" for item in news_items[:15]])

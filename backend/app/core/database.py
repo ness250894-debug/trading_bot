@@ -1911,9 +1911,13 @@ class DuckDBHandler:
         try:
             if self.conn:
                 self.conn.close()
-                logger.info("Database connection closed")
+                if logger:
+                    logger.info("Database connection closed")
         except Exception as e:
-            logger.error(f"Error closing database connection: {e}")
+            if logger:
+                logger.error(f"Error closing database connection: {e}")
+            else:
+                print(f"Error closing database connection: {e}")
     
     def __del__(self):
         """Cleanup on garbage collection."""
