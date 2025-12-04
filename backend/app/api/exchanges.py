@@ -4,8 +4,10 @@ API endpoints for exchange management.
 from fastapi import APIRouter, HTTPException
 from typing import List, Dict
 from ..core.exchange.exchange_factory import ExchangeFactory
+from ..core.database import DuckDBHandler
 
 router = APIRouter()
+db = DuckDBHandler()
 
 
 @router.get("/exchanges", tags=["exchanges"])
@@ -17,7 +19,13 @@ async def get_supported_exchanges() -> Dict:
         Dictionary with exchanges list and count
     """
     try:
-        exchanges = ExchangeFactory.get_exchange_info()
+        # Try to fetch from database first
+        exchanges = db.get_exchanges()
+        
+        # If database is empty, fall back to ExchangeFactory
+        if not exchanges:
+            exchanges = ExchangeFactory.get_exchange_info()
+        
         return {
             "exchanges": exchanges,
             "count": len(exchanges)

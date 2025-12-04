@@ -20,17 +20,7 @@ const STRATEGY_OPTIONS = [
 
 const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
-const POPULAR_SYMBOLS = [
-    'BTC/USDT',
-    'ETH/USDT',
-    'BNB/USDT',
-    'SOL/USDT',
-    'XRP/USDT',
-    'ADA/USDT',
-    'DOGE/USDT',
-    'MATIC/USDT',
-    'CUSTOM' // Special option to enable custom input
-];
+// STRATEGY_PRESETS, RISK_PRESETS, and POPULAR_SYMBOLS removed in favor of API data
 
 
 const STRATEGY_PARAMS = {
@@ -77,64 +67,7 @@ const STRATEGY_PARAMS = {
     }
 };
 
-const STRATEGY_PRESETS = {
-    mean_reversion: [
-        { name: 'Conservative', params: { rsi_period: 14, rsi_overbought: 75, rsi_oversold: 25, bb_period: 20, bb_std: 2.5 } },
-        { name: 'Moderate', params: { rsi_period: 14, rsi_overbought: 70, rsi_oversold: 30, bb_period: 20, bb_std: 2.0 } },
-        { name: 'Aggressive', params: { rsi_period: 7, rsi_overbought: 65, rsi_oversold: 35, bb_period: 14, bb_std: 1.5 } },
-        { name: 'Range Trading', params: { rsi_period: 14, rsi_overbought: 65, rsi_oversold: 35, bb_period: 20, bb_std: 2.0 } }
-    ],
-    sma_crossover: [
-        { name: 'Scalping', params: { fast_period: 5, slow_period: 20 } },
-        { name: 'Swing', params: { fast_period: 20, slow_period: 50 } },
-        { name: 'Trend', params: { fast_period: 50, slow_period: 200 } },
-        { name: 'Trend Following', params: { fast_period: 20, slow_period: 100 } },
-        { name: 'Automated Execution', params: { fast_period: 10, slow_period: 50 } }
-    ],
-    macd: [
-        { name: 'Standard', params: { fast_period: 12, slow_period: 26, signal_period: 9 } },
-        { name: 'Quick', params: { fast_period: 5, slow_period: 35, signal_period: 5 } },
-        { name: 'Trend Analysis', params: { fast_period: 19, slow_period: 39, signal_period: 9 } }
-    ],
-    rsi: [
-        { name: 'Standard', params: { period: 14, overbought: 70, oversold: 30 } },
-        { name: 'Sensitive', params: { period: 7, overbought: 80, oversold: 20 } },
-        { name: 'RSI Reversal', params: { period: 14, overbought: 80, oversold: 20 } }
-    ],
-    bollinger_breakout: [
-        { name: 'Standard', params: { bb_period: 20, bb_std: 2.0, volume_factor: 1.5 } },
-        { name: 'Aggressive', params: { bb_period: 20, bb_std: 1.5, volume_factor: 1.2 } },
-        { name: 'Volume Breakout', params: { bb_period: 20, bb_std: 2.0, volume_factor: 2.0 } },
-        { name: 'Volatility Scalping', params: { bb_period: 10, bb_std: 1.5, volume_factor: 1.2 } }
-    ],
-    momentum: [
-        { name: 'Standard', params: { roc_period: 10, rsi_period: 14, rsi_min: 50, rsi_max: 70 } },
-        { name: 'Quick', params: { roc_period: 5, rsi_period: 7, rsi_min: 45, rsi_max: 75 } },
-        { name: 'Rapid Scalping', params: { roc_period: 3, rsi_period: 5, rsi_min: 40, rsi_max: 80 } }
-    ],
-    dca_dip: [
-        { name: 'Standard', params: { ema_long: 200, ema_short: 20 } },
-        { name: 'Aggressive', params: { ema_long: 100, ema_short: 10 } },
-        { name: 'Smart DCA', params: { ema_long: 200, ema_short: 20 } },
-        { name: 'Compound Growth', params: { ema_long: 150, ema_short: 25 } },
-        { name: 'Secure HODL', params: { ema_long: 300, ema_short: 50 } }
-    ],
-    combined: [
-        { name: 'Standard', params: { rsi_period: 14, fast_sma: 10, slow_sma: 50 } },
-        { name: 'Market Neutral', params: { rsi_period: 14, fast_sma: 20, slow_sma: 50 } },
-        { name: 'Technical Analysis', params: { rsi_period: 14, fast_sma: 10, slow_sma: 100 } },
-        { name: 'Multi-Strategy', params: { rsi_period: 14, fast_sma: 20, slow_sma: 200 } },
-        { name: 'Dynamic Allocation', params: { rsi_period: 21, fast_sma: 50, slow_sma: 200 } }
-    ]
-};
-
-const RISK_PRESETS = [
-    { name: 'Scalp', tp: 1.0, sl: 0.5 },
-    { name: 'Day', tp: 2.0, sl: 1.0 },
-    { name: 'Swing', tp: 5.0, sl: 2.0 },
-    { name: 'Conservative', tp: 0.5, sl: 0.5 },
-    { name: 'Aggressive', tp: 3.0, sl: 1.5 }
-];
+// Presets will be loaded from API
 
 export default function Strategies() {
     const navigate = useNavigate();
@@ -150,29 +83,26 @@ export default function Strategies() {
     const [customSymbol, setCustomSymbol] = useState(false);
     const [subscription, setSubscription] = useState(null);
 
+    // New state for dynamic data
+    const [strategyPresets, setStrategyPresets] = useState({});
+    const [riskPresets, setRiskPresets] = useState([]);
+    const [popularSymbols, setPopularSymbols] = useState([]);
 
-    const fetchExchanges = async () => {
+
+    const fetchData = async () => {
+        setLoading(true);
         setExchangesLoading(true);
         try {
-            const response = await api.get('/exchanges');
-            setExchanges(response.data.exchanges || []);
-        } catch (err) {
-            // Silent fail - use fallback list
-            // Default to bybit if API fails
-            setExchanges([DEFAULT_EXCHANGES[0]]); // Just bybit as fallback
-        } finally {
-            setExchangesLoading(false);
-        }
-    };
-
-    const fetchConfig = async () => {
-        setLoading(true);
-        try {
-            const [statusRes, subRes] = await Promise.all([
+            const [statusRes, subRes, exchangesRes, strategiesRes, risksRes, symbolsRes] = await Promise.all([
                 api.get('/status'),
-                api.get('/billing/status')
+                api.get('/billing/status'),
+                api.get('/exchanges'),
+                api.get('/strategy-presets'),
+                api.get('/risk-presets'),
+                api.get('/popular-symbols')
             ]);
 
+            // Process Config & Subscription
             setConfig(statusRes.data.config);
             setSubscription(subRes.data);
             setMessage(null);
@@ -186,16 +116,46 @@ export default function Strategies() {
             if (savedSuggestion) {
                 setSuggestion(JSON.parse(savedSuggestion));
             }
-        } catch {
+
+            // Process Exchanges
+            setExchanges(exchangesRes.data.exchanges || []);
+
+            // Process Strategy Presets
+            const presetsByStrategy = {};
+            if (strategiesRes.data.presets) {
+                strategiesRes.data.presets.forEach(p => {
+                    if (!presetsByStrategy[p.strategy_type]) {
+                        presetsByStrategy[p.strategy_type] = [];
+                    }
+                    presetsByStrategy[p.strategy_type].push({
+                        name: p.preset_name,
+                        params: p.parameters,
+                        desc: p.description
+                    });
+                });
+            }
+            setStrategyPresets(presetsByStrategy);
+
+            // Process Risk Presets
+            setRiskPresets(risksRes.data.presets || []);
+
+            // Process Symbols
+            const symbols = (symbolsRes.data.symbols || []).map(s => s.symbol);
+            setPopularSymbols([...symbols, 'CUSTOM']);
+
+        } catch (err) {
+            console.error("Error fetching data:", err);
             setMessage({ type: 'error', text: 'Failed to load configuration.' });
+            // Fallback for exchanges if API fails
+            setExchanges([DEFAULT_EXCHANGES[0]]);
         } finally {
             setLoading(false);
+            setExchangesLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchExchanges();
-        fetchConfig();
+        fetchData();
     }, []);
 
     const handleChange = (key, value) => {
@@ -236,8 +196,8 @@ export default function Strategies() {
     const applyRiskPreset = (preset) => {
         setConfig(prev => ({
             ...prev,
-            take_profit_pct: preset.tp / 100,
-            stop_loss_pct: preset.sl / 100
+            take_profit_pct: preset.take_profit_pct,
+            stop_loss_pct: preset.stop_loss_pct
         }));
     };
 
@@ -309,7 +269,7 @@ export default function Strategies() {
     if (!config) return null;
 
     const currentParams = STRATEGY_PARAMS[config.strategy] || {};
-    const currentPresets = STRATEGY_PRESETS[config.strategy] || {};
+    const currentPresets = strategyPresets[config.strategy] || [];
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
@@ -319,7 +279,7 @@ export default function Strategies() {
                     <p className="text-muted-foreground mt-1">Configure your bot's trading logic and risk parameters.</p>
                 </div>
                 <button
-                    onClick={fetchConfig}
+                    onClick={fetchData}
                     className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-foreground transition-all"
                     title="Refresh Config"
                 >
@@ -425,11 +385,12 @@ export default function Strategies() {
                         <div className="flex justify-between items-center mb-4">
                             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Risk Management</label>
                             <div className="flex gap-2">
-                                {RISK_PRESETS.map(preset => (
+                                {riskPresets.map(preset => (
                                     <button
                                         key={preset.name}
                                         onClick={() => applyRiskPreset(preset)}
                                         className="px-3 py-1 text-xs rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                        title={preset.description}
                                     >
                                         {preset.name}
                                     </button>
@@ -532,7 +493,7 @@ export default function Strategies() {
                             ) : (
                                 <div className="relative">
                                     <select
-                                        value={POPULAR_SYMBOLS.includes(config.symbol) ? config.symbol : 'CUSTOM'}
+                                        value={popularSymbols.includes(config.symbol) ? config.symbol : 'CUSTOM'}
                                         onChange={(e) => {
                                             if (e.target.value === 'CUSTOM') {
                                                 setCustomSymbol(true);
@@ -542,7 +503,7 @@ export default function Strategies() {
                                         }}
                                         className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pr-10 text-sm font-mono focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all appearance-none cursor-pointer hover:bg-black/30"
                                     >
-                                        {POPULAR_SYMBOLS.map((symbol) => (
+                                        {popularSymbols.map((symbol) => (
                                             <option key={symbol} value={symbol}>
                                                 {symbol === 'CUSTOM' ? '+ Custom Symbol' : symbol}
                                             </option>

@@ -447,6 +447,74 @@ class DuckDBHandler:
                 
                 logger.info("Trading goals table created successfully")
                 
+                # Create exchanges table for supported trading platforms
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS exchanges (
+                        id INTEGER PRIMARY KEY,
+                        name VARCHAR NOT NULL UNIQUE,
+                        display_name VARCHAR NOT NULL,
+                        supports_futures BOOLEAN DEFAULT TRUE,
+                        supports_spot BOOLEAN DEFAULT TRUE,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_exchanges_name ON exchanges(name)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_exchange_id START 1")
+                
+                logger.info("Exchanges table created successfully")
+                
+                # Create strategy_presets table for strategy configuration templates
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS strategy_presets (
+                        id INTEGER PRIMARY KEY,
+                        strategy_type VARCHAR NOT NULL,
+                        preset_name VARCHAR NOT NULL,
+                        parameters_json TEXT NOT NULL,
+                        description TEXT,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(strategy_type, preset_name)
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_presets_strategy ON strategy_presets(strategy_type)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_strategy_preset_id START 1")
+                
+                logger.info("Strategy presets table created successfully")
+                
+                # Create risk_presets table for risk management templates
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS risk_presets (
+                        id INTEGER PRIMARY KEY,
+                        name VARCHAR NOT NULL UNIQUE,
+                        take_profit_pct DOUBLE NOT NULL,
+                        stop_loss_pct DOUBLE NOT NULL,
+                        description TEXT,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_risk_name ON risk_presets(name)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_risk_preset_id START 1")
+                
+                logger.info("Risk presets table created successfully")
+                
+                # Create popular_symbols table for commonly traded symbols
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS popular_symbols (
+                        id INTEGER PRIMARY KEY,
+                        symbol VARCHAR NOT NULL UNIQUE,
+                        display_order INTEGER DEFAULT 0,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_symbol ON popular_symbols(symbol)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_symbol_order ON popular_symbols(display_order)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_popular_symbol_id START 1")
+                
+                logger.info("Popular symbols table created successfully")
+                
             except Exception as migration_error:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")
@@ -484,6 +552,154 @@ class DuckDBHandler:
                     logger.info("Initial plans seeded.")
             except Exception as e:
                 logger.error(f"Error seeding plans: {e}")
+
+            # Seed exchanges if empty
+            try:
+                count = self.conn.execute("SELECT count(*) FROM exchanges").fetchone()[0]
+                if count == 0:
+                    logger.info("Seeding exchanges...")
+                    exchanges_data = [
+                        ('bybit', 'Bybit', True, True),
+                        ('binance', 'Binance', True, True),
+                        ('okx', 'OKX', True, True),
+                        ('bitget', 'Bitget', True, True)
+                    ]
+                    for exchange in exchanges_data:
+                        self.conn.execute(
+                            "INSERT INTO exchanges (id, name, display_name, supports_futures, supports_spot, is_active, created_at) VALUES (nextval('seq_exchange_id'), ?, ?, ?, ?, TRUE, CURRENT_TIMESTAMP)",
+                            exchange
+                        )
+                    logger.info("Exchanges seeded.")
+            except Exception as e:
+                logger.error(f"Error seeding exchanges: {e}")
+
+            # Seed risk presets if empty
+            try:
+                count = self.conn.execute("SELECT count(*) FROM risk_presets").fetchone()[0]
+                if count == 0:
+                    logger.info("Seeding risk presets...")
+                    risk_data = [
+                        ('Scalp', 0.01, 0.005, 'Quick profits with tight stops'),
+                        ('Day', 0.02, 0.01, 'Standard day trading profile'),
+                        ('Swing', 0.05, 0.02, 'Longer holding periods, wider targets'),
+                        ('Conservative', 0.005, 0.005, 'Very tight risk management'),
+                        ('Aggressive', 0.03, 0.015, 'Higher risk for higher rewards')
+                    ]
+                    for risk in risk_data:
+                        self.conn.execute(
+                            "INSERT INTO risk_presets (id, name, take_profit_pct, stop_loss_pct, description, is_active, created_at) VALUES (nextval('seq_risk_preset_id'), ?, ?, ?, ?, TRUE, CURRENT_TIMESTAMP)",
+                            risk
+                        )
+                    logger.info("Risk presets seeded.")
+            except Exception as e:
+                logger.error(f"Error seeding risk presets: {e}")
+
+            # Seed popular symbols if empty
+            try:
+                count = self.conn.execute("SELECT count(*) FROM popular_symbols").fetchone()[0]
+                if count == 0:
+                    logger.info("Seeding popular symbols...")
+                    symbols_data = [
+                        ('BTC/USDT', 1),
+                        ('ETH/USDT', 2),
+                        ('BNB/USDT', 3),
+                        ('SOL/USDT', 4),
+                        ('XRP/USDT', 5),
+                        ('ADA/USDT', 6),
+                        ('DOGE/USDT', 7),
+                        ('MATIC/USDT', 8)
+                    ]
+                    for symbol, order in symbols_data:
+                        self.conn.execute(
+                            "INSERT INTO popular_symbols (id, symbol, display_order, is_active, created_at) VALUES (nextval('seq_popular_symbol_id'), ?, ?, TRUE, CURRENT_TIMESTAMP)",
+                            [symbol, order]
+                        )
+                    logger.info("Popular symbols seeded.")
+            except Exception as e:
+                logger.error(f"Error seeding popular symbols: {e}")
+
+            # Seed strategy presets if empty
+            try:
+                import json
+                count = self.conn.execute("SELECT count(*) FROM strategy_presets").fetchone()[0]
+                if count == 0:
+                    logger.info("Seeding strategy presets...")
+                    # Mean Reversion presets
+                    mean_reversion_presets = [
+                        ('mean_reversion', 'Conservative', {'rsi_period': 14, 'rsi_overbought': 75, 'rsi_oversold': 25, 'bb_period': 20, 'bb_std': 2.5}, 'Conservative mean reversion setup'),
+                        ('mean_reversion', 'Moderate', {'rsi_period': 14, 'rsi_overbought': 70, 'rsi_oversold': 30, 'bb_period': 20, 'bb_std': 2.0}, 'Balanced mean reversion'),
+                        ('mean_reversion', 'Aggressive', {'rsi_period': 7, 'rsi_overbought': 65, 'rsi_oversold': 35, 'bb_period': 14, 'bb_std': 1.5}, 'Fast mean reversion signals'),
+                        ('mean_reversion', 'Range Trading', {'rsi_period': 14, 'rsi_overbought': 65, 'rsi_oversold': 35, 'bb_period': 20, 'bb_std': 2.0}, 'Optimized for range-bound markets')
+                    ]
+                    
+                    # SMA Crossover presets
+                    sma_presets = [
+                        ('sma_crossover', 'Scalping', {'fast_period': 5, 'slow_period': 20}, 'Ultra-short term crossover'),
+                        ('sma_crossover', 'Swing', {'fast_period': 20, 'slow_period': 50}, 'Medium-term trend following'),
+                        ('sma_crossover', 'Trend', {'fast_period': 50, 'slow_period': 200}, 'Long-term trend identification'),
+                        ('sma_crossover', 'Trend Following', {'fast_period': 20, 'slow_period': 100}, 'Balanced trend capture'),
+                        ('sma_crossover', 'Automated Execution', {'fast_period': 10, 'slow_period': 50}, 'Standard automated setup')
+                    ]
+                    
+                    # MACD presets
+                    macd_presets = [
+                        ('macd', 'Standard', {'fast_period': 12, 'slow_period': 26, 'signal_period': 9}, 'Classic MACD configuration'),
+                        ('macd', 'Quick', {'fast_period': 5, 'slow_period': 35, 'signal_period': 5}, 'Faster signals'),
+                        ('macd', 'Trend Analysis', {'fast_period': 19, 'slow_period': 39, 'signal_period': 9}, 'Enhanced trend detection')
+                    ]
+                    
+                    # RSI presets
+                    rsi_presets = [
+                        ('rsi', 'Standard', {'period': 14, 'overbought': 70, 'oversold': 30}, 'Classic RSI levels'),
+                        ('rsi', 'Sensitive', {'period': 7, 'overbought': 80, 'oversold': 20}, 'More reactive signals'),
+                        ('rsi', 'RSI Reversal', {'period': 14, 'overbought': 80, 'oversold': 20}, 'Extreme reversal zones')
+                    ]
+                    
+                    # Bollinger Breakout presets
+                    bb_presets = [
+                        ('bollinger_breakout', 'Standard', {'bb_period': 20, 'bb_std': 2.0, 'volume_factor': 1.5}, 'Standard breakout setup'),
+                        ('bollinger_breakout', 'Aggressive', {'bb_period': 20, 'bb_std': 1.5, 'volume_factor': 1.2}, 'Earlier breakout entries'),
+                        ('bollinger_breakout', 'Volume Breakout', {'bb_period': 20, 'bb_std': 2.0, 'volume_factor': 2.0}, 'High volume confirmation'),
+                        ('bollinger_breakout', 'Volatility Scalping', {'bb_period': 10, 'bb_std': 1.5, 'volume_factor': 1.2}, 'Short-term volatility plays')
+                    ]
+                    
+                    # Momentum presets
+                    momentum_presets = [
+                        ('momentum', 'Standard', {'roc_period': 10, 'rsi_period': 14, 'rsi_min': 50, 'rsi_max': 70}, 'Balanced momentum'),
+                        ('momentum', 'Quick', {'roc_period': 5, 'rsi_period': 7, 'rsi_min': 45, 'rsi_max': 75}, 'Fast momentum signals'),
+                        ('momentum', 'Rapid Scalping', {'roc_period': 3, 'rsi_period': 5, 'rsi_min': 40, 'rsi_max': 80}, 'Very fast scalping setup')
+                    ]
+                    
+                    # DCA Dip presets
+                    dca_presets = [
+                        ('dca_dip', 'Standard', {'ema_long': 200, 'ema_short': 20}, 'Standard DCA on dips'),
+                        ('dca_dip', 'Aggressive', {'ema_long': 100, 'ema_short': 10}, 'More frequent entries'),
+                        ('dca_dip', 'Smart DCA', {'ema_long': 200, 'ema_short': 20}, 'Intelligent averaging'),
+                        ('dca_dip', 'Compound Growth', {'ema_long': 150, 'ema_short': 25}, 'Balanced accumulation'),
+                        ('dca_dip', 'Secure HODL', {'ema_long': 300, 'ema_short': 50}, 'Very conservative')
+                    ]
+                    
+                    # Combined presets
+                    combined_presets = [
+                        ('combined', 'Standard', {'rsi_period': 14, 'fast_sma': 10, 'slow_sma': 50}, 'Multi-indicator confirmation'),
+                        ('combined', 'Market Neutral', {'rsi_period': 14, 'fast_sma': 20, 'slow_sma': 50}, 'Balanced approach'),
+                        ('combined', 'Technical Analysis', {'rsi_period': 14, 'fast_sma': 10, 'slow_sma': 100}, 'Technical confirmation'),
+                        ('combined', 'Multi-Strategy', {'rsi_period': 14, 'fast_sma': 20, 'slow_sma': 200}, 'Multiple timeframe analysis'),
+                        ('combined', 'Dynamic Allocation', {'rsi_period': 21, 'fast_sma': 50, 'slow_sma': 200}, 'Advanced allocation')
+                    ]
+                    
+                    all_presets = (mean_reversion_presets + sma_presets + macd_presets + 
+                                  rsi_presets + bb_presets + momentum_presets + 
+                                  dca_presets + combined_presets)
+                    
+                    for strategy_type, name, params, desc in all_presets:
+                        self.conn.execute(
+                            "INSERT INTO strategy_presets (id, strategy_type, preset_name, parameters_json, description, is_active, created_at) VALUES (nextval('seq_strategy_preset_id'), ?, ?, ?, ?, TRUE, CURRENT_TIMESTAMP)",
+                            [strategy_type, name, json.dumps(params), desc]
+                        )
+                    logger.info("Strategy presets seeded.")
+            except Exception as e:
+                logger.error(f"Error seeding strategy presets: {e}")
 
         except Exception as e:
             logger.error(f"Error creating tables: {e}")
@@ -915,6 +1131,95 @@ class DuckDBHandler:
         except Exception as e:
             logger.error(f"Error deleting bot config: {e}")
             return False
+
+    # Configuration Tables CRUD Methods
+    def get_exchanges(self):
+        """Get all active exchanges."""
+        try:
+            rows = self.conn.execute(
+                "SELECT id, name, display_name, supports_futures, supports_spot FROM exchanges WHERE is_active = TRUE ORDER BY name"
+            ).fetchall()
+            
+            exchanges = []
+            for row in rows:
+                exchanges.append({
+                    'id': row[0],
+                    'name': row[1],
+                    'display_name': row[2],
+                    'supports_futures': row[3],
+                    'supports_spot': row[4]
+                })
+            return exchanges
+        except Exception as e:
+            logger.error(f"Error fetching exchanges: {e}")
+            return []
+
+    def get_strategy_presets(self, strategy_type=None):
+        """Get strategy presets, optionally filtered by strategy type."""
+        try:
+            import json
+            if strategy_type:
+                rows = self.conn.execute(
+                    "SELECT id, strategy_type, preset_name, parameters_json, description FROM strategy_presets WHERE strategy_type = ? AND is_active = TRUE ORDER BY preset_name",
+                    [strategy_type]
+                ).fetchall()
+            else:
+                rows = self.conn.execute(
+                    "SELECT id, strategy_type, preset_name, parameters_json, description FROM strategy_presets WHERE is_active = TRUE ORDER BY strategy_type, preset_name"
+                ).fetchall()
+            
+            presets = []
+            for row in rows:
+                presets.append({
+                    'id': row[0],
+                    'strategy_type': row[1],
+                    'preset_name': row[2],
+                    'parameters': json.loads(row[3]),
+                    'description': row[4]
+                })
+            return presets
+        except Exception as e:
+            logger.error(f"Error fetching strategy presets: {e}")
+            return []
+
+    def get_risk_presets(self):
+        """Get all active risk presets."""
+        try:
+            rows = self.conn.execute(
+                "SELECT id, name, take_profit_pct, stop_loss_pct, description FROM risk_presets WHERE is_active = TRUE ORDER BY name"
+            ).fetchall()
+            
+            presets = []
+            for row in rows:
+                presets.append({
+                    'id': row[0],
+                    'name': row[1],
+                    'take_profit_pct': row[2],
+                    'stop_loss_pct': row[3],
+                    'description': row[4]
+                })
+            return presets
+        except Exception as e:
+            logger.error(f"Error fetching risk presets: {e}")
+            return []
+
+    def get_popular_symbols(self):
+        """Get all active popular symbols."""
+        try:
+            rows = self.conn.execute(
+                "SELECT id, symbol FROM popular_symbols WHERE is_active = TRUE ORDER BY display_order, symbol"
+            ).fetchall()
+            
+            symbols = []
+            for row in rows:
+                symbols.append({
+                    'id': row[0],
+                    'symbol': row[1]
+                })
+            return symbols
+        except Exception as e:
+            logger.error(f"Error fetching popular symbols: {e}")
+            return []
 
     # Trade Notes CRUD Methods
     def get_trade_note(self, user_id, trade_id):

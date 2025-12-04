@@ -807,3 +807,37 @@ async def update_risk_profile(request: Request, profile_data: RiskProfileUpdate,
     except Exception as e:
         logger.error(f"Error updating risk profile: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Configuration Data Endpoints
+@router.get("/strategy-presets")
+@limiter.limit("60/minute")
+async def get_strategy_presets(request: Request, strategy_type: Optional[str] = None):
+    """Get strategy presets, optionally filtered by strategy type."""
+    try:
+        presets = db.get_strategy_presets(strategy_type)
+        return {"presets": presets}
+    except Exception as e:
+        logger.error(f"Error fetching strategy presets: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch strategy presets")
+
+@router.get("/risk-presets")
+@limiter.limit("60/minute")
+async def get_risk_presets(request: Request):
+    """Get all risk presets."""
+    try:
+        presets = db.get_risk_presets()
+        return {"presets": presets}
+    except Exception as e:
+        logger.error(f"Error fetching risk presets: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch risk presets")
+
+@router.get("/popular-symbols")
+@limiter.limit("60/minute")
+async def get_popular_symbols(request: Request):
+    """Get all popular symbols."""
+    try:
+        symbols = db.get_popular_symbols()
+        return {"symbols": symbols}
+    except Exception as e:
+        logger.error(f"Error fetching popular symbols: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch popular symbols")
