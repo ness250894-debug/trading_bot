@@ -102,6 +102,25 @@
     -moz-appearance: textfield;
     appearance: textfield;
   }
+
+  /* Dark theme select dropdowns */
+  select {
+    @apply text-foreground;
+    background-color: hsl(var(--background));
+  }
+
+  select option {
+    background-color: hsl(224, 71%, 8%);
+    color: hsl(var(--foreground));
+    padding: 0.75rem 1rem;
+  }
+
+  select option:hover,
+  select option:focus,
+  select option:checked {
+    background-color: hsl(var(--primary));
+    color: white;
+  }
 }
 
 @layer utilities {

@@ -255,7 +255,53 @@ export default function Strategies() {
             navigate('/main');
         } catch (err) {
             const errorMsg = err.response?.data?.detail || 'Failed to add bot configuration.';
-            setMessage({ type: 'error', text: errorMsg });
+            const statusCode = err.response?.status;
+
+            // Show upgrade modal for plan limits
+            if (statusCode === 403 && errorMsg.toLowerCase().includes('upgrade')) {
+                modal.show({
+                    title: '🚀 Upgrade Your Plan',
+                    content: (
+                        <div className="space-y-4">
+                            <p className="text-muted-foreground">
+                                Your free plan is limited to <span className="text-foreground font-semibold">1 bot</span>.
+                            </p>
+                            <p className="text-muted-foreground">
+                                Upgrade to unlock:
+                            </p>
+                            <ul className="space-y-2 text-sm">
+                                <li className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                    <span className="text-foreground">Multiple trading bots</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                    <span className="text-foreground">All trading strategies</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                    <span className="text-foreground">Real money trading</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                    <span className="text-foreground">Priority support</span>
+                                </li>
+                            </ul>
+                            <button
+                                onClick={() => {
+                                    modal.hide();
+                                    navigate('/pricing');
+                                }}
+                                className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-purple-500/25"
+                            >
+                                View Upgrade Options
+                            </button>
+                        </div>
+                    )
+                });
+            } else {
+                setMessage({ type: 'error', text: errorMsg });
+            }
             setSaving(false);
         }
     };

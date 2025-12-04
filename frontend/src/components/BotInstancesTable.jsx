@@ -225,7 +225,7 @@ export default function BotInstancesTable({
                                 <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Symbol</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Strategy</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Started At</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Current PnL</th>
                                 <th className="px-6 py-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
@@ -249,10 +249,7 @@ export default function BotInstancesTable({
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
-                                                <div>
-                                                    <span className="font-mono font-bold text-foreground block">{bot.symbol}</span>
-                                                    {bot.config_id && <span className="text-xs text-muted-foreground">ID: {bot.config_id}</span>}
-                                                </div>
+                                                <span className="font-mono font-bold text-foreground">{bot.symbol}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -268,8 +265,16 @@ export default function BotInstancesTable({
                                                 {isRunning ? 'Running' : 'Stopped'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-muted-foreground font-mono">
-                                            {bot.started_at ? new Date(bot.started_at).toLocaleString() : 'N/A'}
+                                        <td className="px-6 py-4">
+                                            {(() => {
+                                                const pnl = bot.pnl || bot.current_pnl || 0;
+                                                const isPositive = pnl >= 0;
+                                                return (
+                                                    <span className={`font-mono font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {isPositive ? '+' : ''}{pnl.toFixed(2)} USDT
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">

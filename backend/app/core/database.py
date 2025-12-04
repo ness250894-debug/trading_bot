@@ -560,16 +560,17 @@ class DuckDBHandler:
             except Exception as e:
                 logger.error(f"Error seeding plans: {e}")
 
-            # Seed exchanges if empty
+            # Seed exchanges if empty or update to correct list
             try:
                 count = self.conn.execute("SELECT count(*) FROM exchanges").fetchone()[0]
                 if count == 0:
                     logger.info("Seeding exchanges...")
                     exchanges_data = [
-                        ('bybit', 'Bybit', True, True),
                         ('binance', 'Binance', True, True),
+                        ('bybit', 'ByBit', True, True),
                         ('okx', 'OKX', True, True),
-                        ('bitget', 'Bitget', True, True)
+                        ('coinbase', 'Coinbase', False, True),
+                        ('kraken', 'Kraken', True, True)
                     ]
                     for exchange in exchanges_data:
                         self.conn.execute(
