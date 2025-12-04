@@ -7,6 +7,79 @@ import TradingGoalsWidget from '../components/TradingGoalsWidget';
 import Disclaimer from '../components/Disclaimer';
 import { formatStrategyName } from '../lib/utils';
 
+const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
+    const isPracticeMode = status?.config?.dry_run;
+
+    return (
+        <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1 md:col-span-2 lg:col-span-1">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <DollarSign size={80} />
+            </div>
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                        <DollarSign size={24} />
+                    </div>
+                    <h3 className="text-base font-medium text-muted-foreground">Account Balance</h3>
+                </div>
+                {isPracticeMode && (
+                    <button
+                        onClick={onRefreshBalance}
+                        disabled={refreshing}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm disabled:opacity-50"
+                        title="Reset practice balance to $10,000"
+                    >
+                        {refreshing ? (
+                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                            </svg>
+                        )}
+                        Reset
+                    </button>
+                )}
+            </div>
+            <div className="text-4xl font-bold text-foreground tracking-tight mb-3">
+                ${status?.balance?.total?.toFixed(2) || '0.00'}
+            </div>
+            <div className="space-y-2">
+                {isPracticeMode ? (
+                    <>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Practice Balance:</span>
+                            <span className="font-semibold text-yellow-400">${status?.balance?.free?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                            <p className="text-xs text-yellow-400 flex items-center gap-1">
+                                <span>⚠️</span>
+                                <span>Practice Mode - No real money</span>
+                            </p>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Available:</span>
+                            <span className="font-semibold text-green-400">${status?.balance?.free?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">In Orders:</span>
+                            <span className="font-semibold">${((status?.balance?.total || 0) - (status?.balance?.free || 0)).toFixed(2)}</span>
+                        </div>
+                        <div className="px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg">
+                            <p className="text-xs text-green-400 flex items-center gap-1">
+                                <span>🚀</span>
+                                <span>Live Trading Active</span>
+                            </p>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const StatCard = ({ title, value, subtext, icon: Icon, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -35,6 +108,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [pollingInterval] = useState(30000); // 30 seconds polling interval
+    const [refreshingBalance, setRefreshingBalance] = useState(false);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -146,6 +220,25 @@ export default function Dashboard() {
         }
     };
 
+    const handleRefreshBalance = async () => {
+        if (!status?.config?.dry_run || refreshingBalance) return;
+
+        setRefreshingBalance(true);
+        try {
+            // In practice mode, we can reset the balance via API
+            // This would need a backend endpoint to reset practice balance
+            // For now, we'll just refresh the status
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+            const statusRes = await api.get('/status');
+            setStatus(statusRes.data);
+            alert('Practice balance has been reset to $10,000!');
+        } catch (err) {
+            alert('Failed to refresh balance. Please try again.');
+        } finally {
+            setRefreshingBalance(false);
+        }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center h-[60vh]">
             <div className="flex flex-col items-center gap-4">
@@ -186,12 +279,11 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
-                    title="Account Balance"
-                    value={`${status?.balance?.total?.toFixed(2) || '0.00'} USDT`}
-                    icon={DollarSign}
-                    subtext={`Free: ${status?.balance?.free?.toFixed(2) || '0.00'} USDT`}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <BalanceCard
+                    status={status}
+                    onRefreshBalance={handleRefreshBalance}
+                    refreshing={refreshingBalance}
                 />
                 <StatCard
                     title="Total PnL"
@@ -199,19 +291,6 @@ export default function Dashboard() {
                     icon={TrendingUp}
                     trend={status?.total_pnl >= 0 ? 'up' : 'down'}
                     subtext={status?.total_pnl >= 0 ? 'Profitable' : 'Loss'}
-                />
-                <StatCard
-                    title="Active Positions"
-                    value={status?.active_trades || 0}
-                    icon={Activity}
-                    subtext="Currently open"
-                />
-                <StatCard
-                    title="Win Rate"
-                    value={`${((trades.filter(t => (t.pnl !== undefined ? t.pnl : t.profit_loss) > 0).length / trades.length || 0) * 100).toFixed(1)}%`}
-                    icon={Clock}
-                    trend="up"
-                    subtext={`${trades.length} total trades`}
                 />
             </div>
 

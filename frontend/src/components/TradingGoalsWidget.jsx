@@ -139,8 +139,8 @@ export default function TradingGoalsWidget() {
                             <div
                                 key={goal.id}
                                 className={`p-4 rounded-xl border transition-all ${goal.is_completed
-                                        ? 'bg-green-500/5 border-green-500/20'
-                                        : 'bg-white/5 border-white/10 hover:border-primary/30'
+                                    ? 'bg-green-500/5 border-green-500/20'
+                                    : 'bg-white/5 border-white/10 hover:border-primary/30'
                                     }`}
                             >
                                 <div className="flex items-start justify-between mb-3">
@@ -213,7 +213,7 @@ export default function TradingGoalsWidget() {
 
             {/* Add/Edit Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCloseModal}>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={handleCloseModal}>
                     <div className="glass rounded-2xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-semibold">
