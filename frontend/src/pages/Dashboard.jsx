@@ -8,21 +8,19 @@ import Disclaimer from '../components/Disclaimer';
 import { formatStrategyName } from '../lib/utils';
 import { ToastContext } from '../components/ToastContext';
 
-const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
+const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
     const isPracticeMode = status?.config?.dry_run;
     const hasApiConnected = status?.balance?.total !== undefined && status?.balance?.total !== null;
 
     return (
-        <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1 md:col-span-2">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
-                <DollarSign size={120} />
-            </div>
+        <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1">
+
             <div className="flex items-center justify-between mb-4 relative z-10">
                 <div className="flex items-center gap-3">
                     <div className="p-3 rounded-lg bg-primary/10 text-primary">
                         <DollarSign size={24} />
                     </div>
-                    <h3 className="text-base font-medium text-muted-foreground">Account Balance</h3>
+                    <h3 className="text-base font-medium text-muted-foreground">Balance Management</h3>
                 </div>
                 {isPracticeMode && hasApiConnected && (
                     <button
@@ -60,7 +58,7 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                         <div>
-                            <div className="text-sm text-muted-foreground mb-2">Real Balance (Exchange)</div>
+                            <div className="text-sm text-muted-foreground mb-2">Balance</div>
                             <div className="text-4xl font-bold text-foreground tracking-tight mb-1">
                                 ${status?.balance?.total?.toFixed(2) || '0.00'}
                             </div>
@@ -321,15 +319,12 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
                 <BalanceCard
                     status={status}
                     onRefreshBalance={handleRefreshBalance}
                     refreshing={refreshingBalance}
-                />
-                <PnLCard
                     trades={trades}
-                    totalPnl={status?.total_pnl}
                 />
             </div>
 
