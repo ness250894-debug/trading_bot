@@ -2,6 +2,12 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
     const isPracticeMode = status?.config?.dry_run;
     const hasApiConnected = status?.balance?.total !== undefined && status?.balance?.total !== null;
 
+    // Real balance from exchange
+    const realBalance = status?.balance?.total || 0;
+
+    // Practice balance - either from status or default to initial_balance config
+    const practiceBalance = status?.practice_balance || status?.config?.initial_balance || 1000;
+
     return (
         <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1">
 
@@ -12,23 +18,21 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
                     </div>
                     <h3 className="text-base font-medium text-muted-foreground">Balance Management</h3>
                 </div>
-                {isPracticeMode && hasApiConnected && (
-                    <button
-                        onClick={onRefreshBalance}
-                        disabled={refreshing}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm disabled:opacity-50 relative z-20"
-                        title="Reset practice balance to $1,000"
-                    >
-                        {refreshing ? (
-                            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
-                            </svg>
-                        )}
-                        Reset
-                    </button>
-                )}
+                <button
+                    onClick={onRefreshBalance}
+                    disabled={refreshing}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm disabled:opacity-50 relative z-20"
+                    title="Reset practice balance to $1,000"
+                >
+                    {refreshing ? (
+                        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+                        </svg>
+                    )}
+                    Reset
+                </button>
             </div>
 
             {!hasApiConnected ? (
@@ -46,21 +50,24 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
                 </div>
             ) : (
                 <>
+                    {/* Both Balances Shown Simultaneously */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                        {/* Real Exchange Balance */}
                         <div>
-                            <div className="text-sm text-muted-foreground mb-2">Balance</div>
+                            <div className="text-sm text-muted-foreground mb-2">Balance (Exchange)</div>
                             <div className="text-4xl font-bold text-foreground tracking-tight mb-1">
-                                ${status?.balance?.total?.toFixed(2) || '0.00'}
+                                ${realBalance.toFixed(2)}
                             </div>
-                            <div className="text-xs text-muted-foreground">USDT on wallet</div>
+                            <div className="text-xs text-muted-foreground">💰 Real money on Binance</div>
                         </div>
 
+                        {/* Practice Balance */}
                         <div>
                             <div className="text-sm text-muted-foreground mb-2">Practice Balance</div>
                             <div className="text-4xl font-bold text-yellow-400 tracking-tight mb-1">
-                                ${status?.balance?.free?.toFixed(2) || '0.00'}
+                                ${practiceBalance.toFixed(2)}
                             </div>
-                            <div className="text-xs text-yellow-400/70">⚠️ Not real money</div>
+                            <div className="text-xs text-yellow-400/70">⚠️ Not real money (for testing)</div>
                         </div>
                     </div>
 
@@ -88,11 +95,16 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
                         </div>
                     )}
 
+                    {/* Bottom Info */}
                     <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between relative z-10">
                         <div className="flex items-center gap-4 text-sm">
                             <div>
+                                <span className="text-muted-foreground">Available: </span>
+                                <span className="font-semibold text-green-400">${status?.balance?.free?.toFixed(2) || '0.00'}</span>
+                            </div>
+                            <div>
                                 <span className="text-muted-foreground">In Orders: </span>
-                                <span className="font-semibold">${((status?.balance?.total || 0) - (status?.balance?.free || 0)).toFixed(2)}</span>
+                                <span className="font-semibold">${(realBalance - (status?.balance?.free || 0)).toFixed(2)}</span>
                             </div>
                         </div>
                         {!isPracticeMode && (
