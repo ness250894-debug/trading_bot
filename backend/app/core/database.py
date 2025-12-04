@@ -425,6 +425,28 @@ class DuckDBHandler:
                 
                 logger.info("Backtest templates table created successfully")
                 
+                # Create trading_goals table
+                self.conn.execute("""
+                    CREATE TABLE IF NOT EXISTS trading_goals (
+                        id INTEGER PRIMARY KEY,
+                        user_id BIGINT NOT NULL,
+                        title VARCHAR NOT NULL,
+                        description TEXT,
+                        target_amount DOUBLE NOT NULL,
+                        current_progress DOUBLE DEFAULT 0,
+                        target_date TIMESTAMP,
+                        is_completed BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                """)
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_goals_user ON trading_goals(user_id)")
+                self.conn.execute("CREATE INDEX IF NOT EXISTS idx_goals_completed ON trading_goals(is_completed)")
+                self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_goal_id START 1")
+                
+                logger.info("Trading goals table created successfully")
+                
             except Exception as migration_error:
                 # Table might not exist yet, which is fine
                 logger.info(f"Table migration skipped (table may not exist yet): {migration_error}")
@@ -1904,6 +1926,169 @@ class DuckDBHandler:
             return True
         except Exception as e:
             logger.error(f"Error updating risk profile: {e}")
+            return False
+    
+    # Trading Goals CRUD Methods
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def create_trading_goal(self, user_id, title, target_amount, description=None, target_date=None):
+        """Create a new trading goal for a user."""
+        try:
+            query = """
+                INSERT INTO trading_goals (id, user_id, title, description, target_amount, target_date, created_at, updated_at)
+                VALUES (nextval('seq_goal_id'), ?, ?, ?, ?, ?, ?, ?)
+            """
+            self.conn.execute(query, [user_id, title, description, target_amount, target_date, datetime.now(), datetime.now()])
+            
+            # Get the created goal
+            result = self.conn.execute(
+                "SELECT id FROM trading_goals WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+                [user_id]
+            ).fetchone()
+            
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Error creating trading goal: {e}")
+            return None
+    
+    def get_trading_goals(self, user_id):
+        """Get all trading goals for a user."""
+        try:
+            rows = self.conn.execute(
+                """
+                SELECT id, title, description, target_amount, current_progress, target_date, 
+                       is_completed, created_at, updated_at
+                FROM trading_goals 
+                WHERE user_id = ? 
+                ORDER BY created_at DESC
+                """,
+                [user_id]
+            ).fetchall()
+            
+            goals = []
+            for row in rows:
+                goals.append({
+                    'id': row[0],
+                    'title': row[1],
+                    'description': row[2],
+                    'target_amount': row[3],
+                    'current_progress': row[4],
+                    'target_date': row[5].isoformat() if row[5] else None,
+                    'is_completed': row[6],
+                    'created_at': row[7].isoformat() if row[7] else None,
+                    'updated_at': row[8].isoformat() if row[8] else None
+                })
+            return goals
+        except Exception as e:
+            logger.error(f"Error fetching trading goals: {e}")
+            return []
+    
+    def get_trading_goal(self, user_id, goal_id):
+        """Get a specific trading goal."""
+        try:
+            row = self.conn.execute(
+                """
+                SELECT id, title, description, target_amount, current_progress, target_date, 
+                       is_completed, created_at, updated_at
+                FROM trading_goals 
+                WHERE user_id = ? AND id = ?
+                """,
+                [user_id, goal_id]
+            ).fetchone()
+            
+            if not row:
+                return None
+            
+            return {
+                'id': row[0],
+                'title': row[1],
+                'description': row[2],
+                'target_amount': row[3],
+                'current_progress': row[4],
+                'target_date': row[5].isoformat() if row[5] else None,
+                'is_completed': row[6],
+                'created_at': row[7].isoformat() if row[7] else None,
+                'updated_at': row[8].isoformat() if row[8] else None
+            }
+        except Exception as e:
+            logger.error(f"Error fetching trading goal: {e}")
+            return None
+    
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def update_trading_goal(self, user_id, goal_id, data):
+        """Update a trading goal."""
+        try:
+            # Verify ownership
+            existing = self.get_trading_goal(user_id, goal_id)
+            if not existing:
+                return False
+            
+            updates = []
+            params = []
+            
+            if 'title' in data:
+                updates.append("title = ?")
+                params.append(data['title'])
+            
+            if 'description' in data:
+                updates.append("description = ?")
+                params.append(data['description'])
+            
+            if 'target_amount' in data:
+                updates.append("target_amount = ?")
+                params.append(data['target_amount'])
+            
+            if 'current_progress' in data:
+                updates.append("current_progress = ?")
+                params.append(data['current_progress'])
+            
+            if 'target_date' in data:
+                updates.append("target_date = ?")
+                params.append(data['target_date'])
+            
+            if 'is_completed' in data:
+                updates.append("is_completed = ?")
+                params.append(data['is_completed'])
+            
+            if not updates:
+                return True
+            
+            updates.append("updated_at = ?")
+            params.append(datetime.now())
+            params.append(goal_id)
+            params.append(user_id)
+            
+            query = f"UPDATE trading_goals SET {', '.join(updates)} WHERE id = ? AND user_id = ?"
+            self.conn.execute(query, params)
+            return True
+        except Exception as e:
+            logger.error(f"Error updating trading goal: {e}")
+            return False
+    
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def delete_trading_goal(self, user_id, goal_id):
+        """Delete a trading goal."""
+        try:
+            # Verify ownership
+            existing = self.get_trading_goal(user_id, goal_id)
+            if not existing:
+                return False
+            
+            self.conn.execute(
+                "DELETE FROM trading_goals WHERE id = ? AND user_id = ?",
+                [goal_id, user_id]
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting trading goal: {e}")
+            return False
+    
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def complete_trading_goal(self, user_id, goal_id):
+        """Mark a trading goal as completed."""
+        try:
+            return self.update_trading_goal(user_id, goal_id, {'is_completed': True})
+        except Exception as e:
+            logger.error(f"Error completing trading goal: {e}")
             return False
     
     def close(self):

@@ -116,6 +116,10 @@ app.include_router(marketplace.router, prefix="/api")
 from .api import news
 app.include_router(news.router, prefix="/api")
 
+# Trading Goals
+from .api import trading_goals
+app.include_router(trading_goals.router, prefix="/api")
+
 # Serve Static Files (Frontend)
 import os
 from fastapi.staticfiles import StaticFiles

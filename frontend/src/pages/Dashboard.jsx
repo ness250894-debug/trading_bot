@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-
-
+import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { Play, Square, Activity, DollarSign, TrendingUp, Terminal, Clock, AlertCircle } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { Activity, DollarSign, TrendingUp, Clock, AlertCircle, PieChart as PieChartIcon, BarChart2 } from 'lucide-react';
 import TradeHistory from '../components/TradeHistory';
-import BotInstancesTable from '../components/BotInstancesTable';
+import TradingGoalsWidget from '../components/TradingGoalsWidget';
 import Disclaimer from '../components/Disclaimer';
 import { formatStrategyName } from '../lib/utils';
 
@@ -29,16 +27,14 @@ const StatCard = ({ title, value, subtext, icon: Icon, trend }) => (
     </div>
 );
 
+const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#6366f1'];
+
 export default function Dashboard() {
     const [status, setStatus] = useState(null);
     const [trades, setTrades] = useState([]);
-    const [logs, setLogs] = useState([]);
-    const [isRunning, setIsRunning] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [wsConnected, setWsConnected] = useState(false);
     const [pollingInterval] = useState(30000); // 30 seconds polling interval
-    const logsEndRef = useRef(null);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -49,7 +45,6 @@ export default function Dashboard() {
                     api.get('/trades')
                 ]);
                 setStatus(statusRes.data);
-                setIsRunning(statusRes.data.is_running);
                 setTrades(tradesRes.data.trades || []);
             } catch (err) {
                 const errorMsg = err.response?.data?.detail || 'Failed to connect to bot';
@@ -60,65 +55,16 @@ export default function Dashboard() {
         };
 
         fetchData();
-        const interval = setInterval(fetchData, pollingInterval); // Use dynamic interval
+        const interval = setInterval(fetchData, pollingInterval);
         return () => clearInterval(interval);
-    }, [pollingInterval]); // Re-create interval when polling frequency changes
+    }, [pollingInterval]);
 
-    const handleStartStop = async (symbol = null) => {
-        try {
-            if (isRunning) {
-                await api.post('/stop', {}, { params: { symbol } });
-            } else {
-                await api.post('/start', {}, { params: { symbol } });
-            }
-            // Refresh status immediately
-            const res = await api.get('/status');
-            setStatus(res.data);
-            setIsRunning(res.data.is_running);
-        } catch (err) {
-            const errorMsg = err.response?.data?.detail || `Failed to ${isRunning ? 'stop' : 'start'} bot`;
-            setError(errorMsg);
-        }
-    };
-
-    // WebSocket for Logs
-    useEffect(() => {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/logs`;
-        const ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => {
-            setWsConnected(true);
-        };
-
-        ws.onmessage = (event) => {
-            setLogs(prev => [...prev.slice(-99), event.data]); // Keep last 100 logs
-        };
-
-        ws.onclose = () => {
-            setWsConnected(false);
-        };
-
-        return () => ws.close();
-    }, []);
-
-    // Auto-scroll logs (only within container, not entire page)
-    useEffect(() => {
-        if (logsEndRef.current) {
-            const container = logsEndRef.current.parentElement;
-            if (container) {
-                container.scrollTop = container.scrollHeight;
-            }
-        }
-    }, [logs]);
-
-    // Calculate PnL for Chart with deep comparison to avoid unnecessary recalculations
+    // Calculate PnL for Chart
     const pnlData = React.useMemo(() => {
         if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
 
         let cumulative = 0;
         return trades.map((t, i) => {
-            // Backend returns 'pnl', frontend was using 'profit_loss'
             const value = t.pnl !== undefined ? t.pnl : (t.profit_loss || 0);
             cumulative += value;
             return {
@@ -127,13 +73,72 @@ export default function Dashboard() {
                 cumulative: cumulative
             };
         });
-    }, [JSON.stringify(trades)]); // Deep comparison via JSON stringify
+    }, [JSON.stringify(trades)]);
+
+    // Calculate Win Rate Over Time
+    const winRateData = React.useMemo(() => {
+        if (!trades || trades.length === 0) return [];
+
+        const data = [];
+        let wins = 0;
+        let total = 0;
+
+        trades.forEach((t, i) => {
+            total++;
+            if ((t.pnl !== undefined ? t.pnl : t.profit_loss) > 0) wins++;
+
+            if ((i + 1) % 5 === 0 || i === trades.length - 1) {
+                data.push({
+                    name: `Trade ${i + 1}`,
+                    winRate: (wins / total) * 100
+                });
+            }
+        });
+
+        return data;
+    }, [JSON.stringify(trades)]);
+
+    // Calculate Symbol Performance
+    const symbolPerformance = React.useMemo(() => {
+        if (!trades || trades.length === 0) return [];
+
+        const symbolMap = {};
+        trades.forEach(t => {
+            const symbol = t.symbol || 'Unknown';
+            const pnl = t.pnl !== undefined ? t.pnl : t.profit_loss || 0;
+
+            if (!symbolMap[symbol]) {
+                symbolMap[symbol] = { symbol, pnl: 0, count: 0 };
+            }
+            symbolMap[symbol].pnl += pnl;
+            symbolMap[symbol].count++;
+        });
+
+        return Object.values(symbolMap).sort((a, b) => b.pnl - a.pnl);
+    }, [JSON.stringify(trades)]);
+
+    // Calculate Daily PnL (group by date)
+    const dailyPnlData = React.useMemo(() => {
+        if (!trades || trades.length === 0) return [];
+
+        const dailyMap = {};
+        trades.forEach(t => {
+            const date = t.timestamp ? new Date(t.timestamp).toLocaleDateString() : 'Unknown';
+            const pnl = t.pnl !== undefined ? t.pnl : t.profit_loss || 0;
+
+            if (!dailyMap[date]) {
+                dailyMap[date] = { date, pnl: 0 };
+            }
+            dailyMap[date].pnl += pnl;
+        });
+
+        return Object.values(dailyMap).slice(-10); // Last 10 days
+    }, [JSON.stringify(trades)]);
 
     const refreshTrades = async () => {
         try {
             const tradesRes = await api.get('/trades');
             setTrades(tradesRes.data.trades || []);
-            // Also refresh status to update total PnL
             const statusRes = await api.get('/status');
             setStatus(statusRes.data);
         } catch (err) {
@@ -169,31 +174,11 @@ export default function Dashboard() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                        Dashboard
+                        Analytics Dashboard
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Real-time market analysis and bot performance.
+                        Comprehensive performance insights and trading analytics.
                     </p>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${wsConnected ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${wsConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-                        {wsConnected ? 'Live Feed' : 'Disconnected'}
-                    </div>
-
-                    <button
-                        onClick={handleStartStop}
-                        className={`
-                            flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all duration-300 shadow-lg
-                            ${isRunning
-                                ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 shadow-red-500/10'
-                                : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/25 hover:shadow-primary/40'
-                            }
-                        `}
-                    >
-                        {isRunning ? <><Square size={18} fill="currentColor" /> Stop Bot</> : <><Play size={18} fill="currentColor" /> Start Bot</>}
-                    </button>
                 </div>
 
                 {/* Disclaimer */}
@@ -222,21 +207,6 @@ export default function Dashboard() {
                     subtext="Currently open"
                 />
                 <StatCard
-                    title="Active Strategy"
-                    value={formatStrategyName(status?.config?.strategy) || 'N/A'}
-                    icon={Activity}
-                    subtext={
-                        <span className="flex flex-col gap-1">
-                            <span className={status?.config?.dry_run ? 'text-yellow-400' : 'text-green-400'}>
-                                {status?.config?.dry_run ? '⚠️ Practice Mode' : '🚀 Live Trading'}
-                            </span>
-                            <span className="text-[10px] opacity-70">
-                                {status?.config?.parameters ? Object.entries(status.config.parameters).map(([k, v]) => `${k}: ${v}`).join(', ') : ''}
-                            </span>
-                        </span>
-                    }
-                />
-                <StatCard
                     title="Win Rate"
                     value={`${((trades.filter(t => (t.pnl !== undefined ? t.pnl : t.profit_loss) > 0).length / trades.length || 0) * 100).toFixed(1)}%`}
                     icon={Clock}
@@ -245,89 +215,133 @@ export default function Dashboard() {
                 />
             </div>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 h-[600px]">
-                {/* Chart Section */}
-                <div className="lg:col-span-2 glass rounded-2xl p-6 flex flex-col">
+            {/* Main Chart - Performance History */}
+            <div className="glass rounded-2xl p-6">
+                <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                    <TrendingUp size={20} className="text-primary" />
+                    Cumulative Performance
+                </h3>
+                <div className="w-full h-[400px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={pnlData}>
+                            <defs>
+                                <linearGradient id="colorPnl" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                            <XAxis
+                                dataKey="name"
+                                stroke="#ffffff40"
+                                tick={{ fontSize: 12 }}
+                                tickLine={false}
+                                axisLine={false}
+                            />
+                            <YAxis
+                                stroke="#ffffff40"
+                                tick={{ fontSize: 12 }}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(value) => `$${value}`}
+                            />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                itemStyle={{ color: '#fff' }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="cumulative"
+                                stroke="#8b5cf6"
+                                strokeWidth={3}
+                                fillOpacity={1}
+                                fill="url(#colorPnl)"
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* Analytics Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Win Rate Over Time */}
+                <div className="glass rounded-2xl p-6">
                     <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                        <TrendingUp size={20} className="text-primary" />
-                        Performance History
+                        <BarChart2 size={20} className="text-primary" />
+                        Win Rate Progress
                     </h3>
-                    <div className="flex-1 w-full min-h-0">
+                    <div className="w-full h-[300px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={pnlData}>
-                                <defs>
-                                    <linearGradient id="colorPnl" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                                <XAxis
-                                    dataKey="name"
-                                    stroke="#ffffff40"
-                                    tick={{ fontSize: 12 }}
-                                    tickLine={false}
-                                    axisLine={false}
-                                />
-                                <YAxis
-                                    stroke="#ffffff40"
-                                    tick={{ fontSize: 12 }}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(value) => `$${value}`}
-                                />
+                            <LineChart data={winRateData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                <XAxis dataKey="name" stroke="#ffffff40" tick={{ fontSize: 10 }} />
+                                <YAxis stroke="#ffffff40" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                                    itemStyle={{ color: '#fff' }}
+                                    formatter={(value) => `${value.toFixed(1)}%`}
                                 />
-                                <Area
-                                    type="monotone"
-                                    dataKey="cumulative"
-                                    stroke="#8b5cf6"
-                                    strokeWidth={3}
-                                    fillOpacity={1}
-                                    fill="url(#colorPnl)"
-                                />
-                            </AreaChart>
+                                <Line type="monotone" dataKey="winRate" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} />
+                            </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Logs Section */}
-                <div className="glass rounded-2xl p-6 flex flex-col overflow-hidden border-l-4 border-l-primary/50">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Terminal size={20} className="text-primary" />
-                        System Logs
+                {/* Symbol Performance */}
+                <div className="glass rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                        <PieChartIcon size={20} className="text-primary" />
+                        Symbol Performance
                     </h3>
-                    <div className="flex-1 overflow-y-auto font-mono text-xs space-y-2 pr-2 scrollbar-thin scrollbar-thumb-white/10">
-                        {logs.length === 0 ? (
-                            <div className="text-muted-foreground text-center mt-20 italic">
-                                Waiting for logs...
-                            </div>
-                        ) : (
-                            logs.map((log, i) => (
-                                <div key={i} className="break-words p-2 rounded hover:bg-white/5 transition-colors border-l-2 border-transparent hover:border-primary/50">
-                                    <span className="text-primary/60">[{new Date().toLocaleTimeString()}]</span>{' '}
-                                    <span className={log.toLowerCase().includes('error') ? 'text-red-400' : 'text-gray-300'}>
-                                        {log}
-                                    </span>
-                                </div>
-                            ))
-                        )}
-                        <div ref={logsEndRef} />
+                    <div className="w-full h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={symbolPerformance}
+                                    dataKey="pnl"
+                                    nameKey="symbol"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={80}
+                                    label={(entry) => entry.symbol}
+                                >
+                                    {symbolPerformance.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                    formatter={(value) => `$${value.toFixed(2)}`}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Daily PnL */}
+                <div className="glass rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                        <BarChart2 size={20} className="text-primary" />
+                        Daily PnL
+                    </h3>
+                    <div className="w-full h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={dailyPnlData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                <XAxis dataKey="date" stroke="#ffffff40" tick={{ fontSize: 10 }} />
+                                <YAxis stroke="#ffffff40" tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                    formatter={(value) => `$${value.toFixed(2)}`}
+                                />
+                                <Bar dataKey="pnl" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
                     </div>
                 </div>
             </div>
 
-            {/* Bot Instances Table */}
-            <BotInstancesTable
-                instances={status?.instances || status || {}}
-                onStart={(symbol) => handleStartStop(symbol)}
-                onStop={(symbol) => handleStartStop(symbol)}
-                onStopAll={() => handleStartStop()}
-                loading={loading}
-            />
+            {/* Trading Goals Widget */}
+            <TradingGoalsWidget />
 
             {/* Trade History Section */}
             <div className="h-[500px] mt-8">
