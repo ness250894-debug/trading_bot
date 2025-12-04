@@ -416,14 +416,33 @@ async def get_bot_configs(request: Request, current_user: dict = Depends(auth.ge
 async def create_bot_config(request: Request, config: BotConfigCreate, current_user: dict = Depends(auth.get_current_user)):
     """Create a new bot configuration."""
     try:
-        config_id = db.create_bot_config(current_user['id'], config.dict())
+        user_id = current_user['id']
+        is_admin = current_user.get('is_admin', False)
+        
+        # Check plan limits for bot configuration count
+        if not is_admin:
+            subscription = db.get_subscription(user_id)
+            is_free_plan = True
+            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+                is_free_plan = False
+            
+            if is_free_plan:
+                # Free plan: limit to 1 bot configuration
+                existing_configs = db.get_bot_configs(user_id)
+                if len(existing_configs) >= 1:
+                    raise HTTPException(
+                        status_code=403, 
+                        detail="Free plan is limited to 1 bot. Upgrade to add more bots."
+                    )
+        
+        config_id = db.create_bot_config(user_id, config.dict())
         
         if config_id:
             # Get the created config
-            created_config = db.get_bot_config(current_user['id'], config_id)
+            created_config = db.get_bot_config(user_id, config_id)
             return {"status": "success", "config": created_config}
         else:
-            raise HTTPException(status_code=400, detail="Failed to create bot configuration. Symbol may already exist.")
+            raise HTTPException(status_code=400, detail="Failed to create bot configuration.")
     except HTTPException:
         raise
     except Exception as e:

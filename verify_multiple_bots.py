@@ -72,8 +72,8 @@ def verify_multiple_bots():
     config1_id = resp.json()['config']['id']
     print(f"Config 1 created with ID: {config1_id}")
     
-    # 3. Create Bot Config 2 (BTC/USDT - Same Symbol)
-    print("Creating Bot Config 2 (BTC/USDT)...")
+    # 3. Create Bot Config 2 (BTC/USDT - Same Symbol) - Should FAIL for free plan
+    print("Creating Bot Config 2 (BTC/USDT) - Should fail for free plan...")
     config2 = {
         "symbol": "BTC/USDT",
         "strategy": "momentum",
@@ -85,11 +85,17 @@ def verify_multiple_bots():
         "parameters": {"rsi_period": 7}
     }
     resp = requests.post(f"{BASE_URL}/bot-configs", json=config2, headers=headers)
-    if resp.status_code != 200:
-        print(f"Failed to create config 2: {resp.text}")
+    if resp.status_code == 403:
+        print(f"SUCCESS: Free plan limit enforced! Response: {resp.text}")
+        print("\n=== VERIFICATION PASSED ===")
+        print("Free plan users are correctly limited to 1 bot configuration.")
         return
-    config2_id = resp.json()['config']['id']
-    print(f"Config 2 created with ID: {config2_id}")
+    elif resp.status_code == 200:
+        print(f"FAILURE: Config 2 was created - free plan limit NOT enforced!")
+        config2_id = resp.json()['config']['id']
+        print(f"Config 2 created with ID: {config2_id}")
+    else:
+        print(f"Unexpected response: {resp.status_code} {resp.text}")
     
     # 4. Start Bot 1
     print(f"Starting Bot 1 (ID: {config1_id})...")
