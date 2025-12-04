@@ -13,7 +13,7 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
     const hasApiConnected = status?.balance?.total !== undefined && status?.balance?.total !== null;
 
     return (
-        <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1 md:col-span-4">
+        <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1 md:col-span-2">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                 <DollarSign size={120} />
             </div>
@@ -29,7 +29,7 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
                         onClick={onRefreshBalance}
                         disabled={refreshing}
                         className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors text-sm disabled:opacity-50 relative z-20"
-                        title="Reset practice balance to $10,000"
+                        title="Reset practice balance to $1,000"
                     >
                         {refreshing ? (
                             <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -60,19 +60,19 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                         <div>
-                            <div className="text-sm text-muted-foreground mb-2">Total Balance</div>
-                            <div className="text-5xl font-bold text-foreground tracking-tight mb-1">
+                            <div className="text-sm text-muted-foreground mb-2">Real Balance (Exchange)</div>
+                            <div className="text-4xl font-bold text-foreground tracking-tight mb-1">
                                 ${status?.balance?.total?.toFixed(2) || '0.00'}
                             </div>
-                            <div className="text-xs text-muted-foreground">USDT</div>
+                            <div className="text-xs text-muted-foreground">USDT on wallet</div>
                         </div>
 
                         <div>
-                            <div className="text-sm text-muted-foreground mb-2">Available Balance</div>
-                            <div className="text-5xl font-bold text-green-400 tracking-tight mb-1">
+                            <div className="text-sm text-muted-foreground mb-2">Practice Balance</div>
+                            <div className="text-4xl font-bold text-yellow-400 tracking-tight mb-1">
                                 ${status?.balance?.free?.toFixed(2) || '0.00'}
                             </div>
-                            <div className="text-xs text-muted-foreground">Free to trade</div>
+                            <div className="text-xs text-yellow-400/70">⚠️ Not real money</div>
                         </div>
                     </div>
 
@@ -83,14 +83,7 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
                                 <span className="font-semibold">${((status?.balance?.total || 0) - (status?.balance?.free || 0)).toFixed(2)}</span>
                             </div>
                         </div>
-                        {isPracticeMode ? (
-                            <div className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                                <p className="text-xs text-yellow-400 flex items-center gap-1">
-                                    <span>⚠️</span>
-                                    <span>Practice Mode - No real money</span>
-                                </p>
-                            </div>
-                        ) : (
+                        {!isPracticeMode && (
                             <div className="px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg">
                                 <p className="text-xs text-green-400 flex items-center gap-1">
                                     <span>🚀</span>
@@ -280,7 +273,7 @@ export default function Dashboard() {
             await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
             const statusRes = await api.get('/status');
             setStatus(statusRes.data);
-            toast.success('Practice balance has been reset to $10,000!');
+            toast.success('Practice balance has been reset to $1,000!');
         } catch (err) {
             toast.error('Failed to refresh balance. Please try again.');
         } finally {
@@ -328,7 +321,7 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <BalanceCard
                     status={status}
                     onRefreshBalance={handleRefreshBalance}
