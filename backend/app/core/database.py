@@ -326,7 +326,14 @@ class DuckDBHandler:
                     )
                 """)
                 self.conn.execute("CREATE INDEX IF NOT EXISTS idx_bot_configs_user ON bot_configurations(user_id)")
-                self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_bot_configs_user_symbol ON bot_configurations(user_id, symbol)")
+                # self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_bot_configs_user_symbol ON bot_configurations(user_id, symbol)") # Removed to allow multiple bots
+                
+                # Migration: Drop unique index if it exists
+                try:
+                    self.conn.execute("DROP INDEX IF EXISTS idx_bot_configs_user_symbol")
+                except Exception:
+                    pass
+                    
                 self.conn.execute("CREATE SEQUENCE IF NOT EXISTS seq_bot_config_id START 1")
                 
                 logger.info("Bot configurations table created successfully")
@@ -1056,13 +1063,15 @@ class DuckDBHandler:
             import json
             from datetime import datetime
             
+            # Use RETURNING id to get the ID of the inserted row
             query = """
                 INSERT INTO bot_configurations
                 (id, user_id, symbol, strategy, timeframe, amount_usdt, take_profit_pct, stop_loss_pct, parameters, dry_run, created_at, updated_at)
                 VALUES (nextval('seq_bot_config_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                RETURNING id
             """
             
-            self.conn.execute(query, [
+            result = self.conn.execute(query, [
                 user_id,
                 config.get('symbol'),
                 config.get('strategy'),
@@ -1074,13 +1083,7 @@ class DuckDBHandler:
                 config.get('dry_run', True),
                 datetime.now(),
                 datetime.now()
-            ])
-            
-            # Get the created config ID
-            result = self.conn.execute(
-                "SELECT id FROM bot_configurations WHERE user_id = ? AND symbol = ?",
-                [user_id, config.get('symbol')]
-            ).fetchone()
+            ]).fetchone()
             
             return result[0] if result else None
         except Exception as e:
