@@ -9,6 +9,7 @@ import { formatStrategyName } from '../lib/utils';
 
 const BalanceCard = ({ status, onRefreshBalance, refreshing }) => {
     const isPracticeMode = status?.config?.dry_run;
+    const hasApiConnected = status?.balance?.total !== undefined && status?.balance?.total !== null;
 
     return (
         <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1 md:col-span-2 lg:col-span-1">
