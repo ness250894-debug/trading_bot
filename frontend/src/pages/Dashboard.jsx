@@ -326,18 +326,15 @@ export default function Dashboard() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <BalanceCard
                     status={status}
                     onRefreshBalance={handleRefreshBalance}
                     refreshing={refreshingBalance}
                 />
-                <StatCard
-                    title="Total PnL"
-                    value={`${status?.total_pnl?.toFixed(2) || '0.00'} USDT`}
-                    icon={TrendingUp}
-                    trend={status?.total_pnl >= 0 ? 'up' : 'down'}
-                    subtext={status?.total_pnl >= 0 ? 'Profitable' : 'Loss'}
+                <PnLCard
+                    trades={trades}
+                    totalPnl={status?.total_pnl}
                 />
             </div>
 
