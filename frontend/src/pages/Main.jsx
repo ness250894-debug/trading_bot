@@ -337,48 +337,38 @@ export default function Main() {
             {/* Subscription Details Card */}
             <DraggableWidget
                 id="subscriptionCard"
+                widgetName="Subscription Details"
                 className="glass p-6 rounded-2xl"
                 defaultWidth="auto"
                 defaultHeight="auto"
+                editableFields={{
+                    title: 'Subscription Details',
+                    planLabel: 'Current Plan',
+                    statusLabel: 'Status',
+                    activeText: 'Active',
+                    expiresLabel: 'Expires',
+                    actionsLabel: 'Actions',
+                    upgradeText: 'Upgrade Plan'
+                }}
             >
                 <div className="flex items-center gap-2 mb-4">
                     <Shield size={20} className="text-primary" />
-                    <h2 className="text-xl font-bold">
-                        <EditableText
-                            configPath="widgets.subscriptionCard.title"
-                            defaultValue="Subscription Details"
-                        />
-                    </h2>
+                    <h2 className="text-xl font-bold">Subscription Details</h2>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                            <EditableText
-                                configPath="widgets.subscriptionCard.planLabel"
-                                defaultValue="Current Plan"
-                            />
-                        </p>
+                        <p className="text-sm text-muted-foreground mb-1">Current Plan</p>
                         <p className="text-lg font-semibold text-foreground">
                             {formatPlanName(subscription?.plan) || 'Free Plan'}
                         </p>
                     </div>
                     <div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                            <EditableText
-                                configPath="widgets.subscriptionCard.statusLabel"
-                                defaultValue="Status"
-                            />
-                        </p>
+                        <p className="text-sm text-muted-foreground mb-1">Status</p>
                         <div className="flex items-center gap-2">
                             {subscription?.status === 'active' ? (
                                 <>
                                     <CheckCircle size={16} className="text-green-400" />
-                                    <p className="text-lg font-semibold text-green-400">
-                                        <EditableText
-                                            configPath="widgets.subscriptionCard.activeText"
-                                            defaultValue="Active"
-                                        />
-                                    </p>
+                                    <p className="text-lg font-semibold text-green-400">Active</p>
                                 </>
                             ) : (
                                 <>
@@ -392,12 +382,7 @@ export default function Main() {
                     </div>
                     {subscription?.expires_at && (
                         <div>
-                            <p className="text-sm text-muted-foreground mb-1">
-                                <EditableText
-                                    configPath="widgets.subscriptionCard.expiresLabel"
-                                    defaultValue="Expires"
-                                />
-                            </p>
+                            <p className="text-sm text-muted-foreground mb-1">Expires</p>
                             <div className="flex items-center gap-2">
                                 <Calendar size={16} className="text-primary" />
                                 <p className="text-lg font-semibold text-foreground">
@@ -407,20 +392,12 @@ export default function Main() {
                         </div>
                     )}
                     <div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                            <EditableText
-                                configPath="widgets.subscriptionCard.actionsLabel"
-                                defaultValue="Actions"
-                            />
-                        </p>
+                        <p className="text-sm text-muted-foreground mb-1">Actions</p>
                         <a
                             href="/pricing"
                             className="text-primary hover:text-primary/80 font-medium inline-flex items-center gap-1"
                         >
-                            <EditableText
-                                configPath="widgets.subscriptionCard.upgradeText"
-                                defaultValue="Upgrade Plan"
-                            /> <TrendingUp size={14} />
+                            Upgrade Plan <TrendingUp size={14} />
                         </a>
                     </div>
                 </div>
