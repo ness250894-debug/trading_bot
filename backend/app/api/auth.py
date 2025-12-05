@@ -125,8 +125,8 @@ async def delete_account(current_user: dict = Depends(auth.get_current_user)):
         # 5. Delete price alerts
         db.conn.execute("DELETE FROM price_alerts WHERE user_id = ?", [user_id])
         
-        # 6. Delete watchlist
-        db.conn.execute("DELETE FROM watchlist WHERE user_id = ?", [user_id])
+        # 6. Delete watchlists
+        db.conn.execute("DELETE FROM watchlists WHERE user_id = ?", [user_id])
         
         # 7. Delete risk profile
         db.conn.execute("DELETE FROM risk_profiles WHERE user_id = ?", [user_id])
