@@ -72,9 +72,16 @@ export default function Main() {
     // Global Practice Mode State
     const [isPracticeMode, setIsPracticeMode] = useState(true);
 
-    // Scroll to top on mount
+    // Scroll to Active Bot Instances on mount
     useEffect(() => {
-        window.scrollTo(0, 0);
+        // Use a small timeout to ensure DOM is ready and layout is stable
+        const timer = setTimeout(() => {
+            const element = document.getElementById('bot-instances-table');
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
+        return () => clearTimeout(timer);
     }, []);
 
     // Multi-bot configuration state
@@ -425,19 +432,21 @@ export default function Main() {
             </div>
 
             {/* Bot Instances Table - Moved to Top */}
-            <BotInstancesTable
-                instances={botStatus?.instances || {}}
-                botConfigs={botConfigs}
-                onRemoveBot={handleRemoveBot}
-                onBulkRemove={handleBulkRemove}
-                onStart={handleStartBot}
-                onStop={handleStopBot}
-                onStopAll={() => handleStartStop()}
-                loading={loading}
-                subscription={subscription}
-                startingBots={startingBots}
-                isBotRunning={isBotRunning}
-            />
+            <div id="bot-instances-table">
+                <BotInstancesTable
+                    instances={botStatus?.instances || {}}
+                    botConfigs={botConfigs}
+                    onRemoveBot={handleRemoveBot}
+                    onBulkRemove={handleBulkRemove}
+                    onStart={handleStartBot}
+                    onStop={handleStopBot}
+                    onStopAll={() => handleStartStop()}
+                    loading={loading}
+                    subscription={subscription}
+                    startingBots={startingBots}
+                    isBotRunning={isBotRunning}
+                />
+            </div>
 
             {/* Account Info Grid */}
             <div className="grid md:grid-cols-2 gap-6">
