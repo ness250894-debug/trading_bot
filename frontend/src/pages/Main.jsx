@@ -5,8 +5,7 @@ import {
     Calendar, Shield, Newspaper, RefreshCw, CheckCircle,
     XCircle, Play, Square, Settings, Plus, Trash2, Edit
 } from 'lucide-react';
-import SentimentWidget from '../components/SentimentWidget';
-import AdvancedSentimentWidget from '../components/AdvancedSentimentWidget';
+import CombinedSentimentWidget from '../components/CombinedSentimentWidget';
 import BotInstancesTable from '../components/BotInstancesTable';
 import WatchlistWidget from '../components/WatchlistWidget';
 import PriceAlertsWidget from '../components/PriceAlertsWidget';
@@ -417,20 +416,11 @@ export default function Main() {
                     <PriceAlertsWidget />
                 </div>
 
-                {/* AI Sentiment - Two widgets stacked */}
-                <div className="flex flex-col gap-6">
-                    <div className="h-[240px]">
-                        <PlanGate feature="AI Sentiment Analysis" explanation="Get real-time market sentiment analysis powered by AI to make smarter trading decisions.">
-                            <SentimentWidget />
-                        </PlanGate>
-                    </div>
-
-                    {/* Advanced Sentiment Widget */}
-                    <div className="h-[240px]">
-                        <PlanGate feature="Advanced Sentiment Metrics" explanation="Deep dive into sentiment analysis with advanced metrics and historical data.">
-                            <AdvancedSentimentWidget />
-                        </PlanGate>
-                    </div>
+                {/* AI Sentiment & Analysis - Combined Widget */}
+                <div className="h-[500px]">
+                    <PlanGate feature="AI Sentiment & Analysis" explanation="Get real-time market sentiment analysis powered by AI with advanced metrics and key market drivers.">
+                        <CombinedSentimentWidget />
+                    </PlanGate>
                 </div>
 
                 {/* Recent Trades (Journal) */}
