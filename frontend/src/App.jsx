@@ -5,6 +5,8 @@ import { ToastProvider } from './components/Toast';
 import { ModalProvider } from './components/Modal';
 import PublicLayout from './components/PublicLayout';
 import HybridLayout from './components/HybridLayout';
+import { ConfigProvider } from './lib/ConfigContext';
+import ConstructorToolbar from './components/constructor/ConstructorToolbar';
 
 // Lazy load pages for performance optimization
 const Landing = lazy(() => import('./pages/Landing'));
@@ -87,92 +89,95 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <ToastProvider>
-          <ModalProvider>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                {/* Public Routes - now use HybridLayout for auth-aware header */}
-                <Route element={<HybridLayout />}>
-                  <Route path="/pricing" element={<Pricing />} />
-                </Route>
+        <ConfigProvider>
+          <ToastProvider>
+            <ModalProvider>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {/* Public Routes - now use HybridLayout for auth-aware header */}
+                  <Route element={<HybridLayout />}>
+                    <Route path="/pricing" element={<Pricing />} />
+                  </Route>
 
-                <Route element={<PublicLayout />}>
-                  <Route path="/" element={<Landing />} />
-                  {/* <Route path="/login" element={<Login />} /> */}
-                  <Route path="/signup" element={<Signup />} />
-                </Route>
+                  <Route element={<PublicLayout />}>
+                    <Route path="/" element={<Landing />} />
+                    {/* <Route path="/login" element={<Login />} /> */}
+                    <Route path="/signup" element={<Signup />} />
+                  </Route>
 
-                {/* Protected Routes */}
-                <Route path="/main" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Main />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Dashboard />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/strategies" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Strategies />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/strategy-builder" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <StrategyBuilder />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/marketplace" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Marketplace />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/optimization" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Optimization />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/backtest" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Backtest />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Settings />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
+                  {/* Protected Routes */}
+                  <Route path="/main" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Main />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Dashboard />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/strategies" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Strategies />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/strategy-builder" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <StrategyBuilder />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/marketplace" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Marketplace />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/optimization" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Optimization />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/backtest" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Backtest />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/settings" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <Settings />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
 
-                <Route path="/admin" element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <AdminDashboard />
-                    </Layout>
-                  </ProtectedRoute>
-                } />
+                  <Route path="/admin" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <AdminDashboard />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
 
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
-          </ModalProvider>
-        </ToastProvider>
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+              <ConstructorToolbar />
+            </ModalProvider>
+          </ToastProvider>
+        </ConfigProvider>
       </Router>
     </ErrorBoundary>
   );

@@ -1,0 +1,152 @@
+/* EditableText Component Styles */
+
+.editable-text {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+}
+
+.editable-text:hover {
+    background: rgba(139, 92, 246, 0.1);
+    outline: 1px dashed rgba(139, 92, 246, 0.5);
+}
+
+.editable-text-icon {
+    display: inline-block;
+    margin-left: 6px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    vertical-align: middle;
+    color: var(--primary, #8b5cf6);
+}
+
+.editable-text:hover .editable-text-icon {
+    opacity: 1;
+}
+
+.editable-text-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.editable-text-container.editing {
+    z-index: 100;
+}
+
+.editable-text-input {
+    background: var(--card, #1a1a2e);
+    border: 1px solid var(--primary, #8b5cf6);
+    border-radius: 4px;
+    color: var(--foreground, #fff);
+    padding: 4px 8px;
+    font-size: inherit;
+    font-family: inherit;
+    min-width: 100px;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+}
+
+.editable-text-input:focus {
+    border-color: var(--primary, #8b5cf6);
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+}
+
+.editable-text-input.number {
+    width: 80px;
+    text-align: center;
+}
+
+textarea.editable-text-input {
+    resize: vertical;
+    min-height: 60px;
+    width: 100%;
+}
+
+.editable-text-actions {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.editable-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.editable-action-btn.save {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.editable-action-btn.save:hover {
+    background: rgba(16, 185, 129, 0.4);
+}
+
+.editable-action-btn.cancel {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.editable-action-btn.cancel:hover {
+    background: rgba(239, 68, 68, 0.4);
+}
+
+/* Color picker */
+.editable-color {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.editable-color-label {
+    font-size: 12px;
+    color: var(--muted-foreground, #888);
+}
+
+.editable-color-input {
+    width: 32px;
+    height: 24px;
+    border: 1px solid var(--border, #333);
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+    background: transparent;
+}
+
+.editable-color-input::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.editable-color-input::-webkit-color-swatch {
+    border-radius: 2px;
+    border: none;
+}
+
+.editable-color-value {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--muted-foreground, #888);
+}
+
+/* Constructor mode indicator */
+.constructor-mode-active .editable-text {
+    outline: 1px dashed rgba(139, 92, 246, 0.3);
+}
+
+/* Dark theme adjustments */
+@media (prefers-color-scheme: dark) {
+    .editable-text-input {
+        background: #1a1a2e;
+    }
+}

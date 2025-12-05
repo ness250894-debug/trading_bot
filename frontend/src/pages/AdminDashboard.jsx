@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { Shield, Trash2, Edit, Check, X, Search, Users, CreditCard } from 'lucide-react';
+import { Shield, Trash2, Edit, Check, X, Search, Users, CreditCard, Palette } from 'lucide-react';
 import Disclaimer from '../components/Disclaimer';
 import { useModal } from '../components/Modal';
 import AdminPlans from '../components/AdminPlans';
+import ConstructorPanel from '../components/constructor/ConstructorPanel';
 import { formatPlanName, formatLabel } from '../lib/utils';
 
 const AdminDashboard = () => {
@@ -237,6 +238,18 @@ const AdminDashboard = () => {
                         <div className="flex items-center gap-2">
                             <CreditCard size={18} />
                             Plans
+                        </div>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('constructor')}
+                        className={`pb-3 px-4 text-sm font-medium transition-colors border-b-2 ${activeTab === 'constructor'
+                            ? 'border-primary text-primary'
+                            : 'border-transparent text-muted-foreground hover:text-foreground'
+                            }`}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Palette size={18} />
+                            Constructor
                         </div>
                     </button>
                 </div>
@@ -490,8 +503,10 @@ const AdminDashboard = () => {
                             </table>
                         </div>
                     </div>
-                ) : (
+                ) : activeTab === 'plans' ? (
                     <AdminPlans />
+                ) : (
+                    <ConstructorPanel />
                 )}
             </div >
         </div >

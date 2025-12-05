@@ -7,6 +7,7 @@ import TradingGoalsWidget from '../components/TradingGoalsWidget';
 import Disclaimer from '../components/Disclaimer';
 import { formatStrategyName } from '../lib/utils';
 import { ToastContext } from '../components/ToastContext';
+import EditableText from '../components/constructor/EditableText';
 
 const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
     const isPracticeMode = status?.config?.dry_run;
@@ -307,10 +308,16 @@ export default function Dashboard() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                        Analytics Dashboard
+                        <EditableText
+                            configPath="pages.dashboard.pageTitle"
+                            defaultValue="Analytics Dashboard"
+                        />
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Comprehensive performance insights and trading analytics.
+                        <EditableText
+                            configPath="pages.dashboard.subtitle"
+                            defaultValue="Comprehensive performance insights and trading analytics."
+                        />
                     </p>
                 </div>
 

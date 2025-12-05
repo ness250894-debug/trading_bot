@@ -112,6 +112,10 @@ app.include_router(sentiment.router, prefix="/api")
 from .api import marketplace
 app.include_router(marketplace.router, prefix="/api")
 
+# UI Constructor (Admin)
+from .api import constructor
+app.include_router(constructor.router, prefix="/api")
+
 # Market News
 from .api import news
 app.include_router(news.router, prefix="/api")
