@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Plus, Trash2, Save, Eye, CheckCircle, AlertTriangle } from 'lucide-react';
-import Disclaimer from '../components/Disclaimer';
+
 import PlanGate from '../components/PlanGate';
 import { formatLabel } from '../lib/utils';
 
@@ -211,8 +211,6 @@ export default function StrategyBuilder() {
                     </h2>
                     <p className="text-muted-foreground mt-1">Create custom trading strategies without coding</p>
                 </div>
-
-                <Disclaimer compact />
 
                 {message && (
                     <div className={`p-4 rounded-xl flex items-center gap-3 border ${message.type === 'success'

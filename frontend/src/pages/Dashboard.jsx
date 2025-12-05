@@ -4,7 +4,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Activity, DollarSign, TrendingUp, Clock, AlertCircle, PieChart as PieChartIcon, BarChart2 } from 'lucide-react';
 import TradeHistory from '../components/TradeHistory';
 import TradingGoalsWidget from '../components/TradingGoalsWidget';
-import Disclaimer from '../components/Disclaimer';
+
 import { formatStrategyName } from '../lib/utils';
 import { ToastContext } from '../components/ToastContext';
 import EditableText from '../components/constructor/EditableText';
@@ -320,9 +320,6 @@ export default function Dashboard() {
                         />
                     </p>
                 </div>
-
-                {/* Disclaimer */}
-                <Disclaimer compact />
             </div>
 
             {/* Stats Grid */}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Shield, Trash2, Edit, Check, X, Search, Users, CreditCard, Palette } from 'lucide-react';
-import Disclaimer from '../components/Disclaimer';
+
 import { useModal } from '../components/Modal';
 import AdminPlans from '../components/AdminPlans';
 import ConstructorPanel from '../components/constructor/ConstructorPanel';
@@ -253,8 +253,6 @@ const AdminDashboard = () => {
                         </div>
                     </button>
                 </div>
-
-                <Disclaimer compact />
 
                 {activeTab === 'users' ? (
                     <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm">

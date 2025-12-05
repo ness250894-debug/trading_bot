@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useStaticData } from '../lib/swr';
-import Disclaimer from '../components/Disclaimer';
+
 import {
     User, Key, Bell, Settings as SettingsIcon, Shield,
     LogOut, Moon, Sun, DollarSign, Globe, CheckCircle,
@@ -279,8 +279,6 @@ export default function Settings() {
                     />
                 </p>
             </div>
-
-            <Disclaimer compact />
 
             <div className="flex flex-col md:flex-row gap-8">
                 {/* Sidebar Navigation */}

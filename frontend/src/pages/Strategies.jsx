@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { DEFAULT_EXCHANGES } from '../constants/exchanges';
 import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity, Globe, Plus } from 'lucide-react';
 import { useModal } from '../components/Modal';
-import Disclaimer from '../components/Disclaimer';
+
 import { useToast } from '../components/ToastContext';
 import EditableText from '../components/constructor/EditableText';
 
@@ -345,8 +345,6 @@ export default function Strategies() {
                     <RefreshCw size={20} />
                 </button>
             </div>
-
-            <Disclaimer compact />
 
             {suggestion && (
                 <div className="glass p-6 rounded-xl border-l-4 border-l-blue-500 flex items-center justify-between animate-in slide-in-from-top-4 duration-500">

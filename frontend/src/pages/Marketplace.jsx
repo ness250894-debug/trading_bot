@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Trophy, TrendingUp, Copy, Star, Users, ArrowUp } from 'lucide-react';
-import Disclaimer from '../components/Disclaimer';
+
 import PlanGate from '../components/PlanGate';
 
 export default function Marketplace() {
@@ -70,8 +70,6 @@ export default function Marketplace() {
                     </h2>
                     <p className="text-muted-foreground mt-1">Browse and clone successful trading strategies</p>
                 </div>
-
-                <Disclaimer compact />
 
                 {message && (
                     <div className={`p-4 rounded-xl ${message.type === 'success'

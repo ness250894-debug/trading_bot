@@ -3,7 +3,7 @@ import api from '../lib/api';
 import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
-import Disclaimer from '../components/Disclaimer';
+
 import PlanGate from '../components/PlanGate';
 import { formatLabel } from '../lib/utils';
 
@@ -451,8 +451,6 @@ export default function Optimization() {
                         </p>
                     </div>
                 </div>
-
-                <Disclaimer compact />
 
                 {/* Configuration Panel - Horizontal Layout */}
                 <div className="glass p-4 rounded-2xl">

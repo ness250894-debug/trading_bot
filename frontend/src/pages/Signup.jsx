@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import { Lock, Mail, AlertCircle, UserPlus, User, Eye, EyeOff } from 'lucide-react';
-import Disclaimer from '../components/Disclaimer';
+
 
 export default function Signup() {
     const [email, setEmail] = useState('');
@@ -52,8 +52,6 @@ export default function Signup() {
                     </h1>
                     <p className="text-muted-foreground mt-2">Start your automated trading journey</p>
                 </div>
-
-                <Disclaimer compact />
 
                 {error && (
                     <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3 text-red-400">

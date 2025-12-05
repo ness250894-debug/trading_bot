@@ -10,7 +10,7 @@ import BotInstancesTable from '../components/BotInstancesTable';
 import WatchlistWidget from '../components/WatchlistWidget';
 import PriceAlertsWidget from '../components/PriceAlertsWidget';
 import RecentTradesWidget from '../components/RecentTradesWidget';
-import Disclaimer from '../components/Disclaimer';
+
 import PlanGate from '../components/PlanGate';
 import { formatPlanName, formatStrategyName, formatLabel } from '../lib/utils';
 import { useToast } from '../components/ToastContext';
@@ -323,11 +323,6 @@ export default function Main() {
                     >
                         <RefreshCw size={20} className={`text-muted-foreground ${refreshing ? 'animate-spin' : ''}`} />
                     </button>
-                </div>
-
-                {/* Disclaimer */}
-                <div className="w-full flex justify-center">
-                    <Disclaimer compact />
                 </div>
             </div>
 
