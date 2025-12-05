@@ -21,9 +21,6 @@ const STRATEGY_OPTIONS = [
 
 const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
-// STRATEGY_PRESETS, RISK_PRESETS, and POPULAR_SYMBOLS removed in favor of API data
-
-
 const STRATEGY_PARAMS = {
     mean_reversion: {
         rsi_period: { label: 'RSI Period', type: 'number', min: 2, max: 50, default: 14 },
@@ -68,13 +65,29 @@ const STRATEGY_PARAMS = {
     }
 };
 
-// Presets will be loaded from API
-
 export default function Strategies() {
     const navigate = useNavigate();
     const toast = useToast();
     const modal = useModal();
-    const [config, setConfig] = useState(null);
+
+    // Initialize new strategy with global practice mode preference
+    // Default to 'true' if not set, or preserve 'false' if explicitly set
+    const savedPracticeMode = localStorage.getItem('globalPracticeMode');
+    const isPracticeMode = savedPracticeMode === null ? true : savedPracticeMode === 'true';
+
+    const initialConfig = {
+        name: 'New Strategy',
+        symbol: 'BTC/USDT',
+        timeframe: '1h',
+        strategy: 'macd',
+        parameters: { ...Object.fromEntries(Object.entries(STRATEGY_PARAMS.macd).map(([k, v]) => [k, v.default])) },
+        amount_usdt: 100,
+        take_profit_pct: 0.04,
+        stop_loss_pct: 0.02,
+        dry_run: isPracticeMode // Use the global setting here!
+    };
+
+    const [config, setConfig] = useState(initialConfig);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
@@ -94,8 +107,7 @@ export default function Strategies() {
         setLoading(true);
         setExchangesLoading(true);
         try {
-            const [statusRes, subRes, exchangesRes, strategiesRes, risksRes, symbolsRes] = await Promise.all([
-                api.get('/status'),
+            const [subRes, exchangesRes, strategiesRes, risksRes, symbolsRes] = await Promise.all([
                 api.get('/billing/status'),
                 api.get('/exchanges'),
                 api.get('/strategy-presets'),
@@ -103,13 +115,13 @@ export default function Strategies() {
                 api.get('/popular-symbols')
             ]);
 
-            // Process Config & Subscription
-            setConfig(statusRes.data.config);
+            // Process Subscription
             setSubscription(subRes.data);
             setMessage(null);
 
-            // Force dry_run to true for free plan
-            if (subRes.data?.plan === 'free' && !statusRes.data.config.dry_run) {
+            // Re-apply free plan limit to config if necessary, though global mode should handle first init
+            if (subRes.data?.plan === 'free') {
+                // Force true for free plan if not already
                 setConfig(prev => ({ ...prev, dry_run: true }));
             }
 
@@ -157,6 +169,8 @@ export default function Strategies() {
 
     useEffect(() => {
         fetchData();
+        // Listen for storage events in case practice mode changes in another tab? 
+        // Not strictly required but good practice. For now just init logic is fine.
     }, []);
 
     const handleChange = (key, value) => {
@@ -223,7 +237,7 @@ export default function Strategies() {
 
         localStorage.removeItem('suggested_strategy_params');
         setSuggestion(null);
-        setMessage({ type: 'success', text: 'Applied suggested parameters and timeframe! Click Update to save.' });
+        setMessage({ type: 'success', text: 'Applied suggested parameters and timeframe! Click Add Bot to save.' });
     };
 
     const dismissSuggestion = () => {
@@ -609,36 +623,7 @@ export default function Strategies() {
                         </div>
                     </div>
 
-                    <div className="pt-8 border-t border-white/5 flex items-center justify-between">
-                        <label
-                            className={`flex items-center gap-4 group ${subscription?.plan === 'free' ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                if (subscription?.plan === 'free') return;
-                                handleChange('dry_run', !config.dry_run);
-                            }}
-                        >
-                            <div className={`
-                                w-14 h-8 rounded-full p-1 transition-colors duration-300
-                                ${config.dry_run ? 'bg-primary' : 'bg-white/10'}
-                                ${subscription?.plan === 'free' ? 'opacity-50' : ''}
-                            `}>
-                                <div className={`
-                                    w-6 h-6 rounded-full bg-white shadow-lg transform transition-transform duration-300
-                                    ${config.dry_run ? 'translate-x-6' : 'translate-x-0'}
-                                `} />
-                            </div>
-                            <div>
-                                <span className="block font-medium text-foreground">Practice Mode</span>
-                                <span className="text-xs text-muted-foreground">Simulate trades without real money</span>
-                                {subscription?.plan === 'free' && (
-                                    <a href="/pricing" className="block text-xs text-primary mt-1 hover:underline">
-                                        Upgrade for Real Trading
-                                    </a>
-                                )}
-                            </div>
-                        </label>
-
+                    <div className="pt-8 border-t border-white/5 flex items-center justify-end">
                         <button
                             onClick={handleAddBot}
                             disabled={saving}
@@ -653,3 +638,4 @@ export default function Strategies() {
         </div>
     );
 }
+

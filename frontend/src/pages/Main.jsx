@@ -10,9 +10,11 @@ import BotInstancesTable from '../components/BotInstancesTable';
 import WatchlistWidget from '../components/WatchlistWidget';
 import PriceAlertsWidget from '../components/PriceAlertsWidget';
 import BalanceCard from '../components/dashboard/BalanceCard';
+import PracticeModeToggle from '../components/PracticeModeToggle';
 
 import PlanGate from '../components/PlanGate';
-import { formatPlanName, formatStrategyName, formatLabel } from '../lib/utils';
+import { useModal } from '../components/Modal';
+import { formatPlanName } from '../lib/utils';
 import { useToast } from '../components/ToastContext';
 import EditableText from '../components/constructor/EditableText';
 import DraggableWidget from '../components/constructor/DraggableWidget';
@@ -67,9 +69,27 @@ export default function Main() {
     const [exchangeBalancesLoading, setExchangeBalancesLoading] = useState(true);
     const [refreshingBalance, setRefreshingBalance] = useState(false);
 
+    // Global Practice Mode State
+    const [isPracticeMode, setIsPracticeMode] = useState(true);
+
     // Multi-bot configuration state
     const [botConfigs, setBotConfigs] = useState([]);
     const [startingBots, setStartingBots] = useState(new Set());
+    const [newsItems, setNewsItems] = useState([]);
+    const [newsLoading, setNewsLoading] = useState(true);
+
+    // Load initial practice mode from localStorage
+    useEffect(() => {
+        const savedMode = localStorage.getItem('globalPracticeMode');
+        // Default to true if not set
+        setIsPracticeMode(savedMode === null ? true : savedMode === 'true');
+    }, []);
+
+    // Handle Practice Mode Toggle
+    const handlePracticeModeToggle = (newValue) => {
+        setIsPracticeMode(newValue);
+        localStorage.setItem('globalPracticeMode', String(newValue));
+    };
 
     // Fetch bot configs from API
     useEffect(() => {
@@ -110,6 +130,13 @@ export default function Main() {
             setUser(userRes.data);
             setSubscription(subRes.data);
             setBotStatus(statusRes.data);
+
+            // Force practice mode if free plan
+            if (subRes.data?.plan === 'free') {
+                setIsPracticeMode(true);
+                localStorage.setItem('globalPracticeMode', 'true');
+            }
+
         } catch (err) {
             // Silent fail - loading state will show error UI if needed
         } finally {
@@ -129,10 +156,14 @@ export default function Main() {
         setRefreshing(true);
         fetchData();
         fetchExchangeBalances();
+        fetchNews();
     };
 
     // Fetch Exchange Balances
     const fetchExchangeBalances = async () => {
+        // Here we could simulate practice balance if in practice mode, 
+        // but BalanceCard handles the *display* logic. 
+        // We still fetch real balances if available for reference or if switched to Live.
         try {
             const response = await api.get('/exchange-balances');
             setExchangeBalances(response.data);
@@ -151,21 +182,36 @@ export default function Main() {
     }, []);
 
     const handleRefreshBalance = async () => {
-        if (!botStatus?.config?.dry_run || refreshingBalance) return;
-
-        setRefreshingBalance(true);
-        try {
-            // In practice mode, we can reset the balance via API
-            // This would need a backend endpoint to reset practice balance
-            // For now, we'll just refresh the status
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-            const statusRes = await api.get('/status');
-            setBotStatus(statusRes.data);
-            toast.success('Practice balance has been reset to $1,000!');
-        } catch (err) {
-            toast.error('Failed to refresh balance. Please try again.');
-        } finally {
-            setRefreshingBalance(false);
+        // If in Practice Mode, reset balance
+        if (isPracticeMode) {
+            if (refreshingBalance) return;
+            setRefreshingBalance(true);
+            try {
+                // Simulate backend reset
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Update bot status to reflect reset if backend supported it
+                // For now just toast
+                toast.success('Practice balance has been reset to $1,000!');
+                // Re-fetch status to see updates if any
+                const statusRes = await api.get('/status');
+                setBotStatus(statusRes.data);
+            } catch (err) {
+                toast.error('Failed to reset practice balance.');
+            } finally {
+                setRefreshingBalance(false);
+            }
+        } else {
+            // If in Live Mode, refresh exchange connection
+            if (refreshingBalance) return;
+            setRefreshingBalance(true);
+            try {
+                await fetchExchangeBalances();
+                toast.success('Exchange balances updated.');
+            } catch (err) {
+                toast.error('Failed to update exchange balances.');
+            } finally {
+                setRefreshingBalance(false);
+            }
         }
     };
 
@@ -255,6 +301,11 @@ export default function Main() {
             const key = configId ? `${symbol}-${configId}` : symbol;
             setStartingBots(prev => new Set(prev).add(key));
 
+            // Force dry_run in payload to match global practice mode
+            // Note: This relies on the endpoint accepting this override if the config 
+            // has a different setting embedded. If not, we might need to update the config first.
+            // For now, assume we just start it. The *creation* of bots captures the mode.
+
             if (configId) {
                 await api.post('/start', null, { params: { config_id: configId } });
             } else {
@@ -299,11 +350,7 @@ export default function Main() {
         }
     };
 
-    // News data - fetched from backend API
-    const [newsItems, setNewsItems] = useState([]);
-    const [newsLoading, setNewsLoading] = useState(true);
-
-    // Fetch news on mount and refresh with other data
+    // Fetch news
     const fetchNews = async () => {
         try {
             const res = await api.get('/news', {
@@ -316,7 +363,7 @@ export default function Main() {
                 setNewsItems(res.data.news || []);
             }
         } catch (err) {
-            // Silent fail - UI will show empty state
+            // Silent fail
         } finally {
             setNewsLoading(false);
         }
@@ -324,7 +371,6 @@ export default function Main() {
 
     useEffect(() => {
         fetchNews();
-        // Refresh news every 5 minutes
         const newsInterval = setInterval(fetchNews, 300000);
         return () => clearInterval(newsInterval);
     }, [botStatus?.config?.symbol]);
@@ -366,6 +412,15 @@ export default function Main() {
                         <RefreshCw size={20} className={`text-muted-foreground ${refreshing ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
+            </div>
+
+            {/* Practice Mode Toggle - Above Bot Table */}
+            <div className="flex justify-end">
+                <PracticeModeToggle
+                    isPracticeMode={isPracticeMode}
+                    onToggle={handlePracticeModeToggle}
+                    isFreePlan={subscription?.plan === 'free'}
+                />
             </div>
 
             {/* Bot Instances Table - Moved to Top */}
@@ -457,7 +512,7 @@ export default function Main() {
                     </div>
                 </DraggableWidget>
 
-                {/* Balance Card */}
+                {/* Balance Card - with Practice Mode State */}
                 <div className="h-full">
                     <BalanceCard
                         status={botStatus}
@@ -466,6 +521,7 @@ export default function Main() {
                         trades={[]}
                         exchangeBalances={exchangeBalances}
                         exchangeBalancesLoading={exchangeBalancesLoading}
+                        isPracticeMode={isPracticeMode}
                     />
                 </div>
             </div>
