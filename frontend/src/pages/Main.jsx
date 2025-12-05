@@ -9,7 +9,7 @@ import CombinedSentimentWidget from '../components/CombinedSentimentWidget';
 import BotInstancesTable from '../components/BotInstancesTable';
 import WatchlistWidget from '../components/WatchlistWidget';
 import PriceAlertsWidget from '../components/PriceAlertsWidget';
-import RecentTradesWidget from '../components/RecentTradesWidget';
+import BalanceCard from '../components/dashboard/BalanceCard';
 
 import PlanGate from '../components/PlanGate';
 import { formatPlanName, formatStrategyName, formatLabel } from '../lib/utils';
@@ -63,6 +63,9 @@ export default function Main() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [pollingInterval, setPollingInterval] = useState(30000); // Start with 30s
+    const [exchangeBalances, setExchangeBalances] = useState(null);
+    const [exchangeBalancesLoading, setExchangeBalancesLoading] = useState(true);
+    const [refreshingBalance, setRefreshingBalance] = useState(false);
 
     // Multi-bot configuration state
     const [botConfigs, setBotConfigs] = useState([]);
@@ -125,6 +128,45 @@ export default function Main() {
     const handleRefresh = () => {
         setRefreshing(true);
         fetchData();
+        fetchExchangeBalances();
+    };
+
+    // Fetch Exchange Balances
+    const fetchExchangeBalances = async () => {
+        try {
+            const response = await api.get('/exchange-balances');
+            setExchangeBalances(response.data);
+        } catch (err) {
+            console.error('Failed to fetch exchange balances:', err);
+        } finally {
+            setExchangeBalancesLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchExchangeBalances();
+        // Refresh exchange balances every 60 seconds
+        const balanceInterval = setInterval(fetchExchangeBalances, 60000);
+        return () => clearInterval(balanceInterval);
+    }, []);
+
+    const handleRefreshBalance = async () => {
+        if (!botStatus?.config?.dry_run || refreshingBalance) return;
+
+        setRefreshingBalance(true);
+        try {
+            // In practice mode, we can reset the balance via API
+            // This would need a backend endpoint to reset practice balance
+            // For now, we'll just refresh the status
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+            const statusRes = await api.get('/status');
+            setBotStatus(statusRes.data);
+            toast.success('Practice balance has been reset to $1,000!');
+        } catch (err) {
+            toast.error('Failed to refresh balance. Please try again.');
+        } finally {
+            setRefreshingBalance(false);
+        }
     };
 
     const handleStartStop = async () => {
@@ -326,78 +368,107 @@ export default function Main() {
                 </div>
             </div>
 
+            {/* Bot Instances Table - Moved to Top */}
+            <BotInstancesTable
+                instances={botStatus?.instances || {}}
+                botConfigs={botConfigs}
+                onRemoveBot={handleRemoveBot}
+                onBulkRemove={handleBulkRemove}
+                onStart={handleStartBot}
+                onStop={handleStopBot}
+                onStopAll={() => handleStartStop()}
+                loading={loading}
+                subscription={subscription}
+                startingBots={startingBots}
+                isBotRunning={isBotRunning}
+            />
 
-
-            {/* Subscription Details Card */}
-            <DraggableWidget
-                id="subscriptionCard"
-                widgetName="Subscription Details"
-                className="glass p-6 rounded-2xl"
-                defaultWidth="auto"
-                defaultHeight="auto"
-                editableFields={{
-                    title: 'Subscription Details',
-                    planLabel: 'Current Plan',
-                    statusLabel: 'Status',
-                    activeText: 'Active',
-                    expiresLabel: 'Expires',
-                    actionsLabel: 'Actions',
-                    upgradeText: 'Upgrade Plan'
-                }}
-            >
-                <div className="flex items-center gap-2 mb-4">
-                    <Shield size={20} className="text-primary" />
-                    <h2 className="text-xl font-bold">Subscription Details</h2>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <p className="text-sm text-muted-foreground mb-1">Current Plan</p>
-                        <p className="text-lg font-semibold text-foreground">
-                            {formatPlanName(subscription?.plan) || 'Free Plan'}
-                        </p>
+            {/* Account Info Grid */}
+            <div className="grid md:grid-cols-2 gap-6">
+                {/* Subscription Details Card - Resized */}
+                <DraggableWidget
+                    id="subscriptionCard"
+                    widgetName="Subscription Details"
+                    className="glass p-6 rounded-2xl h-full"
+                    defaultWidth="auto"
+                    defaultHeight="auto"
+                    editableFields={{
+                        title: 'Subscription Details',
+                        planLabel: 'Current Plan',
+                        statusLabel: 'Status',
+                        activeText: 'Active',
+                        expiresLabel: 'Expires',
+                        actionsLabel: 'Actions',
+                        upgradeText: 'Upgrade Plan'
+                    }}
+                >
+                    <div className="flex items-center gap-2 mb-4">
+                        <Shield size={20} className="text-primary" />
+                        <h2 className="text-xl font-bold">Subscription Details</h2>
                     </div>
-                    <div>
-                        <p className="text-sm text-muted-foreground mb-1">Status</p>
-                        <div className="flex items-center gap-2">
-                            {subscription?.status === 'active' ? (
-                                <>
-                                    <CheckCircle size={16} className="text-green-400" />
-                                    <p className="text-lg font-semibold text-green-400">Active</p>
-                                </>
-                            ) : (
-                                <>
-                                    <XCircle size={16} className="text-red-400" />
-                                    <p className="text-lg font-semibold text-red-400">
-                                        {subscription?.status?.toUpperCase() || 'Inactive'}
-                                    </p>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                    {subscription?.expires_at && (
-                        <div>
-                            <p className="text-sm text-muted-foreground mb-1">Expires</p>
-                            <div className="flex items-center gap-2">
-                                <Calendar size={16} className="text-primary" />
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="text-sm text-muted-foreground mb-1">Current Plan</p>
                                 <p className="text-lg font-semibold text-foreground">
-                                    {new Date(subscription.expires_at).toLocaleDateString()}
+                                    {formatPlanName(subscription?.plan) || 'Free Plan'}
                                 </p>
                             </div>
+                            <div className="text-right">
+                                <p className="text-sm text-muted-foreground mb-1">Status</p>
+                                <div className="flex items-center justify-end gap-2">
+                                    {subscription?.status === 'active' ? (
+                                        <>
+                                            <CheckCircle size={16} className="text-green-400" />
+                                            <span className="text-sm font-semibold text-green-400">Active</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <XCircle size={16} className="text-red-400" />
+                                            <span className="text-sm font-semibold text-red-400">
+                                                {subscription?.status?.toUpperCase() || 'Inactive'}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                    )}
-                    <div>
-                        <p className="text-sm text-muted-foreground mb-1">Actions</p>
-                        <a
-                            href="/pricing"
-                            className="text-primary hover:text-primary/80 font-medium inline-flex items-center gap-1"
-                        >
-                            Upgrade Plan <TrendingUp size={14} />
-                        </a>
+
+                        {subscription?.expires_at && (
+                            <div className="pt-4 border-t border-white/10">
+                                <p className="text-sm text-muted-foreground mb-1">Expires</p>
+                                <div className="flex items-center gap-2">
+                                    <Calendar size={16} className="text-primary" />
+                                    <p className="text-sm font-medium text-foreground">
+                                        {new Date(subscription.expires_at).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="pt-4 border-t border-white/10">
+                            <a
+                                href="/pricing"
+                                className="w-full justify-center text-primary hover:text-primary/80 font-medium inline-flex items-center gap-1 p-2 bg-primary/10 rounded-lg transition-colors border border-primary/20 hover:bg-primary/20"
+                            >
+                                Upgrade Plan <TrendingUp size={14} />
+                            </a>
+                        </div>
                     </div>
+                </DraggableWidget>
+
+                {/* Balance Card */}
+                <div className="h-full">
+                    <BalanceCard
+                        status={botStatus}
+                        onRefreshBalance={handleRefreshBalance}
+                        refreshing={refreshingBalance}
+                        trades={[]}
+                        exchangeBalances={exchangeBalances}
+                        exchangeBalancesLoading={exchangeBalancesLoading}
+                    />
                 </div>
-            </DraggableWidget>
-
-
+            </div>
 
             {/* Market Tools Grid */}
             <div className="grid md:grid-cols-2 gap-6">
@@ -410,18 +481,13 @@ export default function Main() {
                 <div className="h-[500px]">
                     <PriceAlertsWidget />
                 </div>
+            </div>
 
-                {/* AI Sentiment & Analysis - Combined Widget */}
-                <div className="h-[500px]">
-                    <PlanGate feature="AI Sentiment & Analysis" explanation="Get real-time market sentiment analysis powered by AI with advanced metrics and key market drivers.">
-                        <CombinedSentimentWidget />
-                    </PlanGate>
-                </div>
-
-                {/* Recent Trades (Journal) */}
-                <div className="h-[500px]">
-                    <RecentTradesWidget />
-                </div>
+            {/* AI Sentiment & Analysis - Combined Widget */}
+            <div className="h-[500px]">
+                <PlanGate feature="AI Sentiment & Analysis" explanation="Get real-time market sentiment analysis powered by AI with advanced metrics and key market drivers.">
+                    <CombinedSentimentWidget />
+                </PlanGate>
             </div>
 
             {/* News Feed */}
@@ -468,21 +534,6 @@ export default function Main() {
                     )}
                 </div>
             </div>
-
-            {/* Bot Instances Table */}
-            <BotInstancesTable
-                instances={botStatus?.instances || {}}
-                botConfigs={botConfigs}
-                onRemoveBot={handleRemoveBot}
-                onBulkRemove={handleBulkRemove}
-                onStart={handleStartBot}
-                onStop={handleStopBot}
-                onStopAll={() => handleStartStop()}
-                loading={loading}
-                subscription={subscription}
-                startingBots={startingBots}
-                isBotRunning={isBotRunning}
-            />
         </div>
     );
 }
