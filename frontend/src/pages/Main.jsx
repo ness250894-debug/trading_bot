@@ -72,6 +72,11 @@ export default function Main() {
     // Global Practice Mode State
     const [isPracticeMode, setIsPracticeMode] = useState(true);
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     // Multi-bot configuration state
     const [botConfigs, setBotConfigs] = useState([]);
     const [startingBots, setStartingBots] = useState(new Set());
@@ -403,6 +408,11 @@ export default function Main() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <PracticeModeToggle
+                        isPracticeMode={isPracticeMode}
+                        onToggle={handlePracticeModeToggle}
+                        isFreePlan={subscription?.plan === 'free'}
+                    />
                     <button
                         onClick={handleRefresh}
                         disabled={refreshing}
@@ -412,15 +422,6 @@ export default function Main() {
                         <RefreshCw size={20} className={`text-muted-foreground ${refreshing ? 'animate-spin' : ''}`} />
                     </button>
                 </div>
-            </div>
-
-            {/* Practice Mode Toggle - Above Bot Table */}
-            <div className="flex justify-end">
-                <PracticeModeToggle
-                    isPracticeMode={isPracticeMode}
-                    onToggle={handlePracticeModeToggle}
-                    isFreePlan={subscription?.plan === 'free'}
-                />
             </div>
 
             {/* Bot Instances Table - Moved to Top */}

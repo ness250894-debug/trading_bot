@@ -11,7 +11,7 @@ const PracticeModeToggle = ({ isPracticeMode, onToggle, isFreePlan }) => {
                 }}
                 disabled={isFreePlan}
                 className={`
-                    relative w-12 h-7 rounded-full transition-colors duration-200 ease-in-out focus:outline-none
+                    relative w-12 h-7 rounded-full transition-colors duration-200 ease-in-out focus:outline-none flex items-center
                     ${isPracticeMode ? 'bg-primary' : 'bg-gray-700'}
                     ${isFreePlan ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
@@ -19,7 +19,7 @@ const PracticeModeToggle = ({ isPracticeMode, onToggle, isFreePlan }) => {
             >
                 <span
                     className={`
-                        block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out mt-1 ml-1
+                        block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200 ease-in-out ml-1
                         ${isPracticeMode ? 'translate-x-5' : 'translate-x-0'}
                     `}
                 />

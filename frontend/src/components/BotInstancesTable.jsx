@@ -277,6 +277,7 @@ export default function BotInstancesTable({
                                     />
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Symbol</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Mode</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Strategy</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Current PnL</th>
@@ -305,6 +306,14 @@ export default function BotInstancesTable({
                                                 <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
                                                 <span className="font-mono font-bold text-foreground">{bot.symbol}</span>
                                             </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${bot.dry_run
+                                                    ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                                                    : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                                }`}>
+                                                {bot.dry_run ? 'PRACTICE' : 'LIVE'}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-sm text-muted-foreground capitalize">
