@@ -126,6 +126,117 @@ async def list_api_keys(current_user: dict = Depends(auth.get_current_user)):
         logger.error(f"Error listing API keys: {e}")
         raise HTTPException(status_code=500, detail="Failed to list API keys")
 
+
+@router.get("/exchange-balances")
+async def get_exchange_balances(current_user: dict = Depends(auth.get_current_user)):
+    """Fetch balances from all connected exchanges."""
+    try:
+        # Get all API keys for the user
+        result = db.conn.execute(
+            "SELECT exchange, api_key, api_secret FROM api_keys WHERE user_id = ?",
+            [current_user['id']]
+        ).fetchall()
+        
+        if not result:
+            return {
+                "total_usdt": 0.0,
+                "exchanges": [],
+                "has_keys": False
+            }
+        
+        # Import exchange clients
+        from ..core.exchange.client import ByBitClient
+        from ..core.exchange.binance_client import BinanceClient
+        from ..core.exchange.okx_client import OKXClient
+        from ..core.exchange.kraken_client import KrakenClient
+        from ..core.exchange.coinbase_client import CoinbaseClient
+        
+        exchange_clients = {
+            'bybit': ByBitClient,
+            'binance': BinanceClient,
+            'okx': OKXClient,
+            'kraken': KrakenClient,
+            'coinbase': CoinbaseClient
+        }
+        
+        exchange_balances = []
+        total_usdt = 0.0
+        
+        for row in result:
+            exchange_name, encrypted_key, encrypted_secret = row
+            
+            try:
+                if not encryptor:
+                    continue
+                    
+                # Decrypt credentials
+                api_key = encryptor.decrypt(encrypted_key)
+                api_secret = encryptor.decrypt(encrypted_secret)
+                
+                # Get the client class
+                ClientClass = exchange_clients.get(exchange_name.lower())
+                if not ClientClass:
+                    continue
+                
+                # Initialize client (demo=True for safety when just checking balance)
+                client = ClientClass(api_key, api_secret, demo=True, timeout=15000)
+                
+                # Fetch balance
+                balance = client.fetch_balance()
+                
+                if balance:
+                    # Get USDT balance (most common stablecoin)
+                    usdt_total = 0.0
+                    usdt_free = 0.0
+                    
+                    # Handle different balance structures
+                    if 'USDT' in balance:
+                        if isinstance(balance['USDT'], dict):
+                            usdt_total = float(balance['USDT'].get('total', 0) or 0)
+                            usdt_free = float(balance['USDT'].get('free', 0) or 0)
+                        else:
+                            usdt_total = float(balance['USDT'] or 0)
+                    elif 'total' in balance and 'USDT' in balance.get('total', {}):
+                        usdt_total = float(balance['total'].get('USDT', 0) or 0)
+                        usdt_free = float(balance.get('free', {}).get('USDT', 0) or 0)
+                    
+                    exchange_balances.append({
+                        'exchange': exchange_name,
+                        'usdt_total': usdt_total,
+                        'usdt_free': usdt_free,
+                        'status': 'connected'
+                    })
+                    
+                    total_usdt += usdt_total
+                else:
+                    exchange_balances.append({
+                        'exchange': exchange_name,
+                        'usdt_total': 0.0,
+                        'usdt_free': 0.0,
+                        'status': 'error'
+                    })
+                    
+            except Exception as e:
+                logger.warning(f"Failed to fetch balance from {exchange_name}: {e}")
+                exchange_balances.append({
+                    'exchange': exchange_name,
+                    'usdt_total': 0.0,
+                    'usdt_free': 0.0,
+                    'status': 'error',
+                    'error': str(e)[:100]  # Truncate error message
+                })
+        
+        return {
+            "total_usdt": total_usdt,
+            "exchanges": exchange_balances,
+            "has_keys": len(exchange_balances) > 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching exchange balances: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch exchange balances")
+
+
 @router.get("/api-keys/{exchange}", response_model=ApiKeyResponse)
 async def get_api_key_status(exchange: str, current_user: dict = Depends(auth.get_current_user), req: Request = None):
     """Check if user has API keys configured for a specific exchange."""

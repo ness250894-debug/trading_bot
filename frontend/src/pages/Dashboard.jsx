@@ -9,9 +9,18 @@ import { formatStrategyName } from '../lib/utils';
 import { ToastContext } from '../components/ToastContext';
 import EditableText from '../components/constructor/EditableText';
 
-const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
+const BalanceCard = ({ status, onRefreshBalance, refreshing, trades, exchangeBalances, exchangeBalancesLoading }) => {
     const isPracticeMode = status?.config?.dry_run;
-    const hasApiConnected = status?.balance?.total !== undefined && status?.balance?.total !== null;
+    const hasApiConnected = exchangeBalances?.has_keys || (status?.balance?.total !== undefined && status?.balance?.total !== null);
+
+    // Exchange display names
+    const exchangeNames = {
+        'bybit': 'Bybit',
+        'binance': 'Binance',
+        'okx': 'OKX',
+        'kraken': 'Kraken',
+        'coinbase': 'Coinbase'
+    };
 
     return (
         <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1">
@@ -21,7 +30,7 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
                     <div className="p-3 rounded-lg bg-primary/10 text-primary">
                         <DollarSign size={24} />
                     </div>
-                    <h3 className="text-base font-medium text-muted-foreground">Balance Management</h3>
+                    <h3 className="text-base font-medium text-muted-foreground">Exchange Balances</h3>
                 </div>
                 {isPracticeMode && hasApiConnected && (
                     <button
@@ -55,32 +64,55 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
                         To view your account balance and start trading, please connect your exchange API keys in Settings.
                     </p>
                 </div>
+            ) : exchangeBalancesLoading ? (
+                <div className="py-8 text-center">
+                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-muted-foreground text-sm">Fetching balances from exchanges...</p>
+                </div>
             ) : (
                 <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-                        <div>
-                            <div className="text-sm text-muted-foreground mb-2">Balance</div>
-                            <div className="text-4xl font-bold text-foreground tracking-tight mb-1">
-                                ${status?.balance?.total?.toFixed(2) || '0.00'}
-                            </div>
-                            <div className="text-xs text-muted-foreground">USDT on wallet</div>
+                    {/* Total Balance */}
+                    <div className="relative z-10 mb-6">
+                        <div className="text-sm text-muted-foreground mb-2">Total Balance (All Exchanges)</div>
+                        <div className="text-4xl font-bold text-foreground tracking-tight mb-1">
+                            ${exchangeBalances?.total_usdt?.toFixed(2) || '0.00'}
                         </div>
-
-                        <div>
-                            <div className="text-sm text-muted-foreground mb-2">Practice Balance</div>
-                            <div className="text-4xl font-bold text-yellow-400 tracking-tight mb-1">
-                                ${status?.balance?.free?.toFixed(2) || '0.00'}
-                            </div>
-                            <div className="text-xs text-yellow-400/70">⚠️ Not real money</div>
-                        </div>
+                        <div className="text-xs text-muted-foreground">USDT across {exchangeBalances?.exchanges?.length || 0} exchange(s)</div>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between relative z-10">
+                    {/* Per-Exchange Breakdown */}
+                    {exchangeBalances?.exchanges?.length > 0 && (
+                        <div className="space-y-3 mb-4">
+                            <div className="text-sm text-muted-foreground font-medium">Balance by Exchange</div>
+                            {exchangeBalances.exchanges.map((ex, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-2 h-2 rounded-full ${ex.status === 'connected' ? 'bg-green-400' : 'bg-red-400'}`} />
+                                        <span className="font-medium capitalize">{exchangeNames[ex.exchange] || ex.exchange}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="font-bold">${ex.usdt_total?.toFixed(2) || '0.00'}</div>
+                                        {ex.usdt_free !== undefined && ex.usdt_free !== ex.usdt_total && (
+                                            <div className="text-xs text-muted-foreground">
+                                                Available: ${ex.usdt_free?.toFixed(2)}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="pt-4 border-t border-white/10 flex items-center justify-between relative z-10">
                         <div className="flex items-center gap-4 text-sm">
-                            <div>
-                                <span className="text-muted-foreground">In Orders: </span>
-                                <span className="font-semibold">${((status?.balance?.total || 0) - (status?.balance?.free || 0)).toFixed(2)}</span>
-                            </div>
+                            {isPracticeMode && (
+                                <div className="px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                                    <p className="text-xs text-yellow-400 flex items-center gap-1">
+                                        <span>⚠️</span>
+                                        <span>Practice Mode Active</span>
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         {!isPracticeMode && (
                             <div className="px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg">
@@ -150,6 +182,27 @@ export default function Dashboard() {
     const [error, setError] = useState(null);
     const [pollingInterval] = useState(30000); // 30 seconds polling interval
     const [refreshingBalance, setRefreshingBalance] = useState(false);
+    const [exchangeBalances, setExchangeBalances] = useState(null);
+    const [exchangeBalancesLoading, setExchangeBalancesLoading] = useState(true);
+
+    // Fetch Exchange Balances
+    useEffect(() => {
+        const fetchExchangeBalances = async () => {
+            try {
+                const response = await api.get('/exchange-balances');
+                setExchangeBalances(response.data);
+            } catch (err) {
+                console.error('Failed to fetch exchange balances:', err);
+            } finally {
+                setExchangeBalancesLoading(false);
+            }
+        };
+
+        fetchExchangeBalances();
+        // Refresh exchange balances every 60 seconds
+        const balanceInterval = setInterval(fetchExchangeBalances, 60000);
+        return () => clearInterval(balanceInterval);
+    }, []);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -329,6 +382,8 @@ export default function Dashboard() {
                     onRefreshBalance={handleRefreshBalance}
                     refreshing={refreshingBalance}
                     trades={trades}
+                    exchangeBalances={exchangeBalances}
+                    exchangeBalancesLoading={exchangeBalancesLoading}
                 />
             </div>
 
