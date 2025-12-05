@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Square, Plus, RefreshCw, Trash2, Settings } from 'lucide-react';
+import { useModal } from './Modal';
 
 /**
  * BotInstancesTable - Displays all bot instances with checkboxes and multi-bot controls
@@ -19,7 +20,60 @@ export default function BotInstancesTable({
     isBotRunning
 }) {
     const navigate = useNavigate();
+    const modal = useModal();
     const [selectedBots, setSelectedBots] = useState(new Set());
+
+    // Check if user is on free plan
+    const isFreePlan = !subscription || subscription.plan === 'free' || !subscription.plan;
+
+    // Handler for Add Bot button - shows upgrade modal for free plan users with existing bots
+    const handleAddBot = () => {
+        if (isFreePlan && botConfigs && botConfigs.length >= 1) {
+            modal.show({
+                title: '🚀 Upgrade Your Plan',
+                type: 'info',
+                content: (
+                    <div className="space-y-4">
+                        <p className="text-muted-foreground">
+                            Your free plan is limited to <span className="text-foreground font-semibold">1 bot</span>.
+                        </p>
+                        <p className="text-muted-foreground">
+                            Upgrade to unlock:
+                        </p>
+                        <ul className="space-y-2 text-sm">
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                <span className="text-foreground">Multiple trading bots</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                <span className="text-foreground">All trading strategies</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                <span className="text-foreground">Real money trading</span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                                <span className="text-foreground">Priority support</span>
+                            </li>
+                        </ul>
+                        <button
+                            onClick={() => {
+                                modal.hide();
+                                navigate('/pricing');
+                            }}
+                            className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-purple-500/25"
+                        >
+                            View Upgrade Options
+                        </button>
+                    </div>
+                )
+            });
+        } else {
+            navigate('/strategies');
+        }
+    };
 
     // Handle multi-instance response format - combine with botConfigs
     const allBots = React.useMemo(() => {
@@ -165,7 +219,7 @@ export default function BotInstancesTable({
                 </div>
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => navigate('/strategies')}
+                        onClick={handleAddBot}
                         className="flex items-center gap-2 px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-lg transition-all font-medium"
                     >
                         <Plus size={16} />

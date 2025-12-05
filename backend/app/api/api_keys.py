@@ -88,6 +88,44 @@ async def save_api_key(request: ApiKeyRequest, current_user: dict = Depends(auth
         logger.error(f"Error saving API key: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@router.get("/api-keys")
+async def list_api_keys(current_user: dict = Depends(auth.get_current_user)):
+    """List all saved API keys for the user (keys are masked for security)."""
+    try:
+        # Get all API keys for the user
+        result = db.conn.execute(
+            "SELECT exchange, api_key FROM api_keys WHERE user_id = ?",
+            [current_user['id']]
+        ).fetchall()
+        
+        keys = []
+        for row in result:
+            exchange, encrypted_key = row
+            # Decrypt and mask the key
+            try:
+                if encryptor:
+                    decrypted = encryptor.decrypt(encrypted_key)
+                    # Mask: show first 4 and last 4 chars
+                    if len(decrypted) >= 8:
+                        masked = decrypted[:4] + '••••••••' + decrypted[-4:]
+                    else:
+                        masked = '••••••••'
+                else:
+                    masked = '••••••••'
+            except:
+                masked = '••••••••'
+            
+            keys.append({
+                'exchange': exchange,
+                'api_key_masked': masked,
+                'has_key': True
+            })
+        
+        return {"keys": keys}
+    except Exception as e:
+        logger.error(f"Error listing API keys: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list API keys")
+
 @router.get("/api-keys/{exchange}", response_model=ApiKeyResponse)
 async def get_api_key_status(exchange: str, current_user: dict = Depends(auth.get_current_user), req: Request = None):
     """Check if user has API keys configured for a specific exchange."""

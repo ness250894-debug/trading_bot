@@ -4,6 +4,7 @@ import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, Dol
 import { motion, AnimatePresence } from 'framer-motion';
 import UserDropdown from './UserDropdown';
 import ExchangeLinks from './ExchangeLinks';
+import Disclaimer from './Disclaimer';
 
 export default function Layout({ children }) {
     const [isAdmin, setIsAdmin] = React.useState(false);
@@ -77,6 +78,11 @@ export default function Layout({ children }) {
                         className="max-w-7xl mx-auto pb-20"
                     >
                         {children}
+
+                        {/* Disclaimer at bottom of all pages */}
+                        <div className="mt-12">
+                            <Disclaimer compact />
+                        </div>
                     </motion.div>
                 </AnimatePresence>
             </main>

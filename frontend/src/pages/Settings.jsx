@@ -23,20 +23,17 @@ export default function Settings() {
     const [hasKey, setHasKey] = useState(false);
     const [loading, setLoading] = useState(false);
     const [exchanges, setExchanges] = useState([]);
+    const [savedApiKeys, setSavedApiKeys] = useState([]);
+    const [selectedApis, setSelectedApis] = useState(new Set());
 
     // Telegram settings state
     const [telegramChatId, setTelegramChatId] = useState('');
     const [hasTelegram, setHasTelegram] = useState(false);
     const [telegramLoading, setTelegramLoading] = useState(false);
+    const [savedTelegramIds, setSavedTelegramIds] = useState([]);
 
     // User info state
     const [userInfo, setUserInfo] = useState(null);
-
-    // Preferences state
-    const [theme, setTheme] = useState('dark');
-    const [currency, setCurrency] = useState('USD');
-    const [widgetsEnabled, setWidgetsEnabled] = useState(['balance', 'status', 'trades', 'bots']);
-    const [prefsLoading, setPrefsLoading] = useState(false);
 
     // Risk Profile state
     const [riskProfile, setRiskProfile] = useState({
@@ -47,6 +44,13 @@ export default function Settings() {
         stop_trading_on_breach: true
     });
     const [riskLoading, setRiskLoading] = useState(false);
+    const [savedRiskRules, setSavedRiskRules] = useState([]);
+
+    // Helper function to mask API keys
+    const maskApiKey = (key) => {
+        if (!key || key.length < 8) return '••••••••';
+        return key.substring(0, 4) + '••••••••' + key.substring(key.length - 4);
+    };
 
 
     const checkApiKeyStatus = useCallback(async () => {
@@ -62,8 +66,22 @@ export default function Settings() {
         try {
             const response = await api.get('/user/telegram');
             setHasTelegram(response.data.has_telegram);
+            // Also get the chat ID if exists
+            if (response.data.chat_id) {
+                setSavedTelegramIds([{ chat_id: response.data.chat_id }]);
+            }
         } catch (error) {
             // Silent fail - will show "not configured" state
+        }
+    }, []);
+
+    // Load all saved API keys
+    const loadSavedApiKeys = useCallback(async () => {
+        try {
+            const response = await api.get('/api-keys');
+            setSavedApiKeys(response.data.keys || []);
+        } catch (error) {
+            // Silent fail
         }
     }, []);
 
@@ -117,7 +135,8 @@ export default function Settings() {
         checkTelegramStatus();
         loadPreferences();
         loadRiskProfile();
-    }, [exchange, checkApiKeyStatus, checkTelegramStatus, loadPreferences, loadRiskProfile]);
+        loadSavedApiKeys();
+    }, [exchange, checkApiKeyStatus, checkTelegramStatus, loadPreferences, loadRiskProfile, loadSavedApiKeys]);
 
     const handleSaveKeys = async (e) => {
         e.preventDefault();
@@ -132,6 +151,7 @@ export default function Settings() {
             setApiKey('');
             setApiSecret('');
             checkApiKeyStatus();
+            loadSavedApiKeys(); // Refresh the saved APIs table
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Failed to save API keys');
         } finally {
@@ -240,7 +260,6 @@ export default function Settings() {
         { id: 'trading', label: 'Trading', icon: Key },
         { id: 'notifications', label: 'Notifications', icon: Bell },
         { id: 'risk', label: 'Risk Management', icon: AlertTriangle },
-        { id: 'preferences', label: 'Preferences', icon: SettingsIcon },
     ];
 
     return (
@@ -332,6 +351,47 @@ export default function Settings() {
                                             Logout All
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Danger Zone */}
+                            <div className="glass rounded-xl p-6 border border-red-500/20">
+                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2 text-red-400">
+                                    <AlertTriangle size={20} />
+                                    Danger Zone
+                                </h3>
+                                <div className="flex items-center justify-between p-4 bg-red-500/5 rounded-xl">
+                                    <div>
+                                        <div className="font-medium text-red-400">Delete Account</div>
+                                        <div className="text-sm text-muted-foreground">
+                                            Permanently delete your account and all data. This cannot be undone.
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            modal.confirm({
+                                                title: '⚠️ Delete Account',
+                                                message: 'This will permanently delete your account including all bot configurations, API keys, trade history, and settings. This action is IRREVERSIBLE. Are you absolutely sure?',
+                                                confirmText: 'Delete My Account',
+                                                cancelText: 'Cancel',
+                                                type: 'danger',
+                                                onConfirm: async () => {
+                                                    try {
+                                                        await api.delete('/auth/account');
+                                                        toast.success('Account deleted');
+                                                        localStorage.removeItem('token');
+                                                        window.location.href = '/';
+                                                    } catch (error) {
+                                                        toast.error(error.response?.data?.detail || 'Failed to delete account');
+                                                    }
+                                                }
+                                            });
+                                        }}
+                                        className="px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                                    >
+                                        <Trash2 size={16} />
+                                        Delete Account
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -433,6 +493,125 @@ export default function Settings() {
                                     <li>Only grant trading permissions (no withdrawals)</li>
                                 </ul>
                             </div>
+
+                            {/* Your APIs Table */}
+                            {savedApiKeys.length > 0 && (
+                                <div className="mt-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-md font-semibold text-foreground">Your Saved APIs</h4>
+                                        {selectedApis.size > 0 && (
+                                            <button
+                                                onClick={() => {
+                                                    modal.confirm({
+                                                        title: 'Delete Selected APIs',
+                                                        message: `Are you sure you want to delete ${selectedApis.size} API key(s)? This cannot be undone.`,
+                                                        confirmText: 'Delete',
+                                                        type: 'danger',
+                                                        onConfirm: async () => {
+                                                            for (const ex of selectedApis) {
+                                                                try {
+                                                                    await api.delete(`/api-keys/${ex}`);
+                                                                } catch (e) { }
+                                                            }
+                                                            toast.success('Selected APIs deleted');
+                                                            setSelectedApis(new Set());
+                                                            loadSavedApiKeys();
+                                                        }
+                                                    });
+                                                }}
+                                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm font-medium flex items-center gap-2"
+                                            >
+                                                <Trash2 size={14} />
+                                                Delete Selected ({selectedApis.size})
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="bg-white/5 rounded-xl overflow-hidden">
+                                        <table className="w-full">
+                                            <thead className="bg-white/5">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={savedApiKeys.length > 0 && selectedApis.size === savedApiKeys.length}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedApis(new Set(savedApiKeys.map(k => k.exchange)));
+                                                                } else {
+                                                                    setSelectedApis(new Set());
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 rounded border-white/20 bg-black/20"
+                                                        />
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Exchange</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">API Key</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {savedApiKeys.map((apiEntry) => (
+                                                    <tr key={apiEntry.exchange} className="hover:bg-white/5">
+                                                        <td className="px-4 py-3">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedApis.has(apiEntry.exchange)}
+                                                                onChange={(e) => {
+                                                                    const newSet = new Set(selectedApis);
+                                                                    if (e.target.checked) {
+                                                                        newSet.add(apiEntry.exchange);
+                                                                    } else {
+                                                                        newSet.delete(apiEntry.exchange);
+                                                                    }
+                                                                    setSelectedApis(newSet);
+                                                                }}
+                                                                className="w-4 h-4 rounded border-white/20 bg-black/20"
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-3 font-medium capitalize">{apiEntry.exchange}</td>
+                                                        <td className="px-4 py-3 font-mono text-sm text-muted-foreground">{apiEntry.api_key_masked}</td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setExchange(apiEntry.exchange);
+                                                                        toast.info(`Enter new keys for ${apiEntry.exchange} above`);
+                                                                    }}
+                                                                    className="px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded text-xs font-medium"
+                                                                >
+                                                                    Manage
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        modal.confirm({
+                                                                            title: 'Delete API Key',
+                                                                            message: `Delete API keys for ${apiEntry.exchange}?`,
+                                                                            confirmText: 'Delete',
+                                                                            type: 'danger',
+                                                                            onConfirm: async () => {
+                                                                                try {
+                                                                                    await api.delete(`/api-keys/${apiEntry.exchange}`);
+                                                                                    toast.success('API key deleted');
+                                                                                    loadSavedApiKeys();
+                                                                                } catch (e) {
+                                                                                    toast.error('Failed to delete');
+                                                                                }
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-xs font-medium"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -494,6 +673,45 @@ export default function Settings() {
                                     )}
                                 </div>
                             </form>
+
+                            {/* Saved Telegram Chat IDs */}
+                            {savedTelegramIds.length > 0 && (
+                                <div className="mt-6">
+                                    <h4 className="text-md font-semibold text-foreground mb-4">Saved Notifications</h4>
+                                    <div className="bg-white/5 rounded-xl overflow-hidden">
+                                        <table className="w-full">
+                                            <thead className="bg-white/5">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Chat ID</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Status</th>
+                                                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {savedTelegramIds.map((entry, idx) => (
+                                                    <tr key={idx} className="hover:bg-white/5">
+                                                        <td className="px-4 py-3 font-mono text-sm">{entry.chat_id}</td>
+                                                        <td className="px-4 py-3">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded text-xs font-medium">
+                                                                <CheckCircle size={12} />
+                                                                Active
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right">
+                                                            <button
+                                                                onClick={handleTelegramDelete}
+                                                                className="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-xs font-medium"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 

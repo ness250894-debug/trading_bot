@@ -397,16 +397,20 @@ export default function Main() {
                     <PriceAlertsWidget />
                 </div>
 
-                {/* AI Sentiment */}
-                <div className="h-[500px] flex flex-col gap-6">
-                    <PlanGate feature="AI Sentiment Analysis" explanation="Get real-time market sentiment analysis powered by AI to make smarter trading decisions.">
-                        <SentimentWidget />
-                    </PlanGate>
+                {/* AI Sentiment - Two widgets stacked */}
+                <div className="flex flex-col gap-6">
+                    <div className="h-[240px]">
+                        <PlanGate feature="AI Sentiment Analysis" explanation="Get real-time market sentiment analysis powered by AI to make smarter trading decisions.">
+                            <SentimentWidget />
+                        </PlanGate>
+                    </div>
 
                     {/* Advanced Sentiment Widget */}
-                    <PlanGate feature="Advanced Sentiment Metrics" explanation="Deep dive into sentiment analysis with advanced metrics and historical data.">
-                        <AdvancedSentimentWidget />
-                    </PlanGate>
+                    <div className="h-[240px]">
+                        <PlanGate feature="Advanced Sentiment Metrics" explanation="Deep dive into sentiment analysis with advanced metrics and historical data.">
+                            <AdvancedSentimentWidget />
+                        </PlanGate>
+                    </div>
                 </div>
 
                 {/* Recent Trades (Journal) */}

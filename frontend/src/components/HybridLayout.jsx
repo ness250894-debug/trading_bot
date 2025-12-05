@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import LoginModal from './LoginModal';
@@ -18,6 +18,7 @@ export default function HybridLayout() {
     const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const location = useLocation();
 
     useEffect(() => {
         const fetchCurrentUser = async () => {
@@ -66,6 +67,9 @@ export default function HybridLayout() {
         navigate('/');
     };
 
+    // Check if currently on pricing page to hide duplicate link
+    const isOnPricingPage = location.pathname === '/pricing';
+
     return (
         <div className="min-h-screen bg-background flex flex-col">
             {/* Header - conditional based on auth state */}
@@ -79,12 +83,15 @@ export default function HybridLayout() {
                             </span>
                         </Link>
                         <div className="flex items-center gap-4">
-                            <Link
-                                to="/pricing"
-                                className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-                            >
-                                Pricing
-                            </Link>
+                            {/* Hide Pricing link when already on Pricing page */}
+                            {!isOnPricingPage && (
+                                <Link
+                                    to="/pricing"
+                                    className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+                                >
+                                    Pricing
+                                </Link>
+                            )}
 
                             {loading ? (
                                 <div className="w-8 h-8 animate-pulse bg-white/10 rounded-full"></div>
