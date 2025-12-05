@@ -19,12 +19,9 @@ async def get_supported_exchanges() -> Dict:
         Dictionary with exchanges list and count
     """
     try:
-        # Try to fetch from database first
-        exchanges = db.get_exchanges()
-        
-        # If database is empty, fall back to ExchangeFactory
-        if not exchanges:
-            exchanges = ExchangeFactory.get_exchange_info()
+        # Always use ExchangeFactory as the authoritative source
+        # This ensures consistency with the API keys whitelist and available exchange clients
+        exchanges = ExchangeFactory.get_exchange_info()
         
         return {
             "exchanges": exchanges,

@@ -90,12 +90,20 @@ class ExchangeFactory:
         Returns:
             List of dictionaries with exchange information
         """
+        # Display names for exchanges
+        display_names = {
+            'bybit': 'ByBit',
+            'binance': 'Binance',
+            'kraken': 'Kraken',
+            'okx': 'OKX',
+            'coinbase': 'Coinbase',
+        }
+        
         info = []
         for exchange_name in cls._registry.keys():
-            # Default capabilities (can be customized per exchange later)
             info.append({
                 'name': exchange_name,
-                'display_name': exchange_name.capitalize(),
+                'display_name': display_names.get(exchange_name, exchange_name.capitalize()),
                 'supports_demo': True,
                 'supports_futures': exchange_name in ['bybit', 'binance', 'okx'],
                 'supports_spot': True,
