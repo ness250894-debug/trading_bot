@@ -72,17 +72,7 @@ export default function Main() {
     // Global Practice Mode State
     const [isPracticeMode, setIsPracticeMode] = useState(true);
 
-    // Scroll to Active Bot Instances on mount
-    useEffect(() => {
-        // Use a small timeout to ensure DOM is ready and layout is stable
-        const timer = setTimeout(() => {
-            const element = document.getElementById('bot-instances-table');
-            if (element) {
-                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }, 100);
-        return () => clearTimeout(timer);
-    }, []);
+
 
     // Multi-bot configuration state
     const [botConfigs, setBotConfigs] = useState([]);
