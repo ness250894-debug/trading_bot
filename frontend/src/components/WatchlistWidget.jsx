@@ -3,7 +3,7 @@ import { Plus, Trash2, TrendingUp, TrendingDown, Star } from 'lucide-react';
 import api from '../lib/api';
 import { useToast } from './ToastContext';
 import { POPULAR_SYMBOLS } from '../constants/symbols';
-
+import EditableWidget from './constructor/EditableWidget';
 import Combobox from './Combobox';
 
 export default function WatchlistWidget() {
@@ -60,7 +60,15 @@ export default function WatchlistWidget() {
     }
 
     return (
-        <div className="glass p-6 rounded-xl h-full flex flex-col">
+        <EditableWidget
+            configPath="widgets.watchlist"
+            widgetName="Watchlist"
+            editableFields={{
+                title: 'Watchlist',
+                emptyMessage: 'No symbols watched'
+            }}
+            className="glass p-6 rounded-xl h-full flex flex-col"
+        >
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Star size={20} className="text-yellow-500" />
@@ -113,6 +121,6 @@ export default function WatchlistWidget() {
                     ))
                 )}
             </div>
-        </div>
+        </EditableWidget>
     );
 }

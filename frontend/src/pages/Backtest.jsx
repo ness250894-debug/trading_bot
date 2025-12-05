@@ -6,6 +6,7 @@ import { useToast } from '../components/ToastContext';
 import Disclaimer from '../components/Disclaimer';
 import PlanGate from '../components/PlanGate';
 import { formatLabel } from '../lib/utils';
+import EditableText from '../components/constructor/EditableText';
 
 const STRATEGIES = [
     { name: 'Mean Reversion', params: { bb_period: 20, bb_std: 2.0, rsi_period: 14, rsi_oversold: 30, rsi_overbought: 70 } },
@@ -127,7 +128,12 @@ export default function Backtest() {
         <PlanGate feature="Backtesting" explanation="Test your strategies against historical data to verify performance before trading with real money.">
             <div className="p-8 max-w-7xl mx-auto">
                 <div className="flex justify-between items-center mb-8">
-                    <h2 className="text-3xl font-bold">Backtest Lab</h2>
+                    <h2 className="text-3xl font-bold">
+                        <EditableText
+                            configPath="pages.backtest.pageTitle"
+                            defaultValue="Backtest Lab"
+                        />
+                    </h2>
                 </div>
 
                 <Disclaimer compact />

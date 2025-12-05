@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { useStaticData } from '../lib/swr';
 import styles from './Pricing.module.css';
 import { CheckCircle, Zap, Shield, TrendingUp, Crown } from 'lucide-react';
+import EditableText from '../components/constructor/EditableText';
 
 const PLAN_METADATA = {
     free: { color: 'gray', icon: Shield, cta: 'Current Plan', order: 0 },
@@ -135,9 +136,17 @@ export default function Pricing() {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1 className={styles.title}>Choose Your Plan</h1>
+                <h1 className={styles.title}>
+                    <EditableText
+                        configPath="pages.pricing.pageTitle"
+                        defaultValue="Choose Your Plan"
+                    />
+                </h1>
                 <p className={styles.subtitle}>
-                    Unlock the full power of automated trading
+                    <EditableText
+                        configPath="pages.pricing.subtitle"
+                        defaultValue="Unlock the full power of automated trading"
+                    />
                 </p>
 
                 <div className={styles.toggleContainer}>

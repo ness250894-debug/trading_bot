@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Tag, Save, X, TrendingUp, TrendingDown } from 'lucide-react';
 import api from '../lib/api';
 import { useToast } from './ToastContext';
+import EditableWidget from './constructor/EditableWidget';
 
 export default function RecentTradesWidget() {
     const [trades, setTrades] = useState([]);
@@ -65,7 +66,16 @@ export default function RecentTradesWidget() {
     }
 
     return (
-        <div className="glass p-6 rounded-xl h-full flex flex-col">
+        <EditableWidget
+            configPath="widgets.recentTrades"
+            widgetName="Recent Trades"
+            editableFields={{
+                title: 'Recent Trades',
+                displayLimit: 10,
+                emptyMessage: 'No recent trades'
+            }}
+            className="glass p-6 rounded-xl h-full flex flex-col"
+        >
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                     <TrendingUp size={20} className="text-primary" />
@@ -186,6 +196,6 @@ export default function RecentTradesWidget() {
                     </div>
                 </div>
             )}
-        </div>
+        </EditableWidget>
     );
 }

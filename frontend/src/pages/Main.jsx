@@ -15,6 +15,7 @@ import Disclaimer from '../components/Disclaimer';
 import PlanGate from '../components/PlanGate';
 import { formatPlanName, formatStrategyName, formatLabel } from '../lib/utils';
 import { useToast } from '../components/ToastContext';
+import EditableText from '../components/constructor/EditableText';
 
 const InfoCard = ({ title, value, icon: Icon, subtext, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group hover:border-primary/20 transition-all">
@@ -306,7 +307,10 @@ export default function Main() {
                         Welcome back, {user?.nickname || user?.email?.split('@')[0] || 'Trader'}!
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Your trading overview and account information.
+                        <EditableText
+                            configPath="pages.main.subtitle"
+                            defaultValue="Your trading overview and account information."
+                        />
                     </p>
                 </div>
 

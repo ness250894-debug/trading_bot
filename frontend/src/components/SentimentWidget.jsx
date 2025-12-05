@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { TrendingUp, TrendingDown, Minus, Newspaper, RefreshCw } from 'lucide-react';
+import EditableWidget from './constructor/EditableWidget';
 
 export default function SentimentWidget({ symbol = 'BTC' }) {
     const [sentiment, setSentiment] = useState(null);
@@ -58,7 +59,15 @@ export default function SentimentWidget({ symbol = 'BTC' }) {
     }
 
     return (
-        <div className="glass rounded-xl p-6 space-y-4">
+        <EditableWidget
+            configPath="widgets.sentiment"
+            widgetName="AI Sentiment"
+            editableFields={{
+                title: 'AI Sentiment',
+                refreshIntervalMinutes: 30
+            }}
+            className="glass rounded-xl p-6 space-y-4"
+        >
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <Newspaper size={18} className="text-primary" />
@@ -108,6 +117,6 @@ export default function SentimentWidget({ symbol = 'BTC' }) {
             <div className="text-xs text-muted-foreground capitalize">
                 Market: {sentiment.sentiment}
             </div>
-        </div>
+        </EditableWidget>
     );
 }
