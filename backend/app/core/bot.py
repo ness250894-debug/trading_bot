@@ -369,6 +369,64 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     logger.warning(f"⚠️ User {user_id} subscription inactive - skipping new trade")
                     time.sleep(config.LOOP_DELAY_SECONDS)
                     continue
+
+                # --- Risk Management Checks ---
+                risk_profile = db.get_risk_profile(user_id)
+                if risk_profile:
+                    # 1. Check Max Daily Loss
+                    if risk_profile.get('max_daily_loss'):
+                        daily_pnl = db.get_daily_pnl(user_id)
+                        limit = abs(float(risk_profile['max_daily_loss']))
+                        if daily_pnl <= -limit:
+                            logger.warning(f"⛔ Max Daily Loss breached for user {user_id}. PnL: {daily_pnl}, Limit: {limit}")
+                            notifier.send_message(f"⛔ *Risk Warning*: Daily Loss Limit Hit ({daily_pnl:.2f}). Trading paused.")
+                            
+                            if risk_profile.get('stop_trading_on_breach'):
+                                logger.info(f"Stopping bot for user {user_id} due to risk breach")
+                                running_event.clear()
+                                break # Exit loop
+                            
+                            time.sleep(config.LOOP_DELAY_SECONDS)
+                            continue # Skip trade
+                    
+                    # 2. Check Max Position Size
+                    if risk_profile.get('max_position_size'):
+                        max_size = float(risk_profile['max_position_size'])
+                        if amount_usdt > max_size:
+                            logger.warning(f"⛔ Max Position Size exceeded for user {user_id}. Amount: {amount_usdt}, Max: {max_size}")
+                            notifier.send_message(f"⚠️ Trade blocked: Amount ({amount_usdt}) exceeds limit ({max_size})")
+                            time.sleep(config.LOOP_DELAY_SECONDS)
+                            continue
+
+                    # 3. Check Max Open Positions
+                    if risk_profile.get('max_open_positions'):
+                        max_pos = int(risk_profile['max_open_positions'])
+                        try:
+                            # Dynamic import to avoid circular dependency
+                            from .bot_manager import bot_manager
+                            bot_stats = bot_manager.get_status(user_id)
+                            
+                            open_positions = 0
+                            if bot_stats:
+                                if isinstance(bot_stats, dict) and 'is_running' not in bot_stats:
+                                    # Multi-instance dict: count instances with active trades
+                                    for s in bot_stats.values():
+                                        if s.get('active_trades', 0) > 0:
+                                            open_positions += 1
+                                elif bot_stats.get('active_trades', 0) > 0:
+                                    open_positions = 1
+                            
+                            # Note: We are currently at 0 (checked by position_size == 0)
+                            # So open_positions represents *other* bots. 
+                            # If we trade now, we will be open_positions + 1
+                            if open_positions >= max_pos:
+                                logger.warning(f"⛔ Max Open Positions reached for user {user_id}. Current: {open_positions}, Max: {max_pos}")
+                                notifier.send_message(f"⚠️ Trade blocked: Max open positions reached ({max_pos})")
+                                time.sleep(config.LOOP_DELAY_SECONDS)
+                                continue
+                        except Exception as e:
+                            logger.error(f"Failed to check open positions: {e}")
+                # ------------------------------
                     
                 # Open position
                 ticker = client.fetch_ticker(symbol)

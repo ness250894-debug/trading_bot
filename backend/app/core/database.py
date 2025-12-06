@@ -808,6 +808,19 @@ class DuckDBHandler:
             logger.error(f"Error calculating PnL: {e}")
             return 0.0
 
+    def get_daily_pnl(self, user_id):
+        """Get total realized PnL for the current day (UTC)."""
+        try:
+            # DuckDB's current_date returns the start of the current day
+            result = self.conn.execute(
+                "SELECT SUM(pnl) FROM trades WHERE user_id = ? AND timestamp >= current_date",
+                [user_id]
+            ).fetchone()
+            return result[0] if result and result[0] else 0.0
+        except Exception as e:
+            logger.error(f"Error calculating daily PnL: {e}")
+            return 0.0
+
     def get_user_by_email(self, email):
         """Get user by email."""
         try:
