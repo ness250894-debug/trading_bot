@@ -111,10 +111,10 @@ async def run_backtest(request: Request, backtest_data: BacktestRequest, current
         
         return {
             "metrics": {
-                "final_balance": bt.balance,
-                "total_return": total_return,
-                "win_rate": win_rate,
-                "total_trades": len(bt.trades)
+                "final_balance": float(bt.balance),
+                "total_return": float(total_return),
+                "win_rate": float(win_rate),
+                "total_trades": int(len(bt.trades))
             },
             "trades": bt.trades,
             "chart_data": chart_data.to_dict(orient="records")

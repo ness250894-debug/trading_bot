@@ -132,14 +132,14 @@ class VectorizedBacktester:
                     fee = value * config.TAKER_FEE_PCT
                     pnl = (exit_price - entry_price) * self.position_size
                     
-                    self.balance += pnl - fee
+                    self.balance += float(pnl - fee)
                     
                     self.trades.append({
-                        'pnl': pnl - fee,
-                        'reason': exit_reason,
-                        'time': timestamps[i], # Execution time
-                        'entry_price': entry_price,
-                        'exit_price': exit_price
+                        'pnl': float(pnl - fee),
+                        'reason': str(exit_reason),
+                        'time': str(timestamps[i]), # Execution time as string
+                        'entry_price': float(entry_price),
+                        'exit_price': float(exit_price)
                     })
                     
                     in_position = False
@@ -156,7 +156,7 @@ class VectorizedBacktester:
                     amount_usdt = self.balance * 0.99
                     fee = amount_usdt * config.TAKER_FEE_PCT
                     
-                    self.balance -= fee
+                    self.balance -= float(fee)
                     self.position_size = amount_usdt / entry_price
                     highest_price = entry_price
                     in_position = True
