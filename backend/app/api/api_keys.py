@@ -94,7 +94,7 @@ async def list_api_keys(current_user: dict = Depends(auth.get_current_user)):
     try:
         # Get all API keys for the user
         result = db.conn.execute(
-            "SELECT exchange, api_key FROM api_keys WHERE user_id = ?",
+            "SELECT exchange, api_key_encrypted FROM api_keys WHERE user_id = ?",
             [current_user['id']]
         ).fetchall()
         
@@ -133,7 +133,7 @@ async def get_exchange_balances(current_user: dict = Depends(auth.get_current_us
     try:
         # Get all API keys for the user
         result = db.conn.execute(
-            "SELECT exchange, api_key, api_secret FROM api_keys WHERE user_id = ?",
+            "SELECT exchange, api_key_encrypted, api_secret_encrypted FROM api_keys WHERE user_id = ?",
             [current_user['id']]
         ).fetchall()
         
