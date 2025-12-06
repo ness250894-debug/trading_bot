@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
-import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown, Crown, Lock } from 'lucide-react';
 import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
 
@@ -183,6 +183,17 @@ export default function Optimization() {
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: 'return', direction: 'desc' });
+    const [subscription, setSubscription] = useState(null);
+    const [isGlobalOptimization, setIsGlobalOptimization] = useState(false);
+    const globalQueueRef = React.useRef([]);
+    const globalOptimizationRef = React.useRef(false);
+
+    // Fetch subscription status
+    useEffect(() => {
+        api.get('/billing/status')
+            .then(res => setSubscription(res.data))
+            .catch(err => console.error("Failed to fetch subscription:", err));
+    }, []);
 
     const strategies = Object.keys(strategyInfo);
 
@@ -326,17 +337,46 @@ export default function Optimization() {
                     }
                 }
 
-                setResults(uniqueResults);
-                setLoading(false);
-                setIsOptimizing(false);
+                // Global Optimization Logic
+                if (globalOptimizationRef.current) {
+                    setResults(prev => [...prev, ...uniqueResults]);
+
+                    const nextTask = globalQueueRef.current.shift();
+                    if (nextTask) {
+                        // Update UI to show progress
+                        setStrategy(nextTask.strategy);
+                        // Send next request
+                        sendOptimizationRequest(nextTask, event.target);
+                    } else {
+                        // All done
+                        globalOptimizationRef.current = false;
+                        setIsGlobalOptimization(false);
+                        setLoading(false);
+                        setIsOptimizing(false);
+                        toast.success("Ultimate Optimization Complete!");
+                    }
+                } else {
+                    setResults(uniqueResults);
+                    setLoading(false);
+                    setIsOptimizing(false);
+                }
                 // Don't close socket, keep it open for next run
             } else if (data.type === 'error') {
                 toast.error('Optimization error: ' + data.error);
                 setLoading(false);
                 setIsOptimizing(false);
+                // Abort global optimization on error
+                if (globalOptimizationRef.current) {
+                    globalOptimizationRef.current = false;
+                    setIsGlobalOptimization(false);
+                }
             } else if (data.error) {
                 toast.error(data.error);
                 setLoading(false);
+                if (globalOptimizationRef.current) {
+                    globalOptimizationRef.current = false;
+                    setIsGlobalOptimization(false);
+                }
             }
         };
 
@@ -396,6 +436,104 @@ export default function Optimization() {
             n_trials: nTrials,
             token: localStorage.getItem('token')
         }));
+    };
+
+    const sendOptimizationRequest = (task, socket) => {
+        const { strategy, timeframe, ranges } = task;
+
+        // Filter valid keys for this strategy
+        const validKeys = STRATEGY_PARAM_KEYS[strategy] || [];
+        const param_ranges = {};
+
+        for (const [key, range] of Object.entries(ranges)) {
+            // Explicitly skip legacy keys
+            if (['bb_length', 'short_window', 'long_window', 'rsi_length', 'rsi_buy', 'rsi_sell', 'buy_threshold', 'sell_threshold'].includes(key)) {
+                continue;
+            }
+            if (validKeys.includes(key)) {
+                param_ranges[key] = [range.start, range.end, range.step];
+            }
+        }
+
+        socket.send(JSON.stringify({
+            symbol: 'BTC/USDT',
+            timeframe: timeframe,
+            days: 3,
+            strategy: strategy,
+            param_ranges: param_ranges,
+            n_trials: nTrials, // Use current user setting for all
+            token: localStorage.getItem('token')
+        }));
+    };
+
+    const runGlobalOptimization = () => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            toast.error("WebSocket not connected. Please refresh the page.");
+            return;
+        }
+
+        // 1. Check Subscription
+        if (!subscription || subscription.plan === 'free') {
+            modal.show({
+                title: '🚀 Unlock Ultimate Optimization',
+                content: (
+                    <div className="space-y-4">
+                        <p className="text-muted-foreground">
+                            The <span className="text-foreground font-semibold">Ultimate Optimization</span> tool runs ALL strategies automatically to find the absolute best market fit.
+                        </p>
+                        <p className="text-muted-foreground">
+                            Upgrade to <span className="text-amber-400 font-bold">Pro</span> or <span className="text-purple-400 font-bold">Admin</span> to access this powerful feature.
+                        </p>
+                        <button
+                            onClick={() => {
+                                modal.hide();
+                                window.location.href = '/pricing';
+                            }}
+                            className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2"
+                        >
+                            <Crown size={18} />
+                            Upgrade Now
+                        </button>
+                    </div>
+                )
+            });
+            return;
+        }
+
+        setLoading(true);
+        setIsOptimizing(true);
+        setIsGlobalOptimization(true);
+        globalOptimizationRef.current = true;
+        setResults([]); // Clear previous results
+
+        // 2. Build Queue
+        // Use "Wide Search" preset if available, else first preset, else default generic logic?
+        // Relying on presets for simplicity and robustness
+        const queue = [];
+        for (const stratName of Object.keys(strategyInfo)) {
+            const stratPresets = presets[stratName];
+            if (stratPresets && stratPresets.length > 0) {
+                // Prefer 'Wide Search' or last one (usually broadest), or just first 'Standard'.
+                // Let's use the LAST preset which is often the widest/most robust in our list? 
+                // Wait, in my list above, 'Wide Search' is last for SMA. 
+                // 'Volatile' is last for others.
+                // Let's use the last one for coverage.
+                const preset = stratPresets[stratPresets.length - 1];
+                queue.push({
+                    strategy: stratName,
+                    timeframe: preset.timeframe || '1h',
+                    ranges: preset.ranges
+                });
+            }
+        }
+        globalQueueRef.current = queue;
+
+        // 3. Start First Task
+        const firstTask = globalQueueRef.current.shift();
+        if (firstTask) {
+            setStrategy(firstTask.strategy); // Update UI
+            sendOptimizationRequest(firstTask, ws);
+        }
     };
 
 
@@ -489,26 +627,8 @@ export default function Optimization() {
                                     >
                                         {strategies.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-                                        <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </div>
                                 </div>
                             </div>
-                            {presets[strategy] && (
-                                <div className="flex gap-2">
-                                    {presets[strategy].map((preset, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => applyPreset(preset)}
-                                            className="px-3 py-1.5 text-xs font-medium bg-white/5 hover:bg-white/10 text-foreground rounded-lg transition-colors border border-white/5"
-                                        >
-                                            {preset.name}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -604,7 +724,7 @@ export default function Optimization() {
                 </div>
 
                 {/* Results Panel - Below Configuration */}
-                <div className="glass rounded-2xl overflow-hidden flex flex-col">
+                < div className="glass rounded-2xl overflow-hidden flex flex-col" >
                     <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
                         <h3 className="font-semibold flex items-center gap-2 text-lg">
                             <TrendingUp size={20} className="text-green-400" />
@@ -743,6 +863,6 @@ export default function Optimization() {
                     </div>
                 </div>
             </div>
-        </PlanGate >
+        </PlanGate>
     );
 }
