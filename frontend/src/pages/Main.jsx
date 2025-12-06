@@ -72,6 +72,11 @@ export default function Main() {
     // Global Practice Mode State
     const [isPracticeMode, setIsPracticeMode] = useState(true);
 
+    // Scroll to top on mount
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
 
 
     // Multi-bot configuration state
