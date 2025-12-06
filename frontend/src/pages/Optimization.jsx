@@ -320,9 +320,11 @@ export default function Optimization() {
             const data = JSON.parse(event.data);
 
             if (data.type === 'progress') {
-                setIsOptimizing(true);
-                setLoading(true);
                 setProgress({ current: data.current, total: data.total });
+
+                if (!ultimateOptimizingRef.current) {
+                    setIsOptimizing(true);
+                }
 
                 // Handle Partial Results from Ultimate Optimization
                 if (data.details && data.details.type === 'strategy_complete') {
@@ -700,10 +702,10 @@ export default function Optimization() {
                         </div>
                         <button
                             onClick={runOptimization}
-                            disabled={loading}
+                            disabled={isOptimizing || isUltimateOptimizing}
                             className="flex-1 bg-primary hover:bg-primary/90 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
                         >
-                            {loading ? (
+                            {isOptimizing ? (
                                 <span className="animate-pulse flex items-center gap-2">
                                     <Activity className="animate-spin" size={16} /> Optimizing...
                                 </span>
@@ -887,13 +889,13 @@ export default function Optimization() {
 
                         <button
                             onClick={runUltimateOptimization}
-                            disabled={loading}
+                            disabled={isOptimizing || isUltimateOptimizing}
                             className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm ${subscription?.plan === 'free'
                                 ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer'
                                 : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25'
                                 }`}
                         >
-                            {loading && isUltimateOptimizing ? (
+                            {isUltimateOptimizing ? (
                                 <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></span>
                             ) : (
                                 subscription?.plan === 'free' ? <Lock size={16} /> : <Play size={16} fill="currentColor" />
