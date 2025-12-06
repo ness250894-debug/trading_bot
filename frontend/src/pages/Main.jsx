@@ -550,7 +550,7 @@ export default function Main() {
             </div>
 
             {/* AI Sentiment & Analysis - Combined Widget */}
-            <div className="h-[500px]">
+            <div>
                 <PlanGate feature="AI Sentiment & Analysis" explanation="Get real-time market sentiment analysis powered by AI with advanced metrics and key market drivers.">
                     <CombinedSentimentWidget />
                 </PlanGate>
