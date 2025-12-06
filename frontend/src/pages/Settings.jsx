@@ -152,7 +152,7 @@ export default function Settings() {
             setApiKey('');
             setApiSecret('');
             checkApiKeyStatus();
-            loadSavedApiKeys(); // Refresh the saved APIs table
+            await loadSavedApiKeys(); // Refresh the saved APIs table
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Failed to save API keys');
         } finally {
