@@ -332,10 +332,10 @@ async def websocket_optimize(websocket: WebSocket):
                             continue
 
                         # 3. Optimize
-                        def strategy_progress(current, total):
+                        def strategy_progress(current, total, details=None):
                             # Map local progress to global progress
                             global_p = current_global_trial + current
-                            progress_callback(global_p, total_trials)
+                            progress_callback(global_p, total_trials, details)
 
                         optimizer = Hyperopt(req.symbol, req.timeframe, bt.df)
                         results_df = optimizer.optimize(req.param_ranges, strategy_class, n_trials=req.n_trials, progress_callback=strategy_progress)
