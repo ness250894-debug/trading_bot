@@ -201,7 +201,7 @@ async def get_exchange_balances(current_user: dict = Depends(auth.get_current_us
                         usdt_free = float(balance.get('free', {}).get('USDT', 0) or 0)
                     
                     exchange_balances.append({
-                        'exchange': exchange_name,
+                    'name': exchange_name,
                         'usdt_total': usdt_total,
                         'usdt_free': usdt_free,
                         'status': 'connected'
@@ -210,7 +210,7 @@ async def get_exchange_balances(current_user: dict = Depends(auth.get_current_us
                     total_usdt += usdt_total
                 else:
                     exchange_balances.append({
-                        'exchange': exchange_name,
+                    'name': exchange_name,
                         'usdt_total': 0.0,
                         'usdt_free': 0.0,
                         'status': 'error'
