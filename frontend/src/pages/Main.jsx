@@ -72,9 +72,14 @@ export default function Main() {
     // Global Practice Mode State
     const [isPracticeMode, setIsPracticeMode] = useState(true);
 
-    // Scroll to top on mount
+    // Scroll main container to top on mount
     useEffect(() => {
-        window.scrollTo(0, 0);
+        const mainContainer = document.querySelector('main');
+        if (mainContainer) {
+            mainContainer.scrollTo({ top: 0, behavior: 'instant' });
+        } else {
+            window.scrollTo(0, 0);
+        }
     }, []);
 
 
