@@ -398,16 +398,7 @@ export default function Optimization() {
         }));
     };
 
-    // Map display names to backend strategy names
-    const applyToStrategy = (params) => {
-        const backendStrategyName = STRATEGY_NAME_MAP[strategy] || strategy.toLowerCase().replace(/\s+/g, '_');
-        const suggestion = {
-            strategy: backendStrategyName,
-            params: params
-        };
-        localStorage.setItem('suggested_strategy_params', JSON.stringify(suggestion));
-        window.location.href = '/strategies';
-    };
+
 
     const applyToBacktest = (params) => {
         const suggestion = {
@@ -735,12 +726,6 @@ export default function Optimization() {
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <div className="flex justify-center gap-2">
-                                                        <button
-                                                            onClick={() => applyToStrategy(res.params)}
-                                                            className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-primary/20"
-                                                        >
-                                                            Strategy
-                                                        </button>
                                                         <button
                                                             onClick={() => applyToBacktest(res.params)}
                                                             className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
