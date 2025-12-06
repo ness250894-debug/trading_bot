@@ -252,12 +252,129 @@ async def websocket_optimize(websocket: WebSocket):
             # Wait for commands
             data = await websocket.receive_json()
             
-            # If user wants to start a new optimization
-            if "strategy" in data:
-                if job_manager.status == "running":
-                    await websocket.send_json({"error": "Optimization already running"})
+            # Authenticate User
+            token = data.get("token")
+            if not token:
+                await websocket.send_json({"error": "Authentication required. Please refresh the page."})
+                continue
+            
+            current_user = await auth.get_current_user_from_token(token)
+            if not current_user:
+                await websocket.send_json({"error": "Invalid session. Please login again."})
+                continue
+
+            if job_manager.status == "running":
+                await websocket.send_json({"error": "Optimization already running"})
+                continue
+            
+            # --- ULTIMATE OPTIMIZATION HANDLER ---
+            if data.get("type") == "ultimate":
+                tasks_data = data.get("tasks", [])
+                if not tasks_data:
+                    await websocket.send_json({"error": "No tasks provided for ultimate optimization"})
                     continue
 
+                # Prepare tasks
+                tasks = []
+                total_trials = 0
+                
+                # Check subscription
+                is_admin = current_user.get('is_admin', False)
+                if not is_admin:
+                    from ..core.database import DuckDBHandler
+                    db = DuckDBHandler()
+                    subscription = db.get_subscription(current_user['id'])
+                    is_free_plan = True
+                    if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+                        is_free_plan = False
+                    
+                    if is_free_plan:
+                         await websocket.send_json({"error": "Ultimate Optimization is not available on the Free plan."})
+                         continue
+
+                for task_data in tasks_data:
+                    try:
+                        req = OptimizeRequest(**task_data)
+                        tasks.append(req)
+                        total_trials += req.n_trials or 50
+                    except Exception as e:
+                        logger.error(f"Invalid task data: {e}")
+                        continue
+                
+                def run_ultimate_job(progress_callback):
+                    all_results = []
+                    current_global_trial = 0
+                    
+                    from ..core.database import DuckDBHandler
+                    db = DuckDBHandler()
+                    
+                    for req in tasks:
+                        # 1. Initialize Strategy
+                        strategy_class = None
+                        if req.strategy == "Mean Reversion": strategy_class = MeanReversion
+                        elif req.strategy == "SMA Crossover": strategy_class = SMACrossover
+                        elif req.strategy == "MACD": strategy_class = MACDStrategy
+                        elif req.strategy == "RSI": strategy_class = RSIStrategy
+                        elif req.strategy == "Bollinger Breakout": strategy_class = BollingerBreakout
+                        elif req.strategy == "Momentum": strategy_class = Momentum
+                        elif req.strategy == "DCA Dip": strategy_class = DCADip
+                        else: continue # Skip unknown
+
+                        # 2. Fetch Data
+                        dummy_strategy = strategy_class()
+                        bt = VectorizedBacktester(req.symbol, req.timeframe, dummy_strategy, days=req.days)
+                        bt.fetch_data()
+                        
+                        if bt.df is None or bt.df.empty:
+                            # Skip this strategy if no data, but increment progress
+                            current_global_trial += (req.n_trials or 50)
+                            progress_callback(current_global_trial, total_trials)
+                            continue
+
+                        # 3. Optimize
+                        def strategy_progress(current, total):
+                            # Map local progress to global progress
+                            global_p = current_global_trial + current
+                            progress_callback(global_p, total_trials)
+
+                        optimizer = Hyperopt(req.symbol, req.timeframe, bt.df)
+                        results_df = optimizer.optimize(req.param_ranges, strategy_class, n_trials=req.n_trials, progress_callback=strategy_progress)
+                        
+                        task_results = results_df.to_dict(orient="records")
+                        valid_task_results = []
+
+                        # 4. Process Results for this strategy
+                        for result in task_results:
+                            params = {k: v for k, v in result.items() if k not in ['return', 'strategy', 'number', 'state', 'datetime_start', 'datetime_complete', 'duration', 'win_rate', 'trades', 'final_balance']}
+                            params['timeframe'] = req.timeframe
+                            result['params'] = params
+                            result['strategy'] = req.strategy # Set correct name
+                            
+                            result['win_rate'] = result.get('win_rate', 0)
+                            result['trades'] = result.get('trades', 0)
+                            result['final_balance'] = result.get('final_balance', 0)
+
+                            if result.get('return', 0) > 0:
+                                db.save_result(result, user_id=current_user['id'], timeframe=req.timeframe, symbol=req.symbol)
+                                valid_task_results.append(result)
+                        
+                        all_results.extend(valid_task_results)
+                        current_global_trial += (req.n_trials or 50)
+                        
+                        # 5. Send Partial Complete for this strategy
+                        # We send the valid results specifically for this strategy to the frontend
+                        progress_callback(current_global_trial, total_trials, details={
+                            "type": "strategy_complete",
+                            "strategy": req.strategy,
+                            "results": valid_task_results
+                        })
+                    
+                    return all_results
+
+                await job_manager.start_job(run_ultimate_job)
+
+            # --- SINGLE STRATEGY HANDLER ---
+            elif "strategy" in data:
                 request = OptimizeRequest(**data)
                 
                 # Initialize Strategy Class
@@ -278,17 +395,6 @@ async def websocket_optimize(websocket: WebSocket):
                     strategy_class = DCADip
                 else:
                     await websocket.send_json({"error": f"Unknown strategy: {request.strategy}"})
-                    continue
-
-                # Authenticate User
-                token = data.get("token")
-                if not token:
-                    await websocket.send_json({"error": "Authentication required. Please refresh the page."})
-                    continue
-                
-                current_user = await auth.get_current_user_from_token(token)
-                if not current_user:
-                    await websocket.send_json({"error": "Invalid session. Please login again."})
                     continue
 
                 # Fetch Data Once
@@ -336,8 +442,6 @@ async def websocket_optimize(websocket: WebSocket):
                     return results_list
 
                 # Start the job via Manager
-                # Note: run_opt is synchronous now because Hyperopt.optimize is blocking/synchronous
-                # JobManager runs it in a thread, so it's fine.
                 await job_manager.start_job(run_opt)
 
     except WebSocketDisconnect:
