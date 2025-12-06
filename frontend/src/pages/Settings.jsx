@@ -5,7 +5,7 @@ import { useStaticData } from '../lib/swr';
 import {
     User, Key, Bell, Settings as SettingsIcon, Shield,
     LogOut, Moon, Sun, DollarSign, Globe, CheckCircle,
-    AlertTriangle, Trash2, Save, Copy
+    AlertTriangle, Trash2, Save, Copy, Plus
 } from 'lucide-react';
 import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
@@ -406,219 +406,172 @@ export default function Settings() {
 
                     {/* Trading Tab */}
                     {activeTab === 'trading' && (
-                        <div className="glass rounded-xl p-6">
-                            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                <Key size={20} className="text-primary" />
-                                API Configuration
-                            </h3>
+                        <div className="space-y-6">
+                            {/* Connected Exchanges Section */}
+                            <div className="glass rounded-xl p-6">
+                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                    <Key size={20} className="text-primary" />
+                                    Connected Exchanges
+                                </h3>
 
-                            <div className="mb-6">
-                                <label className="block text-sm font-medium text-muted-foreground mb-3">Select Exchange</label>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {exchanges.map((ex) => (
-                                        <button
-                                            key={ex.name}
-                                            onClick={() => setExchange(ex.name)}
-                                            className={`p-4 rounded-xl border transition-all relative ${exchange === ex.name
-                                                ? 'bg-primary/10 border-primary text-foreground'
-                                                : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10'
-                                                }`}
-                                        >
-                                            <div className="font-bold text-sm">{ex.display_name}</div>
-                                            {exchange === ex.name && (
-                                                <div className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.6)]"></div>
-                                            )}
-                                            {ex.supports_demo && (
-                                                <div className="text-[10px] text-primary mt-1 font-medium">Testnet</div>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {hasKey && (
-                                <div className="mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2 text-green-400 text-sm font-medium">
-                                    <CheckCircle size={16} />
-                                    API keys configured for {exchanges.find(e => e.name === exchange)?.display_name || exchange}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleSaveKeys} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">API Key</label>
-                                    <input
-                                        type="text"
-                                        value={apiKey}
-                                        onChange={(e) => setApiKey(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
-                                        placeholder="Enter your API key"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-muted-foreground mb-1">API Secret</label>
-                                    <input
-                                        type="password"
-                                        value={apiSecret}
-                                        onChange={(e) => setApiSecret(e.target.value)}
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
-                                        placeholder="Enter your API secret"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="flex gap-3 pt-2">
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="flex-1 bg-primary hover:bg-primary/90 text-white py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                    >
-                                        <Save size={18} />
-                                        {loading ? 'Saving...' : hasKey ? 'Update Keys' : 'Save Keys'}
-                                    </button>
-                                    {hasKey && (
-                                        <button
-                                            type="button"
-                                            onClick={handleDeleteKeys}
-                                            disabled={loading}
-                                            className="px-4 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
-
-                            <div className="mt-6 p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
-                                <h4 className="text-sm font-semibold text-yellow-500 mb-2 flex items-center gap-2">
-                                    <AlertTriangle size={16} />
-                                    Security Note
-                                </h4>
-                                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                                    <li>Never share your API keys with anyone</li>
-                                    <li>Enable IP whitelist restrictions on your exchange</li>
-                                    <li>Only grant trading permissions (no withdrawals)</li>
-                                </ul>
-                            </div>
-
-                            {/* Your APIs Table */}
-                            {savedApiKeys.length > 0 && (
-                                <div className="mt-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-md font-semibold text-foreground">Your Saved APIs</h4>
-                                        {selectedApis.size > 0 && (
-                                            <button
-                                                onClick={() => {
-                                                    modal.confirm({
-                                                        title: 'Delete Selected APIs',
-                                                        message: `Are you sure you want to delete ${selectedApis.size} API key(s)? This cannot be undone.`,
-                                                        confirmText: 'Delete',
-                                                        type: 'danger',
-                                                        onConfirm: async () => {
-                                                            for (const ex of selectedApis) {
-                                                                try {
-                                                                    await api.delete(`/api-keys/${ex}`);
-                                                                } catch (e) { }
-                                                            }
-                                                            toast.success('Selected APIs deleted');
-                                                            setSelectedApis(new Set());
-                                                            loadSavedApiKeys();
-                                                        }
-                                                    });
-                                                }}
-                                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-sm font-medium flex items-center gap-2"
-                                            >
-                                                <Trash2 size={14} />
-                                                Delete Selected ({selectedApis.size})
-                                            </button>
-                                        )}
+                                {savedApiKeys.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-foreground bg-white/5 rounded-xl border border-dashed border-white/10">
+                                        <div className="flex justify-center mb-3">
+                                            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center">
+                                                <Key size={24} className="opacity-50" />
+                                            </div>
+                                        </div>
+                                        <p>No exchanges connected yet.</p>
+                                        <p className="text-xs mt-1">Connect an exchange below to start trading.</p>
                                     </div>
-                                    <div className="bg-white/5 rounded-xl overflow-hidden">
-                                        <table className="w-full">
-                                            <thead className="bg-white/5">
-                                                <tr>
-                                                    <th className="px-4 py-3 text-left">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={savedApiKeys.length > 0 && selectedApis.size === savedApiKeys.length}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) {
-                                                                    setSelectedApis(new Set(savedApiKeys.map(k => k.exchange)));
-                                                                } else {
-                                                                    setSelectedApis(new Set());
-                                                                }
-                                                            }}
-                                                            className="w-4 h-4 rounded border-white/20 bg-black/20"
-                                                        />
-                                                    </th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Exchange</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">API Key</th>
-                                                    <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-white/5">
-                                                {savedApiKeys.map((apiEntry) => (
-                                                    <tr key={apiEntry.exchange} className="hover:bg-white/5">
-                                                        <td className="px-4 py-3">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedApis.has(apiEntry.exchange)}
-                                                                onChange={(e) => {
-                                                                    const newSet = new Set(selectedApis);
-                                                                    if (e.target.checked) {
-                                                                        newSet.add(apiEntry.exchange);
-                                                                    } else {
-                                                                        newSet.delete(apiEntry.exchange);
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {savedApiKeys.map((apiEntry) => (
+                                            <div key={apiEntry.exchange} className="p-4 bg-white/5 border border-white/10 rounded-xl relative group hover:border-primary/30 transition-all">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                                                            {apiEntry.exchange.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-semibold capitalize text-foreground">{apiEntry.exchange}</h4>
+                                                            <span className="flex items-center gap-1 text-[10px] text-green-400 font-medium bg-green-500/10 px-1.5 py-0.5 rounded w-fit">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                                                Active
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            modal.confirm({
+                                                                title: 'Disconnect Exchange',
+                                                                message: `Are you sure you want to delete API keys for ${apiEntry.exchange}? This will stop any active bots on this exchange.`,
+                                                                confirmText: 'Disconnect',
+                                                                type: 'danger',
+                                                                onConfirm: async () => {
+                                                                    try {
+                                                                        await api.delete(`/api-keys/${apiEntry.exchange}`);
+                                                                        toast.success('Exchange disconnected');
+                                                                        loadSavedApiKeys();
+                                                                    } catch (e) {
+                                                                        toast.error('Failed to disconnect');
                                                                     }
-                                                                    setSelectedApis(newSet);
-                                                                }}
-                                                                className="w-4 h-4 rounded border-white/20 bg-black/20"
-                                                            />
-                                                        </td>
-                                                        <td className="px-4 py-3 font-medium capitalize">{apiEntry.exchange}</td>
-                                                        <td className="px-4 py-3 font-mono text-sm text-muted-foreground">{apiEntry.api_key_masked}</td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <div className="flex items-center justify-end gap-2">
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setExchange(apiEntry.exchange);
-                                                                        toast.info(`Enter new keys for ${apiEntry.exchange} above`);
-                                                                    }}
-                                                                    className="px-2 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded text-xs font-medium"
-                                                                >
-                                                                    Manage
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        modal.confirm({
-                                                                            title: 'Delete API Key',
-                                                                            message: `Delete API keys for ${apiEntry.exchange}?`,
-                                                                            confirmText: 'Delete',
-                                                                            type: 'danger',
-                                                                            onConfirm: async () => {
-                                                                                try {
-                                                                                    await api.delete(`/api-keys/${apiEntry.exchange}`);
-                                                                                    toast.success('API key deleted');
-                                                                                    loadSavedApiKeys();
-                                                                                } catch (e) {
-                                                                                    toast.error('Failed to delete');
-                                                                                }
-                                                                            }
-                                                                        });
-                                                                    }}
-                                                                    className="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded text-xs font-medium"
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                                                }
+                                                            });
+                                                        }}
+                                                        className="p-2 hover:bg-red-500/10 text-muted-foreground hover:text-red-400 rounded-lg transition-colors"
+                                                        title="Disconnect"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+
+                                                <div className="space-y-1">
+                                                    <label className="text-xs text-muted-foreground">API Key</label>
+                                                    <div className="font-mono text-sm bg-black/20 px-3 py-2 rounded-lg text-gray-300 border border-white/5 flex items-center justify-between">
+                                                        {apiEntry.api_key_masked}
+                                                        <Key size={12} className="opacity-30" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Connect New Exchange Section */}
+                            <div className="glass rounded-xl p-6">
+                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold">
+                                        <Plus size={16} />
+                                    </div>
+                                    Connect New Exchange
+                                </h3>
+
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-muted-foreground mb-3">Select Exchange</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {exchanges.map((ex) => {
+                                            const isConnected = savedApiKeys.some(k => k.exchange === ex.name);
+                                            return (
+                                                <button
+                                                    key={ex.name}
+                                                    onClick={() => {
+                                                        setExchange(ex.name);
+                                                        setApiKey('');
+                                                        setApiSecret('');
+                                                    }}
+                                                    disabled={isConnected}
+                                                    className={`p-3 rounded-xl border transition-all relative text-left ${exchange === ex.name
+                                                        ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary'
+                                                        : isConnected
+                                                            ? 'bg-white/5 border-white/5 text-muted-foreground opacity-50 cursor-not-allowed'
+                                                            : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10 hover:border-white/20'
+                                                        }`}
+                                                >
+                                                    <div className="font-bold text-sm mb-1">{ex.display_name}</div>
+                                                    {isConnected ? (
+                                                        <div className="text-[10px] text-green-400 flex items-center gap-1">
+                                                            <CheckCircle size={10} /> Connected
+                                                        </div>
+                                                    ) : (
+                                                        ex.supports_demo && (
+                                                            <div className="text-[10px] text-primary/70">Supports Testnet</div>
+                                                        )
+                                                    )}
+
+                                                    {exchange === ex.name && !isConnected && (
+                                                        <div className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.6)]"></div>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 </div>
-                            )}
+
+                                <form onSubmit={handleSaveKeys} className="space-y-4 max-w-2xl">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">API Key</label>
+                                            <input
+                                                type="text"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
+                                                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                                                placeholder="Paste API Key"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">API Secret</label>
+                                            <input
+                                                type="password"
+                                                value={apiSecret}
+                                                onChange={(e) => setApiSecret(e.target.value)}
+                                                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                                                placeholder="Paste API Secret"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4 pt-2">
+                                        <button
+                                            type="submit"
+                                            disabled={loading}
+                                            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/20"
+                                        >
+                                            <Save size={18} />
+                                            {loading ? 'Saving...' : 'Save Keys'}
+                                        </button>
+
+                                        <div className="text-xs text-muted-foreground flex items-center gap-2 bg-yellow-500/5 px-3 py-2 rounded-lg border border-yellow-500/10">
+                                            <Shield size={14} className="text-yellow-500" />
+                                            Keys are encrypted at rest with AES-256
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     )}
 
