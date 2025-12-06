@@ -264,7 +264,7 @@ export default function BotInstancesTable({
                     </button>
                 </div>
             ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto max-h-[350px] overflow-y-auto relative scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                     <table className="w-full">
                         <thead className="bg-white/5">
                             <tr>
@@ -309,8 +309,8 @@ export default function BotInstancesTable({
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${bot.dry_run
-                                                    ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                                                    : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                                ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+                                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                                                 }`}>
                                                 {bot.dry_run ? 'PRACTICE' : 'LIVE'}
                                             </span>
