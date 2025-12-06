@@ -38,12 +38,13 @@ export default function Backtest() {
                 // Find matching strategy object
                 const matchedStrategy = STRATEGIES.find(s => s.name === suggestion.strategy);
                 if (matchedStrategy) {
-                    console.log("Applying suggestion:", suggestion); // Debug log
                     setSelectedStrategy(matchedStrategy);
-                    setParams(suggestion.params);
+
+                    // Filter out timeframe if it accidentally crept into params
+                    const { timeframe: dummy, ...cleanParams } = suggestion.params;
+                    setParams(cleanParams);
 
                     if (suggestion.timeframe) {
-                        console.log("Setting timeframe to:", suggestion.timeframe);
                         setTimeframe(suggestion.timeframe);
                     }
 
