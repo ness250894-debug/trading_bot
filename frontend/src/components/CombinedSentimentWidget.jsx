@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import {
     TrendingUp, TrendingDown, Minus, RefreshCw,
-    Activity, Zap, MessageSquare, ChevronDown, ChevronUp, Newspaper
+    Activity, Zap, MessageSquare, ChevronDown, ChevronUp
 } from 'lucide-react';
 import EditableWidget from './constructor/EditableWidget';
 
@@ -253,38 +253,7 @@ export default function CombinedSentimentWidget({ symbol = 'BTC' }) {
                             </div>
 
                             {/* News Sources Used */}
-                            {advancedData.recent_news && advancedData.recent_news.length > 0 && (
-                                <div>
-                                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-                                        <Newspaper size={14} /> Analyzed News
-                                    </h4>
-                                    <div className="space-y-2">
-                                        {advancedData.recent_news.map((item, idx) => (
-                                            <a
-                                                key={idx}
-                                                href={item.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="block p-3 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-all group"
-                                            >
-                                                <div className="flex justify-between items-start gap-2">
-                                                    <h5 className="text-xs font-medium text-gray-200 group-hover:text-primary transition-colors line-clamp-2">
-                                                        {item.title}
-                                                    </h5>
-                                                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                                        {new Date(item.published || Date.now()).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                                <div className="mt-1 flex items-center gap-2">
-                                                    <span className="text-[10px] text-primary/60 bg-primary/5 px-1.5 rounded">
-                                                        {item.source}
-                                                    </span>
-                                                </div>
-                                            </a>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+
 
                             {/* Footer */}
                             <div className="pt-4 border-t border-white/5 text-[10px] text-muted-foreground text-center">
