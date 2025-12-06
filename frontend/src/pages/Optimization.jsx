@@ -324,6 +324,7 @@ export default function Optimization() {
 
                 if (!ultimateOptimizingRef.current) {
                     setIsOptimizing(true);
+                    setLoading(true);
                 }
 
                 // Handle Partial Results from Ultimate Optimization
@@ -341,7 +342,6 @@ export default function Optimization() {
                 const uniqueResults = [];
                 const seenParams = new Set();
 
-                // If standard optimization, set results
                 if (!ultimateOptimizingRef.current) {
                     for (const result of data.results) {
                         const paramKey = JSON.stringify(Object.keys(result.params).sort().reduce((obj, key) => {
@@ -715,7 +715,7 @@ export default function Optimization() {
                                 </>
                             )}
                         </button>
-                        {isOptimizing && (
+                        {isOptimizing && !isUltimateOptimizing && (
                             <div className="flex-1 flex flex-col gap-1">
                                 <div className="flex justify-between text-xs text-muted-foreground">
                                     <span>Progress</span>
