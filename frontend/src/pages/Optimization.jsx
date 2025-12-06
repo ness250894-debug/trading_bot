@@ -497,6 +497,24 @@ export default function Optimization() {
                         </div>
                     </div>
 
+                    {/* Presets */}
+                    {presets[strategy] && presets[strategy].length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-6 p-3 bg-white/5 rounded-xl border border-white/10">
+                            <span className="text-xs font-bold text-muted-foreground uppercase flex items-center mr-2">
+                                <Sliders size={12} className="mr-1" /> Presets:
+                            </span>
+                            {presets[strategy].map((preset, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => applyPreset(preset)}
+                                    className="px-3 py-1 bg-black/20 hover:bg-primary/20 hover:text-primary text-xs font-medium rounded-full border border-white/5 transition-all"
+                                >
+                                    {preset.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {Object.entries(ranges).map(([param, range]) => {
                             const limits = paramLimits[param] || { min: 0, max: 100, step: 1 };
