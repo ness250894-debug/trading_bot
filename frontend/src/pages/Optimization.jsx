@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-
-import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import api from '../lib/api';
+import { Play, TrendingUp, Activity, Settings, Info, CheckCircle, AlertCircle, Sliders, ArrowUp, ArrowDown, ArrowUpDown, Crown, Lock } from 'lucide-react';
 import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
 
@@ -183,6 +183,20 @@ export default function Optimization() {
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: 'return', direction: 'desc' });
+    const [subscription, setSubscription] = useState(null);
+
+    // Ultimate Optimization State
+    const [isUltimateOptimizing, setIsUltimateOptimizing] = useState(false);
+    const [ultimateResults, setUltimateResults] = useState([]);
+    const globalQueueRef = React.useRef([]);
+    const ultimateOptimizingRef = React.useRef(false);
+
+    // Fetch subscription status
+    useEffect(() => {
+        api.get('/billing/status')
+            .then(res => setSubscription(res.data))
+            .catch(err => console.error("Failed to fetch subscription:", err));
+    }, []);
 
     const strategies = Object.keys(strategyInfo);
 
@@ -326,18 +340,54 @@ export default function Optimization() {
                     }
                 }
 
-                setResults(uniqueResults);
-                setLoading(false);
-                setIsOptimizing(false);
-                toast.success("Optimization Complete!");
+                if (ultimateOptimizingRef.current) {
+                    // Ultimate Optimization Flow
+                    // Add strategy name to results if not present (backend might not send it in params, but it's in the task)
+                    // Actually, the result params don't have strategy name. We need to know which strategy produced these.
+                    // The current strategy is set in state `strategy`.
+                    const strategiesResults = uniqueResults.map(r => ({
+                        ...r,
+                        strategy: strategy // Use current strategy from state
+                    }));
+
+                    setUltimateResults(prev => [...prev, ...strategiesResults]);
+
+                    const nextTask = globalQueueRef.current.shift();
+                    if (nextTask) {
+                        setStrategy(nextTask.strategy);
+                        sendOptimizationRequest(nextTask, event.target);
+                    } else {
+                        // All done
+                        ultimateOptimizingRef.current = false;
+                        setIsUltimateOptimizing(false);
+                        setLoading(false);
+                        setIsOptimizing(false);
+                        toast.success("Ultimate Optimization Complete!");
+                    }
+
+                } else {
+                    // Standard Optimization Flow
+                    setResults(uniqueResults);
+                    setLoading(false);
+                    setIsOptimizing(false);
+                    toast.success("Optimization Complete!");
+                }
             } else if (data.type === 'error') {
                 toast.error('Optimization error: ' + data.error);
                 setLoading(false);
                 setIsOptimizing(false);
+                if (ultimateOptimizingRef.current) {
+                    ultimateOptimizingRef.current = false;
+                    setIsUltimateOptimizing(false);
+                }
             } else if (data.error) {
                 toast.error(data.error);
                 setLoading(false);
                 setIsOptimizing(false);
+                if (ultimateOptimizingRef.current) {
+                    ultimateOptimizingRef.current = false;
+                    setIsUltimateOptimizing(false);
+                }
             }
         };
 
@@ -364,22 +414,76 @@ export default function Optimization() {
         'DCA Dip': ['ema_long', 'ema_short']
     };
 
-    const runOptimization = () => {
+    const runUltimateOptimization = () => {
         if (!ws || ws.readyState !== WebSocket.OPEN) {
             toast.error("WebSocket not connected. Please refresh the page.");
             return;
         }
 
+        // Check Subscription
+        if (!subscription || subscription.plan === 'free') {
+            modal.show({
+                title: '🚀 Unlock Ultimate Optimization',
+                content: (
+                    <div className="space-y-4">
+                        <p className="text-muted-foreground">
+                            The <span className="text-foreground font-semibold">Ultimate Optimization</span> tool runs ALL strategies automatically to find the absolute best market fit.
+                        </p>
+                        <p className="text-muted-foreground">
+                            Upgrade to <span className="text-amber-400 font-bold">Pro</span> or <span className="text-purple-400 font-bold">Admin</span> to access this powerful feature.
+                        </p>
+                        <button
+                            onClick={() => {
+                                modal.hide();
+                                window.location.href = '/pricing';
+                            }}
+                            className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl font-semibold transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2"
+                        >
+                            <Crown size={18} />
+                            Upgrade Now
+                        </button>
+                    </div>
+                )
+            });
+            return;
+        }
+
         setLoading(true);
         setIsOptimizing(true);
-        setProgress({ current: 0, total: nTrials });
-        setResults([]);
+        setIsUltimateOptimizing(true);
+        ultimateOptimizingRef.current = true;
+        setUltimateResults([]); // Clear previous ultimate results only
 
+        // Build Queue
+        const queue = [];
+        for (const stratName of Object.keys(strategyInfo)) {
+            const stratPresets = presets[stratName];
+            if (stratPresets && stratPresets.length > 0) {
+                // Use last preset (usually widest ranges)
+                const preset = stratPresets[stratPresets.length - 1];
+                queue.push({
+                    strategy: stratName,
+                    timeframe: preset.timeframe || '1h',
+                    ranges: preset.ranges
+                });
+            }
+        }
+        globalQueueRef.current = queue;
+
+        // Start First Task
+        const firstTask = globalQueueRef.current.shift();
+        if (firstTask) {
+            setStrategy(firstTask.strategy);
+            sendOptimizationRequest(firstTask, ws);
+        }
+    };
+
+    const sendOptimizationRequest = (task, socket) => {
+        const { strategy, timeframe, ranges } = task;
         const validKeys = STRATEGY_PARAM_KEYS[strategy] || [];
         const param_ranges = {};
 
         for (const [key, range] of Object.entries(ranges)) {
-            // Explicitly skip legacy keys
             if (['bb_length', 'short_window', 'long_window', 'rsi_length', 'rsi_buy', 'rsi_sell', 'buy_threshold', 'sell_threshold'].includes(key)) {
                 continue;
             }
@@ -388,7 +492,7 @@ export default function Optimization() {
             }
         }
 
-        ws.send(JSON.stringify({
+        socket.send(JSON.stringify({
             symbol: 'BTC/USDT',
             timeframe: timeframe,
             days: 3,
@@ -399,8 +503,22 @@ export default function Optimization() {
         }));
     };
 
+    const runOptimization = () => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            toast.error("WebSocket not connected. Please refresh the page.");
+            return;
+        }
+        setLoading(true);
+        setIsOptimizing(true);
+        setProgress({ current: 0, total: nTrials });
+        setResults([]);
 
-
+        sendOptimizationRequest({
+            strategy,
+            timeframe,
+            ranges
+        }, ws);
+    };
 
 
     const applyToBacktest = (params) => {
@@ -606,6 +724,111 @@ export default function Optimization() {
                     </div>
                 </div>
 
+                {/* Ultimate Optimization Section */}
+                <div className="glass rounded-2xl overflow-hidden flex flex-col border border-purple-500/20 shadow-lg shadow-purple-900/10 mb-8">
+                    <div className="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-purple-900/20 to-transparent">
+                        <div className="flex items-center gap-3">
+                            <h3 className="font-semibold flex items-center gap-2 text-lg text-purple-100">
+                                <Crown size={20} className="text-purple-400" />
+                                Ultimate Optimization Results
+                            </h3>
+                            {isUltimateOptimizing && (
+                                <span className="text-xs text-purple-300 animate-pulse bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                                    Running... {progress.current} / {progress.total}
+                                </span>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={runUltimateOptimization}
+                            disabled={loading}
+                            className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm ${subscription?.plan === 'free'
+                                ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer'
+                                : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25'
+                                }`}
+                        >
+                            {loading && isUltimateOptimizing ? (
+                                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></span>
+                            ) : (
+                                subscription?.plan === 'free' ? <Lock size={16} /> : <Play size={16} fill="currentColor" />
+                            )}
+                            Run Ultimate Optimization
+                        </button>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <div className="max-h-[500px] overflow-y-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
+                                    <tr>
+                                        <th className="px-6 py-4">Strategy</th>
+                                        <th className="px-6 py-4">Rank</th>
+                                        <th className="px-6 py-4">Parameters</th>
+                                        <th className="px-6 py-4 text-right">Return</th>
+                                        <th className="px-6 py-4 text-right">Win Rate</th>
+                                        <th className="px-6 py-4 text-right">Trades</th>
+                                        <th className="px-6 py-4 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {ultimateResults.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" className="px-6 py-16 text-center text-muted-foreground">
+                                                <div className="flex flex-col items-center justify-center gap-2 opacity-50">
+                                                    <Crown size={32} />
+                                                    <p>Run Ultimate Optimization to compare all strategies</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        ultimateResults.sort((a, b) => b.return - a.return).map((res, i) => (
+                                            <tr key={i} className="hover:bg-white/5 transition-colors group">
+                                                <td className="px-6 py-4 font-medium text-purple-200">
+                                                    {res.strategy}
+                                                </td>
+                                                <td className="px-6 py-4 font-mono text-muted-foreground">
+                                                    #{i + 1}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {Object.entries(res.params).map(([k, v]) => (
+                                                            <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
+                                                                <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                                <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                    {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {res.win_rate.toFixed(1)}%
+                                                </td>
+                                                <td className="px-6 py-4 text-right text-muted-foreground font-mono">
+                                                    {res.trades}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                setStrategy(res.strategy);
+                                                                applyToBacktest(res.params);
+                                                            }}
+                                                            className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
+                                                        >
+                                                            Backtest
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Results Panel - Below Configuration */}
                 < div className="glass rounded-2xl overflow-hidden flex flex-col" >
                     <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
@@ -744,8 +967,8 @@ export default function Optimization() {
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
-        </PlanGate>
+                </div >
+            </div >
+        </PlanGate >
     );
 }
