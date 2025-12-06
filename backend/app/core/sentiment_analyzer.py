@@ -9,6 +9,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 import google.generativeai as genai
 from .config import GEMINI_API_KEY, CRYPTOPANIC_API_KEY
+from .news_service import news_service
 
 logger = logging.getLogger("SentimentAnalyzer")
 
@@ -250,6 +251,23 @@ Output ONLY valid JSON.
         reddit_posts = self.fetch_reddit_sentiment(symbol)
         news_items.extend(reddit_posts)
         
+        # Aggregated News (CryptoCompare, CoinDesk, etc.)
+        try:
+            aggregated_news = news_service.get_aggregated_news(symbols=symbol, limit=20)
+            news_items.extend([f"{item['title']} : {item['summary']}" for item in aggregated_news])
+            
+            # Add to display news (convert to CryptoPanic format for compatibility)
+            for item in aggregated_news:
+                cryptopanic_news.append({
+                    'title': item['title'],
+                    'published': item.get('time', 'Recently'),
+                    'source': item.get('source', 'Unknown'),
+                    'url': item.get('url', '')
+                })
+                
+        except Exception as e:
+            logger.error(f"Error fetching aggregated news: {e}")
+        
         if not news_items:
             return {
                 'symbol': symbol,
@@ -275,8 +293,8 @@ Output ONLY valid JSON.
             'signal_strength': analysis.get('signal_strength', 'moderate'),
             'topics': analysis.get('topics', []),
             'news_count': len(news_items),
-            'sources': ['CryptoPanic', 'Reddit'],
-            'recent_news': cryptopanic_news[:5],  # Top 5 news items
+            'sources': ['CryptoPanic', 'Reddit', 'CryptoCompare', 'CoinDesk', 'Other'],
+            'recent_news': cryptopanic_news[:10],  # Top 10 news items
             'analyzed_at': datetime.now().isoformat()
         }
         
