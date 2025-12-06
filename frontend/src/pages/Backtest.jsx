@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Play, Loader2, Save, FolderOpen, Trash2, X } from 'lucide-react';
@@ -27,6 +27,32 @@ export default function Backtest() {
     const [timeframe, setTimeframe] = useState('1m');
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(null);
+
+    // Initial load from optimization suggestion
+    useEffect(() => {
+        const suggestionStr = localStorage.getItem('backtest_params_suggestion');
+        if (suggestionStr) {
+            try {
+                const suggestion = JSON.parse(suggestionStr);
+
+                // Find matching strategy object
+                const matchedStrategy = STRATEGIES.find(s => s.name === suggestion.strategy);
+                if (matchedStrategy) {
+                    setSelectedStrategy(matchedStrategy);
+                    setParams(suggestion.params);
+                    if (suggestion.timeframe) {
+                        setTimeframe(suggestion.timeframe);
+                    }
+                    toast.success(`Applied optimized parameters for ${suggestion.strategy}`);
+                }
+
+                // Clear to avoid reapplying on refresh
+                localStorage.removeItem('backtest_params_suggestion');
+            } catch (e) {
+                console.error("Failed to parse backtest suggestion", e);
+            }
+        }
+    }, []);
 
     // Template state
     const [templates, setTemplates] = useState([]);

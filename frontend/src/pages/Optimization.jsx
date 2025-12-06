@@ -409,6 +409,16 @@ export default function Optimization() {
         window.location.href = '/strategies';
     };
 
+    const applyToBacktest = (params) => {
+        const suggestion = {
+            strategy: strategy,
+            timeframe: timeframe,
+            params: params
+        };
+        localStorage.setItem('backtest_params_suggestion', JSON.stringify(suggestion));
+        window.location.href = '/backtest';
+    };
+
 
 
 
@@ -700,10 +710,11 @@ export default function Optimization() {
                                                     <div className="flex flex-wrap gap-2">
                                                         {Object.entries(res.params).map(([k, v]) => (
                                                             <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
-                                                                {k}: {v}
+                                                                <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
                                                             </span>
                                                         ))}
                                                     </div>
+
                                                 </td>
                                                 <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                                     {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
@@ -723,12 +734,20 @@ export default function Optimization() {
                                                     {res.trades}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <button
-                                                        onClick={() => applyToStrategy(res.params)}
-                                                        className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-primary/20"
-                                                    >
-                                                        Apply
-                                                    </button>
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            onClick={() => applyToStrategy(res.params)}
+                                                            className="text-xs bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-primary/20"
+                                                        >
+                                                            Strategy
+                                                        </button>
+                                                        <button
+                                                            onClick={() => applyToBacktest(res.params)}
+                                                            className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
+                                                        >
+                                                            Backtest
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
@@ -739,6 +758,6 @@ export default function Optimization() {
                     </div>
                 </div>
             </div>
-        </PlanGate>
+        </PlanGate >
     );
 }
