@@ -18,11 +18,11 @@ class PaperExchange(BaseExchangeClient):
             exchange_type: Which exchange to use for data fetching ('bybit', 'binance', etc.)
         """
         # Initialize base class
-        super().__init__(api_key, api_secret, demo=True)
+        super().__init__(api_key, api_secret)
         
         # Create real client for data fetching (using factory)
         self.data_client = ExchangeFactory.create_exchange(
-            exchange_type, api_key, api_secret, demo=True
+            exchange_type, api_key, api_secret
         )
         
         # Virtual State

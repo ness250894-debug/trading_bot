@@ -29,7 +29,6 @@ class ExchangeFactory:
         exchange_name: str, 
         api_key: str, 
         api_secret: str, 
-        demo: bool = True,
         timeout: int = 10000
     ) -> BaseExchangeClient:
         """
@@ -39,7 +38,6 @@ class ExchangeFactory:
             exchange_name: Name of the exchange ('bybit', 'binance', etc.)
             api_key: API key
             api_secret: API secret
-            demo: Whether to use demo/testnet mode
             timeout: Request timeout in milliseconds
             
         Returns:
@@ -57,7 +55,7 @@ class ExchangeFactory:
             )
         
         exchange_class = cls._registry[exchange_name]
-        return exchange_class(api_key, api_secret, demo=demo, timeout=timeout)
+        return exchange_class(api_key, api_secret, timeout=timeout)
     
     @classmethod
     def get_supported_exchanges(cls) -> List[str]:
@@ -104,7 +102,6 @@ class ExchangeFactory:
             info.append({
                 'name': exchange_name,
                 'display_name': display_names.get(exchange_name, exchange_name.capitalize()),
-                'supports_demo': True,
                 'supports_futures': exchange_name in ['bybit', 'binance', 'okx'],
                 'supports_spot': True,
             })

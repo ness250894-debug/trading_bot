@@ -54,7 +54,7 @@ async def get_balance(current_user: dict = Depends(auth.get_current_user)):
         if getattr(config, 'DRY_RUN', False):
             client = PaperExchange(config.API_KEY, config.API_SECRET)
         else:
-            client = ExchangeClient(config.API_KEY, config.API_SECRET, demo=config.DEMO)
+            client = ExchangeClient(config.API_KEY, config.API_SECRET)
             
         balance = client.fetch_balance()
         return balance
@@ -245,7 +245,7 @@ async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(
             if strategy_config["dry_run"]:
                 client = PaperExchange(config.API_KEY, config.API_SECRET)
             else:
-                client = ExchangeClient(config.API_KEY, config.API_SECRET, demo=config.DEMO)
+                client = ExchangeClient(config.API_KEY, config.API_SECRET)
             
             balance_data = client.fetch_balance()
             usdt_balance = balance_data.get('USDT', {})

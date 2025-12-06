@@ -7,17 +7,16 @@ from .base_client import BaseExchangeClient
 class BinanceClient(BaseExchangeClient):
     """Binance exchange client implementation."""
     
-    def __init__(self, api_key, api_secret, demo=True, timeout=10000):
+    def __init__(self, api_key, api_secret, timeout=10000):
         """
         Initialize Binance exchange client.
         
         Args:
             api_key: API key
             api_secret: API secret
-            demo: Use testnet
             timeout: Request timeout in milliseconds
         """
-        super().__init__(api_key, api_secret, demo, timeout)
+        super().__init__(api_key, api_secret, timeout=timeout)
         
         self.exchange = ccxt.binance({
             'apiKey': api_key,
@@ -30,15 +29,10 @@ class BinanceClient(BaseExchangeClient):
             }
         })
         
-        if demo:
-            self.exchange.set_sandbox_mode(True)
-            # Binance testnet URLs
-            self.logger.info("Using Binance Testnet")
-        
         # Load markets
         try:
             self.exchange.load_markets()
-            self.logger.info(f"Binance client initialized ({'Testnet' if demo else 'Live'})")
+            self.logger.info("Binance client initialized")
         except Exception as e:
             self.logger.error(f"Failed to load Binance markets: {e}")
     

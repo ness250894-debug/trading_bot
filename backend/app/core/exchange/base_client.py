@@ -10,19 +10,17 @@ class BaseExchangeClient(ABC):
     All exchange implementations must extend this class and implement all abstract methods.
     """
     
-    def __init__(self, api_key: str, api_secret: str, demo: bool = True, timeout: int = 10000):
+    def __init__(self, api_key: str, api_secret: str, timeout: int = 10000):
         """
         Initialize base exchange client.
         
         Args:
             api_key: API key for the exchange
             api_secret: API secret for the exchange
-            demo: Whether to use demo/testnet mode
             timeout: Request timeout in milliseconds
         """
         self.api_key = api_key
         self.api_secret = api_secret
-        self.demo = demo
         self.timeout = timeout
         self.logger = logging.getLogger(self.__class__.__name__)
         self.exchange = None  # To be set by subclass

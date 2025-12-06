@@ -407,6 +407,97 @@ export default function Settings() {
                     {/* Trading Tab */}
                     {activeTab === 'trading' && (
                         <div className="space-y-6">
+
+                            {/* Connect New Exchange Section */}
+                            <div className="glass rounded-xl p-6">
+                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold">
+                                        <Plus size={16} />
+                                    </div>
+                                    Connect New Exchange
+                                </h3>
+
+                                <div className="mb-6">
+                                    <label className="block text-sm font-medium text-muted-foreground mb-3">Select Exchange</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        {exchanges.map((ex) => {
+                                            const isConnected = savedApiKeys.some(k => k.exchange === ex.name);
+                                            return (
+                                                <button
+                                                    key={ex.name}
+                                                    onClick={() => {
+                                                        setExchange(ex.name);
+                                                        setApiKey('');
+                                                        setApiSecret('');
+                                                    }}
+                                                    disabled={isConnected}
+                                                    className={`p-3 rounded-xl border transition-all relative text-left ${exchange === ex.name
+                                                        ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary'
+                                                        : isConnected
+                                                            ? 'bg-white/5 border-white/5 text-muted-foreground opacity-50 cursor-not-allowed'
+                                                            : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10 hover:border-white/20'
+                                                        }`}
+                                                >
+                                                    <div className="font-bold text-sm mb-1">{ex.display_name}</div>
+                                                    {isConnected ? (
+                                                        <div className="text-[10px] text-green-400 flex items-center gap-1">
+                                                            <CheckCircle size={10} /> Connected
+                                                        </div>
+                                                    ) : null}
+
+                                                    {exchange === ex.name && !isConnected && (
+                                                        <div className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.6)]"></div>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handleSaveKeys} className="space-y-4 max-w-2xl">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">API Key</label>
+                                            <input
+                                                type="text"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
+                                                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                                                placeholder="Paste API Key"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-muted-foreground mb-1">API Secret</label>
+                                            <input
+                                                type="password"
+                                                value={apiSecret}
+                                                onChange={(e) => setApiSecret(e.target.value)}
+                                                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                                                placeholder="Paste API Secret"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4 pt-2">
+                                        <button
+                                            type="submit"
+                                            disabled={loading}
+                                            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/20"
+                                        >
+                                            <Save size={18} />
+                                            {loading ? 'Saving...' : 'Save Keys'}
+                                        </button>
+
+                                        <div className="text-xs text-muted-foreground flex items-center gap-2 bg-yellow-500/5 px-3 py-2 rounded-lg border border-yellow-500/10">
+                                            <Shield size={14} className="text-yellow-500" />
+                                            Keys are encrypted at rest with AES-256
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+
                             {/* Connected Exchanges Section */}
                             <div className="glass rounded-xl p-6">
                                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -479,99 +570,6 @@ export default function Settings() {
                                 )}
                             </div>
 
-                            {/* Connect New Exchange Section */}
-                            <div className="glass rounded-xl p-6">
-                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-sm font-bold">
-                                        <Plus size={16} />
-                                    </div>
-                                    Connect New Exchange
-                                </h3>
-
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-muted-foreground mb-3">Select Exchange</label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                        {exchanges.map((ex) => {
-                                            const isConnected = savedApiKeys.some(k => k.exchange === ex.name);
-                                            return (
-                                                <button
-                                                    key={ex.name}
-                                                    onClick={() => {
-                                                        setExchange(ex.name);
-                                                        setApiKey('');
-                                                        setApiSecret('');
-                                                    }}
-                                                    disabled={isConnected}
-                                                    className={`p-3 rounded-xl border transition-all relative text-left ${exchange === ex.name
-                                                        ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary'
-                                                        : isConnected
-                                                            ? 'bg-white/5 border-white/5 text-muted-foreground opacity-50 cursor-not-allowed'
-                                                            : 'bg-white/5 border-white/10 text-muted-foreground hover:bg-white/10 hover:border-white/20'
-                                                        }`}
-                                                >
-                                                    <div className="font-bold text-sm mb-1">{ex.display_name}</div>
-                                                    {isConnected ? (
-                                                        <div className="text-[10px] text-green-400 flex items-center gap-1">
-                                                            <CheckCircle size={10} /> Connected
-                                                        </div>
-                                                    ) : (
-                                                        ex.supports_demo && (
-                                                            <div className="text-[10px] text-primary/70">Supports Testnet</div>
-                                                        )
-                                                    )}
-
-                                                    {exchange === ex.name && !isConnected && (
-                                                        <div className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full shadow-[0_0_8px_rgba(139,92,246,0.6)]"></div>
-                                                    )}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-
-                                <form onSubmit={handleSaveKeys} className="space-y-4 max-w-2xl">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-muted-foreground mb-1">API Key</label>
-                                            <input
-                                                type="text"
-                                                value={apiKey}
-                                                onChange={(e) => setApiKey(e.target.value)}
-                                                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
-                                                placeholder="Paste API Key"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-muted-foreground mb-1">API Secret</label>
-                                            <input
-                                                type="password"
-                                                value={apiSecret}
-                                                onChange={(e) => setApiSecret(e.target.value)}
-                                                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2.5 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 outline-none transition-all"
-                                                placeholder="Paste API Secret"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-4 pt-2">
-                                        <button
-                                            type="submit"
-                                            disabled={loading}
-                                            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 shadow-lg shadow-primary/20"
-                                        >
-                                            <Save size={18} />
-                                            {loading ? 'Saving...' : 'Save Keys'}
-                                        </button>
-
-                                        <div className="text-xs text-muted-foreground flex items-center gap-2 bg-yellow-500/5 px-3 py-2 rounded-lg border border-yellow-500/10">
-                                            <Shield size={14} className="text-yellow-500" />
-                                            Keys are encrypted at rest with AES-256
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
                         </div>
                     )}
 

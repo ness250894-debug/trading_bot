@@ -464,7 +464,7 @@ def main(user_id: int = 0):
         logger.info("⚠️ DRY RUN MODE ENABLED: Using Paper Exchange")
         client = PaperExchange(config.API_KEY, config.API_SECRET)
     else:
-        client = ExchangeClient(config.API_KEY, config.API_SECRET, demo=config.DEMO)
+        client = ExchangeClient(config.API_KEY, config.API_SECRET)
     
     # Set Leverage
     client.set_leverage(config.SYMBOL, config.LEVERAGE)

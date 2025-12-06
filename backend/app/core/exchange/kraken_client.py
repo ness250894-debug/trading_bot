@@ -7,17 +7,16 @@ from .base_client import BaseExchangeClient
 class KrakenClient(BaseExchangeClient):
     """Kraken exchange client implementation."""
     
-    def __init__(self, api_key, api_secret, demo=True, timeout=10000):
+    def __init__(self, api_key, api_secret, timeout=10000):
         """
         Initialize Kraken exchange client.
         
         Args:
             api_key: API key
             api_secret: API secret
-            demo: Use testnet/sandbox
             timeout: Request timeout in milliseconds
         """
-        super().__init__(api_key, api_secret, demo, timeout)
+        super().__init__(api_key, api_secret, timeout=timeout)
         
         self.exchange = ccxt.kraken({
             'apiKey': api_key,
@@ -29,15 +28,10 @@ class KrakenClient(BaseExchangeClient):
             }
         })
         
-        if demo:
-            # Kraken sandbox/testnet
-            self.exchange.sandbox = True
-            self.logger.info("Using Kraken Sandbox/Testnet")
-        
         # Load markets
         try:
             self.exchange.load_markets()
-            self.logger.info(f"Kraken client initialized ({'Testnet' if demo else 'Live'})")
+            self.logger.info("Kraken client initialized")
         except Exception as e:
             self.logger.error(f"Failed to load Kraken markets: {e}")
     

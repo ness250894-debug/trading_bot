@@ -2,11 +2,11 @@
 // Used as fallback when API fails to load exchanges
 
 export const DEFAULT_EXCHANGES = [
-    { name: 'bybit', display_name: 'ByBit', supports_demo: true },
-    { name: 'binance', display_name: 'Binance', supports_demo: true },
-    { name: 'kraken', display_name: 'Kraken', supports_demo: true },
-    { name: 'okx', display_name: 'OKX', supports_demo: true },
-    { name: 'coinbase', display_name: 'Coinbase', supports_demo: false }
+    { name: 'bybit', display_name: 'ByBit' },
+    { name: 'binance', display_name: 'Binance' },
+    { name: 'kraken', display_name: 'Kraken' },
+    { name: 'okx', display_name: 'OKX' },
+    { name: 'coinbase', display_name: 'Coinbase' }
 ];
 
 // Helper function to format exchange display name

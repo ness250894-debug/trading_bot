@@ -7,17 +7,16 @@ from .base_client import BaseExchangeClient
 class OKXClient(BaseExchangeClient):
     """OKX (formerly OKEx) exchange client implementation."""
     
-    def __init__(self, api_key, api_secret, demo=True, timeout=10000):
+    def __init__(self, api_key, api_secret, timeout=10000):
         """
         Initialize OKX exchange client.
         
         Args:
             api_key: API key
             api_secret: API secret
-            demo: Use sandbox/demo trading
             timeout: Request timeout in milliseconds
         """
-        super().__init__(api_key, api_secret, demo, timeout)
+        super().__init__(api_key, api_secret, timeout=timeout)
         
         self.exchange = ccxt.okx({
             'apiKey': api_key,
@@ -29,16 +28,10 @@ class OKXClient(BaseExchangeClient):
             }
         })
         
-        if demo:
-            # OKX sandbox mode
-            self.exchange.set_sandbox_mode(True)
-            self.logger.info("Using OKX Sandbox/Demo Trading")
-            self.logger.warning("Make sure to use demo account API keys for OKX sandbox")
-        
         # Load markets
         try:
             self.exchange.load_markets()
-            self.logger.info(f"OKX client initialized ({'Demo' if demo else 'Live'})")
+            self.logger.info("OKX client initialized")
         except Exception as e:
             self.logger.error(f"Failed to load OKX markets: {e}")
     

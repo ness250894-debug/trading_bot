@@ -16,7 +16,7 @@ if not API_KEY or not API_SECRET:
     logger.warning("⚠️ BYBIT_API_KEY or BYBIT_API_SECRET not set in environment!")
     logger.warning("⚠️ Bot will not be able to connect to exchange.")
 
-DEMO = os.getenv('BYBIT_DEMO', 'True').lower() == 'true'
+
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 

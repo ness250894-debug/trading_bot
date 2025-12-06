@@ -74,7 +74,7 @@ class ClientManager:
                     raise ValueError(f"Exchange '{exchange}' is not supported. Supported: {ExchangeFactory.get_supported_exchanges()}")
                 
                 client = ExchangeFactory.create_exchange(
-                    exchange, api_key, api_secret, demo=config.DEMO, timeout=10000
+                    exchange, api_key, api_secret, timeout=10000
                 )
             
             # Cache client

@@ -178,8 +178,8 @@ async def get_exchange_balances(current_user: dict = Depends(auth.get_current_us
                 if not ClientClass:
                     continue
                 
-                # Initialize client (demo=False for live balances)
-                client = ClientClass(api_key, api_secret, demo=False, timeout=15000)
+                # Initialize client (live client)
+                client = ClientClass(api_key, api_secret, timeout=15000)
                 
                 # Fetch balance
                 balance = client.fetch_balance()

@@ -7,20 +7,16 @@ from .base_client import BaseExchangeClient
 class CoinbaseClient(BaseExchangeClient):
     """Coinbase Advanced Trade API client implementation."""
     
-    def __init__(self, api_key, api_secret, demo=True, timeout=10000):
+    def __init__(self, api_key, api_secret, timeout=10000):
         """
         Initialize Coinbase exchange client.
-        
-        Note: Coinbase has limited sandbox support in CCXT.
-        Demo mode will use testnet if available, otherwise falls back to live API.
         
         Args:
             api_key: API key
             api_secret: API secret
-            demo: Use sandbox/testnet (limited support)
             timeout: Request timeout in milliseconds
         """
-        super().__init__(api_key, api_secret, demo, timeout)
+        super().__init__(api_key, api_secret, timeout=timeout)
         
         # Coinbase Advanced Trade (replaces Coinbase Pro)
         self.exchange = ccxt.coinbase({
@@ -30,19 +26,10 @@ class CoinbaseClient(BaseExchangeClient):
             'timeout': timeout,
         })
         
-        if demo:
-            # Coinbase sandbox support is limited
-            # try:
-            #     self.exchange.set_sandbox_mode(True)
-            #     self.logger.info("Using Coinbase Sandbox")
-            # except:
-            self.logger.warning("Coinbase sandbox support is limited. Using production API with caution.")
-            self.logger.warning("Consider using paper trading mode instead.")
-        
         # Load markets
         try:
             self.exchange.load_markets()
-            self.logger.info(f"Coinbase client initialized ({'Demo/Limited' if demo else 'Live'})")
+            self.logger.info("Coinbase client initialized")
         except Exception as e:
             self.logger.error(f"Failed to load Coinbase markets: {e}")
     
