@@ -113,7 +113,7 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades, exchangeBal
                                                 <div className="flex items-center gap-2">
                                                     <span className="capitalize text-sm font-medium">{exchangeNames[ex.name] || ex.name}</span>
                                                 </div>
-                                                <div className="text-sm font-semibold">${ex.total?.toFixed(2)}</div>
+                                                <div className="text-sm font-semibold">${ex.usdt_total?.toFixed(2)}</div>
                                             </div>
                                         ))}
                                     </div>
