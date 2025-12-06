@@ -38,11 +38,15 @@ export default function Backtest() {
                 // Find matching strategy object
                 const matchedStrategy = STRATEGIES.find(s => s.name === suggestion.strategy);
                 if (matchedStrategy) {
+                    console.log("Applying suggestion:", suggestion); // Debug log
                     setSelectedStrategy(matchedStrategy);
                     setParams(suggestion.params);
+
                     if (suggestion.timeframe) {
+                        console.log("Setting timeframe to:", suggestion.timeframe);
                         setTimeframe(suggestion.timeframe);
                     }
+
                     toast.success(`Applied optimized parameters for ${suggestion.strategy}`);
                 }
 

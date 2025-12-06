@@ -410,6 +410,7 @@ export default function Optimization() {
     };
 
     const applyToBacktest = (params) => {
+        console.log("Saving backtest suggestion:", { strategy, timeframe, params }); // Debug log
         const suggestion = {
             strategy: strategy,
             timeframe: timeframe,
