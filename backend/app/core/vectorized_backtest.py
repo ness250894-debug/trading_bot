@@ -52,63 +52,114 @@ class VectorizedBacktester:
     def run(self):
         if self.df is None: return
 
-        # 1. Populate
+        # 1. Populate Indicators
         self.df = self.strategy.populate_indicators(self.df)
         self.df = self.strategy.populate_buy_trend(self.df)
         self.df = self.strategy.populate_sell_trend(self.df)
         
-        # 2. Loop
-        for i, row in self.df.iterrows():
-            price = row['close']
-            ts = row['timestamp']
-            
-            if self.position_size > 0:
-                # Check Exit
-                reason = None
-                exit_price = price
+        # 2. Prepare Numpy Arrays for Speed
+        # We drop NaNs to ensure alignment
+        # df_clean = self.df.dropna().reset_index(drop=True)
+        # Actually, let's keep NaNs but handle them, to preserve timestamps
+        
+        opens = self.df['open'].to_numpy()
+        highs = self.df['high'].to_numpy()
+        lows = self.df['low'].to_numpy()
+        closes = self.df['close'].to_numpy()
+        timestamps = self.df['timestamp'].to_numpy()
+        
+        # Handle cases where buy/sell columns might not exist if strategy didn't set them
+        if 'buy' not in self.df.columns: self.df['buy'] = 0
+        if 'sell' not in self.df.columns: self.df['sell'] = 0
+        
+        buy_signals = self.df['buy'].fillna(0).to_numpy()
+        sell_signals = self.df['sell'].fillna(0).to_numpy()
+        
+        n = len(closes)
+        in_position = False
+        entry_price = 0.0
+        highest_price = 0.0 # For trailing stop
+        
+        # 3. Vectorized Loop (Iterating index)
+        # We start at i=1 because signals from i-1 execute at Open of i
+        for i in range(1, n):
+            # Check Exit First
+            if in_position:
+                exit_reason = None
+                exit_price = 0.0
                 
-                if row.get('sell') == 1:
-                    reason = 'Signal'
-                elif row['low'] <= self.entry_price * (1 - config.STOP_LOSS_PCT):
-                    reason = 'Stop Loss'
-                    exit_price = self.entry_price * (1 - config.STOP_LOSS_PCT)
-                elif row['high'] >= self.entry_price * (1 + config.TAKE_PROFIT_PCT):
-                    reason = 'Take Profit'
-                    exit_price = self.entry_price * (1 + config.TAKE_PROFIT_PCT)
+                # A. Signal Exit (from previous candle i-1)
+                if sell_signals[i-1] == 1:
+                    exit_reason = 'Signal'
+                    exit_price = opens[i] # Execute at Open
                 
-                # Trailing Stop Logic
-                if not reason:
-                    # Update High/Low for Trailing Stop
-                    if not hasattr(self, 'highest_price') or row['high'] > self.highest_price:
-                        self.highest_price = row['high']
+                # B. Stop Loss / Take Profit (intra-candle check)
+                # We assume worst-case (hit SL first) or checked against High/Low
+                # Current Candle High/Low
+                elif lows[i] <= entry_price * (1 - config.STOP_LOSS_PCT):
+                    exit_reason = 'Stop Loss'
+                    # Slippage simulation: realistic worst case execution
+                    exit_price = entry_price * (1 - config.STOP_LOSS_PCT)
+                
+                elif highs[i] >= entry_price * (1 + config.TAKE_PROFIT_PCT):
+                    exit_reason = 'Take Profit'
+                    exit_price = entry_price * (1 + config.TAKE_PROFIT_PCT)
+                
+                # C. Trailing Stop
+                else:
+                    # Update High for Trailing Stop
+                    if highs[i] > highest_price:
+                        highest_price = highs[i]
                     
-                    # Check Activation
-                    if self.highest_price >= self.entry_price * (1 + config.TRAILING_STOP_ACTIVATION_PCT):
-                        stop_price = self.highest_price * (1 - config.TRAILING_STOP_PCT)
-                        if row['low'] < stop_price:
-                            reason = 'Trailing Stop'
+                    activation_price = entry_price * (1 + config.TRAILING_STOP_ACTIVATION_PCT)
+                    if highest_price >= activation_price:
+                        stop_price = highest_price * (1 - config.TRAILING_STOP_PCT)
+                        if lows[i] < stop_price:
+                            exit_reason = 'Trailing Stop'
                             exit_price = stop_price
 
-                
-                if reason:
-                    # Close
+                # Execute Exit
+                if exit_reason:
+                    # Calculate PnL
+                    # Simulated Amount: 99% of balance
+                    # position_size = (balance * 0.99) / entry_price
+                    # We track balance continuously
+                    
+                    # Re-calculate position size based on balance at entry time?
+                    # Simplify: We held 'position_size' units
+                    
                     value = self.position_size * exit_price
                     fee = value * config.TAKER_FEE_PCT
-                    pnl = (exit_price - self.entry_price) * self.position_size
+                    pnl = (exit_price - entry_price) * self.position_size
+                    
                     self.balance += pnl - fee
-                    self.trades.append({'pnl': pnl - fee, 'reason': reason, 'time': ts})
-                    self.position_size = 0
-                    self.highest_price = 0  # Reset tracking
-            
-            elif self.position_size == 0:
-                if row.get('buy') == 1:
-                    # Open
+                    
+                    self.trades.append({
+                        'pnl': pnl - fee,
+                        'reason': exit_reason,
+                        'time': timestamps[i], # Execution time
+                        'entry_price': entry_price,
+                        'exit_price': exit_price
+                    })
+                    
+                    in_position = False
+                    self.position_size = 0.0
+                    entry_price = 0.0
+                    highest_price = 0.0
+
+            # Check Entry (if not in position)
+            # Use 'elif' because we can't enter same candle we exited (simplification)
+            elif not in_position:
+                if buy_signals[i-1] == 1:
+                    # Execute BUY at Open of i
+                    entry_price = opens[i]
                     amount_usdt = self.balance * 0.99
-                    self.position_size = amount_usdt / price
-                    self.entry_price = price
-                    self.highest_price = price  # Initialize tracking
                     fee = amount_usdt * config.TAKER_FEE_PCT
+                    
                     self.balance -= fee
+                    self.position_size = amount_usdt / entry_price
+                    highest_price = entry_price
+                    in_position = True
 
     def show_results(self):
         logger.info(f"Final Balance: {self.balance:.2f}")
