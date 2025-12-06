@@ -155,9 +155,18 @@ export default function Backtest() {
         }
     };
 
+    const createBotFromBacktest = () => {
+        const suggestion = {
+            strategy: selectedStrategy.name,
+            params: { ...params, timeframe }, // Include timeframe in params for Strategy page to detect
+        };
+        localStorage.setItem('suggested_strategy_params', JSON.stringify(suggestion));
+        window.location.href = '/strategies';
+    };
+
     return (
-        <PlanGate feature="Backtesting" explanation="Test your strategies against historical data to verify performance before trading with real money.">
-            <div className="p-8 max-w-7xl mx-auto">
+        <PlanGate feature="Backtesting" explanation="Test your strategies against historical data before risking real capital.">
+            <div className="max-w-7xl mx-auto space-y-8">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-3xl font-bold">
                         <EditableText
@@ -295,24 +304,45 @@ export default function Backtest() {
                                     </ResponsiveContainer>
                                 </div>
 
+                                {/* Create Bot Button */}
+                                <div className="flex justify-end">
+                                    <button
+                                        onClick={createBotFromBacktest}
+                                        className="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-green-600/25"
+                                    >
+                                        <Play size={20} />
+                                        Create Bot with this Strategy
+                                    </button>
+                                </div>
+
                                 {/* Trade History */}
                                 <div className="bg-card rounded-xl border border-border overflow-hidden">
                                     <div className="p-4 border-b border-border">
                                         <h3 className="font-semibold">Trade History</h3>
                                     </div>
-                                    <div className="max-h-[300px] overflow-auto">
-                                        <table className="w-full text-sm text-left">
-                                            <thead className="bg-muted/50 text-muted-foreground">
-                                                <tr>
+                                    <div className="max-h-[400px] overflow-y-auto">
+                                        <table className="w-full text-sm item-center">
+                                            <thead className="bg-muted/50 sticky top-0">
+                                                <tr className="text-left text-muted-foreground">
                                                     <th className="p-3">Time</th>
-                                                    <th className="p-3">PnL</th>
+                                                    <th className="p-3">Type</th>
+                                                    <th className="p-3 text-right">Entry</th>
+                                                    <th className="p-3 text-right">Exit</th>
+                                                    <th className="p-3 text-right">PnL</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody className="divide-y divide-border">
                                                 {results.trades.map((trade, i) => (
-                                                    <tr key={i} className="border-b border-border hover:bg-muted/20">
-                                                        <td className="p-3">{new Date(trade.time).toLocaleString()}</td>
-                                                        <td className={`p-3 font-medium ${trade.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                    <tr key={i} className="hover:bg-muted/50">
+                                                        <td className="p-3">{trade.time.split('T')[0]}</td>
+                                                        <td className="p-3">
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${trade.pnl >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                                {trade.reason || 'Trade'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-3 text-right">${trade.entry_price.toFixed(2)}</td>
+                                                        <td className="p-3 text-right">${trade.exit_price.toFixed(2)}</td>
+                                                        <td className={`p-3 text-right font-bold ${trade.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                                                             {trade.pnl > 0 ? '+' : ''}{trade.pnl.toFixed(2)}
                                                         </td>
                                                     </tr>
