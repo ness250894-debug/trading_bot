@@ -318,13 +318,20 @@ export default function Optimization() {
 
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            const isUltimate = data.job_type === 'ultimate';
 
             if (data.type === 'progress') {
-                setProgress({ current: data.current, total: data.total });
-
-                if (!ultimateOptimizingRef.current) {
+                // Update active states based on job type
+                if (isUltimate) {
+                    setIsUltimateOptimizing(true);
+                    ultimateOptimizingRef.current = true;
+                    setIsOptimizing(false);
+                } else {
                     setIsOptimizing(true);
                     setLoading(true);
+                    setIsUltimateOptimizing(false);
+                    ultimateOptimizingRef.current = false;
+                    setProgress({ current: data.current, total: data.total });
                 }
 
                 // Handle Partial Results from Ultimate Optimization
@@ -342,7 +349,7 @@ export default function Optimization() {
                 const uniqueResults = [];
                 const seenParams = new Set();
 
-                if (!ultimateOptimizingRef.current) {
+                if (!isUltimate) {
                     for (const result of data.results) {
                         const paramKey = JSON.stringify(Object.keys(result.params).sort().reduce((obj, key) => {
                             obj[key] = result.params[key];
@@ -370,18 +377,14 @@ export default function Optimization() {
                 toast.error('Optimization error: ' + data.error);
                 setLoading(false);
                 setIsOptimizing(false);
-                if (ultimateOptimizingRef.current) {
-                    ultimateOptimizingRef.current = false;
-                    setIsUltimateOptimizing(false);
-                }
+                ultimateOptimizingRef.current = false;
+                setIsUltimateOptimizing(false);
             } else if (data.error) {
                 toast.error(data.error);
                 setLoading(false);
                 setIsOptimizing(false);
-                if (ultimateOptimizingRef.current) {
-                    ultimateOptimizingRef.current = false;
-                    setIsUltimateOptimizing(false);
-                }
+                ultimateOptimizingRef.current = false;
+                setIsUltimateOptimizing(false);
             }
         };
 

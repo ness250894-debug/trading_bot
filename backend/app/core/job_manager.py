@@ -25,11 +25,12 @@ class JobManager:
         self.error: Optional[str] = None
         self.subscribers: List[Any] = [] # List of websocket queues or callbacks
 
-    async def start_job(self, job_func, *args, **kwargs):
+    async def start_job(self, job_func, job_type="standard", *args, **kwargs):
         if self.status == "running":
             raise Exception("A job is already running")
 
         self.status = "running"
+        self.job_type = job_type
         self.progress = {"current": 0, "total": 0}
         self.results = []
         self.error = None
@@ -51,18 +52,18 @@ class JobManager:
         # Async wrapper to manage the thread execution and state
         async def job_lifecycle_wrapper():
             try:
-                logger.info("Starting optimization job in background thread...")
+                logger.info(f"Starting {self.job_type} optimization job in background thread...")
                 # Run the blocking job in the default executor
                 self.results = await loop.run_in_executor(None, threaded_job_wrapper)
                 
                 self.status = "completed"
-                await self.notify_subscribers({"type": "complete", "results": self.results})
+                await self.notify_subscribers({"type": "complete", "job_type": self.job_type, "results": self.results})
                 logger.info("Optimization job completed.")
             except Exception as e:
                 logger.error(f"Optimization job failed: {e}")
                 self.status = "failed"
                 self.error = str(e)
-                await self.notify_subscribers({"type": "error", "error": str(e)})
+                await self.notify_subscribers({"type": "error", "job_type": self.job_type, "error": str(e)})
             finally:
                 self.current_job = None
 
@@ -74,6 +75,7 @@ class JobManager:
         self.progress = {"current": current, "total": total}
         message = {
             "type": "progress",
+            "job_type": self.job_type,
             "current": current,
             "total": total
         }
@@ -88,12 +90,14 @@ class JobManager:
         if self.status == "running":
             await websocket.send_json({
                 "type": "progress",
+                "job_type": self.job_type,
                 "current": self.progress["current"],
                 "total": self.progress["total"]
             })
         elif self.status == "completed":
             await websocket.send_json({
                 "type": "complete",
+                "job_type": self.job_type,
                 "results": self.results
             })
         elif self.status == "failed":

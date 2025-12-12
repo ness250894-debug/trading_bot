@@ -371,7 +371,7 @@ async def websocket_optimize(websocket: WebSocket):
                     
                     return all_results
 
-                await job_manager.start_job(run_ultimate_job)
+                await job_manager.start_job(run_ultimate_job, job_type="ultimate")
 
             # --- SINGLE STRATEGY HANDLER ---
             elif "strategy" in data:
@@ -442,7 +442,7 @@ async def websocket_optimize(websocket: WebSocket):
                     return results_list
 
                 # Start the job via Manager
-                await job_manager.start_job(run_opt)
+                await job_manager.start_job(run_opt, job_type="standard")
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected by client")
