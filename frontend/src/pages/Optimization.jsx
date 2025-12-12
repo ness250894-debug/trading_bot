@@ -190,7 +190,10 @@ export default function Optimization() {
 
     // Ultimate Optimization State
     const [isUltimateOptimizing, setIsUltimateOptimizing] = useState(false);
-    const [ultimateResults, setUltimateResults] = useState([]);
+    const [ultimateResults, setUltimateResults] = useState(() => {
+        const saved = localStorage.getItem('ultimate_optimization_results');
+        return saved ? JSON.parse(saved) : [];
+    });
     const globalQueueRef = React.useRef([]);
     const ultimateOptimizingRef = React.useRef(false);
 
@@ -283,6 +286,15 @@ export default function Optimization() {
         setResults([]);
         localStorage.removeItem('optimization_results');
     };
+
+    const clearUltimateResults = () => {
+        setUltimateResults([]);
+        localStorage.removeItem('ultimate_optimization_results');
+    };
+
+    useEffect(() => {
+        localStorage.setItem('ultimate_optimization_results', JSON.stringify(ultimateResults));
+    }, [ultimateResults]);
 
     const [ws, setWs] = useState(null);
 
@@ -540,10 +552,10 @@ export default function Optimization() {
     };
 
 
-    const applyToBacktest = (params) => {
+    const applyToBacktest = (params, strategyOverride = null, timeframeOverride = null) => {
         const suggestion = {
-            strategy: strategy,
-            timeframe: timeframe,
+            strategy: strategyOverride || strategy,
+            timeframe: timeframeOverride || timeframe,
             params: params
         };
         localStorage.setItem('backtest_params_suggestion', JSON.stringify(suggestion));
@@ -1003,6 +1015,14 @@ export default function Optimization() {
                                 )}
                                 Run Ultimate Optimization
                             </button>
+                            {ultimateResults.length > 0 && (
+                                <button
+                                    onClick={clearUltimateResults}
+                                    className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors"
+                                >
+                                    Clear
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -1065,8 +1085,7 @@ export default function Optimization() {
                                                     <div className="flex justify-center gap-2">
                                                         <button
                                                             onClick={() => {
-                                                                setStrategy(res.strategy);
-                                                                applyToBacktest(res.params);
+                                                                applyToBacktest(res.params, res.strategy, res.timeframe || '1h');
                                                             }}
                                                             className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
                                                         >

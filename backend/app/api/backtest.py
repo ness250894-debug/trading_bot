@@ -349,6 +349,8 @@ async def websocket_optimize(websocket: WebSocket):
                             params['timeframe'] = req.timeframe
                             result['params'] = params
                             result['strategy'] = req.strategy # Set correct name
+                            result['timeframe'] = req.timeframe # Add at result level for frontend
+                            result['symbol'] = req.symbol # Add at result level for frontend
                             
                             result['win_rate'] = result.get('win_rate', 0)
                             result['trades'] = result.get('trades', 0)
