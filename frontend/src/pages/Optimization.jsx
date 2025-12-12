@@ -469,6 +469,7 @@ export default function Optimization() {
 
                 tasks.push({
                     strategy: stratName,
+                    symbol: symbol,
                     timeframe: preset.timeframe || '1h',
                     days: 3,
                     param_ranges: taskRange,
