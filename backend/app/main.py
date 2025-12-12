@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.exceptions import HTTPException, RequestValidationError
 import logging
 import asyncio
@@ -26,6 +27,9 @@ add_pii_filter_to_logger()  # Apply to root logger
 logger.info("✅ PII filter enabled - sensitive data will be redacted from logs")
 
 app = FastAPI(title="Trading Bot API", version="1.0.0")
+
+# Add GZip compression for faster responses (compress responses > 500 bytes)
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Add HTTPS enforcement middleware (must be before CORS)
 from .middleware.https_middleware import HTTPSRedirectMiddleware
