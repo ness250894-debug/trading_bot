@@ -1004,81 +1004,81 @@ export default function Optimization() {
                                 Run Ultimate Optimization
                             </button>
                         </div>
+                    </div>
 
-                        <div className="overflow-x-auto">
-                            <div className="max-h-[500px] overflow-y-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
+                    <div className="overflow-x-auto">
+                        <div className="max-h-[500px] overflow-y-auto">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
+                                    <tr>
+                                        <th className="px-6 py-4">Strategy</th>
+                                        <th className="px-6 py-4">Symbol</th>
+                                        <th className="px-6 py-4">Rank</th>
+                                        <th className="px-6 py-4">Parameters</th>
+                                        <th className="px-6 py-4 text-right">Return</th>
+                                        <th className="px-6 py-4 text-right">Win Rate</th>
+                                        <th className="px-6 py-4 text-right">Trades</th>
+                                        <th className="px-6 py-4 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {ultimateResults.length === 0 ? (
                                         <tr>
-                                            <th className="px-6 py-4">Strategy</th>
-                                            <th className="px-6 py-4">Symbol</th>
-                                            <th className="px-6 py-4">Rank</th>
-                                            <th className="px-6 py-4">Parameters</th>
-                                            <th className="px-6 py-4 text-right">Return</th>
-                                            <th className="px-6 py-4 text-right">Win Rate</th>
-                                            <th className="px-6 py-4 text-right">Trades</th>
-                                            <th className="px-6 py-4 text-center">Action</th>
+                                            <td colSpan="8" className="px-6 py-16 text-center text-muted-foreground">
+                                                <div className="flex flex-col items-center justify-center gap-2 opacity-50">
+                                                    <Crown size={32} />
+                                                    <p>Run Ultimate Optimization to compare all strategies</p>
+                                                </div>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {ultimateResults.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="8" className="px-6 py-16 text-center text-muted-foreground">
-                                                    <div className="flex flex-col items-center justify-center gap-2 opacity-50">
-                                                        <Crown size={32} />
-                                                        <p>Run Ultimate Optimization to compare all strategies</p>
+                                    ) : (
+                                        ultimateResults.sort((a, b) => b.return - a.return).map((res, i) => (
+                                            <tr key={i} className="hover:bg-white/5 transition-colors group">
+                                                <td className="px-6 py-4 font-medium text-purple-200">
+                                                    {res.strategy}
+                                                </td>
+                                                <td className="px-6 py-4 font-mono text-cyan-300 text-xs">
+                                                    {res.params?.symbol || res.symbol || symbol}
+                                                </td>
+                                                <td className="px-6 py-4 font-mono text-muted-foreground">
+                                                    #{i + 1}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {Object.entries(res.params).map(([k, v]) => (
+                                                            <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
+                                                                <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                                <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                    {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {res.win_rate.toFixed(1)}%
+                                                </td>
+                                                <td className="px-6 py-4 text-right text-muted-foreground font-mono">
+                                                    {res.trades}
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex justify-center gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                setStrategy(res.strategy);
+                                                                applyToBacktest(res.params);
+                                                            }}
+                                                            className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
+                                                        >
+                                                            Backtest
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ) : (
-                                            ultimateResults.sort((a, b) => b.return - a.return).map((res, i) => (
-                                                <tr key={i} className="hover:bg-white/5 transition-colors group">
-                                                    <td className="px-6 py-4 font-medium text-purple-200">
-                                                        {res.strategy}
-                                                    </td>
-                                                    <td className="px-6 py-4 font-mono text-cyan-300 text-xs">
-                                                        {res.params?.symbol || res.symbol || symbol}
-                                                    </td>
-                                                    <td className="px-6 py-4 font-mono text-muted-foreground">
-                                                        #{i + 1}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {Object.entries(res.params).map(([k, v]) => (
-                                                                <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
-                                                                    <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    </td>
-                                                    <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                        {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        {res.win_rate.toFixed(1)}%
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right text-muted-foreground font-mono">
-                                                        {res.trades}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <div className="flex justify-center gap-2">
-                                                            <button
-                                                                onClick={() => {
-                                                                    setStrategy(res.strategy);
-                                                                    applyToBacktest(res.params);
-                                                                }}
-                                                                className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
-                                                            >
-                                                                Backtest
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
