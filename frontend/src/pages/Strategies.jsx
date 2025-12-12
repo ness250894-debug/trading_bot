@@ -221,6 +221,7 @@ export default function Strategies() {
 
         const params = { ...suggestion.params };
         let newTimeframe = config.timeframe;
+        let newSymbol = config.symbol;
 
         // Extract timeframe if present
         if (params.timeframe) {
@@ -228,16 +229,22 @@ export default function Strategies() {
             delete params.timeframe;
         }
 
+        // Extract symbol from top-level suggestion
+        if (suggestion.symbol) {
+            newSymbol = suggestion.symbol;
+        }
+
         setConfig(prev => ({
             ...prev,
             strategy: suggestion.strategy,
+            symbol: newSymbol,
             timeframe: newTimeframe,
             parameters: params
         }));
 
         localStorage.removeItem('suggested_strategy_params');
         setSuggestion(null);
-        setMessage({ type: 'success', text: 'Applied suggested parameters and timeframe! Click Add Bot to save.' });
+        setMessage({ type: 'success', text: 'Applied suggested parameters, symbol, and timeframe! Click Add Bot to save.' });
     };
 
     const dismissSuggestion = () => {

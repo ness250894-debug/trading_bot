@@ -51,6 +51,10 @@ export default function Backtest() {
                         setTimeframe(suggestion.timeframe);
                     }
 
+                    if (suggestion.symbol) {
+                        setSymbol(suggestion.symbol);
+                    }
+
                     toast.success(`Applied optimized parameters for ${suggestion.strategy}`);
                 }
 
@@ -166,6 +170,7 @@ export default function Backtest() {
     const createBotFromBacktest = () => {
         const suggestion = {
             strategy: selectedStrategy.name,
+            symbol: symbol,
             params: { ...params, timeframe }, // Include timeframe in params for Strategy page to detect
         };
         localStorage.setItem('suggested_strategy_params', JSON.stringify(suggestion));

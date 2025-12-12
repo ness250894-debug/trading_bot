@@ -552,10 +552,11 @@ export default function Optimization() {
     };
 
 
-    const applyToBacktest = (params, strategyOverride = null, timeframeOverride = null) => {
+    const applyToBacktest = (params, strategyOverride = null, timeframeOverride = null, symbolOverride = null) => {
         const suggestion = {
             strategy: strategyOverride || strategy,
             timeframe: timeframeOverride || timeframe,
+            symbol: symbolOverride || symbol,
             params: params
         };
         localStorage.setItem('backtest_params_suggestion', JSON.stringify(suggestion));
@@ -1085,7 +1086,7 @@ export default function Optimization() {
                                                     <div className="flex justify-center gap-2">
                                                         <button
                                                             onClick={() => {
-                                                                applyToBacktest(res.params, res.strategy, res.timeframe || '1h');
+                                                                applyToBacktest(res.params, res.strategy, res.timeframe || '1h', res.symbol);
                                                             }}
                                                             className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
                                                         >
