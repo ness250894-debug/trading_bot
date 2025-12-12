@@ -581,7 +581,7 @@ export default function Optimization() {
                 ::-webkit-scrollbar-thumb:hover {
                     background: rgba(255, 255, 255, 0.3); 
                 }
-            `}</style>
+                `}</style>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                         <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
@@ -813,6 +813,7 @@ export default function Optimization() {
                                 <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
                                     <tr>
                                         <th className="px-6 py-4">Rank</th>
+                                        <th className="px-6 py-4">Symbol</th>
                                         <th className="px-6 py-4">Parameters</th>
                                         <th
                                             className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group select-none"
@@ -859,7 +860,7 @@ export default function Optimization() {
                                 <tbody className="divide-y divide-white/5">
                                     {sortedResults.length === 0 ? (
                                         <tr>
-                                            <td colSpan="6" className="px-6 py-24 text-center">
+                                            <td colSpan="7" className="px-6 py-24 text-center">
                                                 <div className="flex flex-col items-center justify-center text-muted-foreground">
                                                     <Activity size={48} className="mb-4 opacity-20" />
                                                     <p className="text-lg font-medium">No results yet</p>
@@ -878,6 +879,9 @@ export default function Optimization() {
                                                             <CheckCircle size={14} /> #1
                                                         </span>
                                                     ) : `#${i + 1}`}
+                                                </td>
+                                                <td className="px-6 py-4 font-mono text-cyan-300 text-xs">
+                                                    {symbol}
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex flex-wrap gap-2">
@@ -940,96 +944,145 @@ export default function Optimization() {
                             )}
                         </div>
 
-                        <button
-                            onClick={runUltimateOptimization}
-                            disabled={isOptimizing || isUltimateOptimizing}
-                            className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm ${subscription?.plan === 'free'
-                                ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer'
-                                : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25'
-                                }`}
-                        >
-                            {isUltimateOptimizing ? (
-                                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></span>
-                            ) : (
-                                subscription?.plan === 'free' ? <Lock size={16} /> : <Play size={16} fill="currentColor" />
-                            )}
-                            Run Ultimate Optimization
-                        </button>
-                    </div>
+                        <div className="flex items-center gap-4">
+                            {/* Symbol Selector for Ultimate */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium text-purple-200">Symbol:</label>
+                                {customSymbol ? (
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="e.g., BTC/USDT"
+                                            className="bg-black/20 border border-purple-500/30 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm font-mono uppercase w-32"
+                                            value={symbol}
+                                            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                                        />
+                                        <button
+                                            onClick={() => setCustomSymbol(false)}
+                                            className="text-xs text-purple-300 hover:text-purple-200 transition-colors"
+                                        >
+                                            ← Back
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <select
+                                            className="bg-black/20 border border-purple-500/30 rounded-lg p-2 pr-8 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm appearance-none cursor-pointer hover:bg-black/30 [&>option]:bg-zinc-900 [&>option]:text-white font-mono"
+                                            value={POPULAR_SYMBOLS.includes(symbol) ? symbol : 'CUSTOM'}
+                                            onChange={(e) => {
+                                                if (e.target.value === 'CUSTOM') {
+                                                    setCustomSymbol(true);
+                                                } else {
+                                                    setSymbol(e.target.value);
+                                                }
+                                            }}
+                                        >
+                                            {POPULAR_SYMBOLS.map(s => <option key={s} value={s}>{s === 'CUSTOM' ? '+ Custom' : s}</option>)}
+                                        </select>
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <svg className="w-4 h-4 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
 
-                    <div className="overflow-x-auto">
-                        <div className="max-h-[500px] overflow-y-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
-                                    <tr>
-                                        <th className="px-6 py-4">Strategy</th>
-                                        <th className="px-6 py-4">Rank</th>
-                                        <th className="px-6 py-4">Parameters</th>
-                                        <th className="px-6 py-4 text-right">Return</th>
-                                        <th className="px-6 py-4 text-right">Win Rate</th>
-                                        <th className="px-6 py-4 text-right">Trades</th>
-                                        <th className="px-6 py-4 text-center">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                    {ultimateResults.length === 0 ? (
+                            <button
+                                onClick={runUltimateOptimization}
+                                disabled={isOptimizing || isUltimateOptimizing}
+                                className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm ${subscription?.plan === 'free'
+                                    ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer'
+                                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25'
+                                    }`}
+                            >
+                                {isUltimateOptimizing ? (
+                                    <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></span>
+                                ) : (
+                                    subscription?.plan === 'free' ? <Lock size={16} /> : <Play size={16} fill="currentColor" />
+                                )}
+                                Run Ultimate Optimization
+                            </button>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <div className="max-h-[500px] overflow-y-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
                                         <tr>
-                                            <td colSpan="7" className="px-6 py-16 text-center text-muted-foreground">
-                                                <div className="flex flex-col items-center justify-center gap-2 opacity-50">
-                                                    <Crown size={32} />
-                                                    <p>Run Ultimate Optimization to compare all strategies</p>
-                                                </div>
-                                            </td>
+                                            <th className="px-6 py-4">Strategy</th>
+                                            <th className="px-6 py-4">Symbol</th>
+                                            <th className="px-6 py-4">Rank</th>
+                                            <th className="px-6 py-4">Parameters</th>
+                                            <th className="px-6 py-4 text-right">Return</th>
+                                            <th className="px-6 py-4 text-right">Win Rate</th>
+                                            <th className="px-6 py-4 text-right">Trades</th>
+                                            <th className="px-6 py-4 text-center">Action</th>
                                         </tr>
-                                    ) : (
-                                        ultimateResults.sort((a, b) => b.return - a.return).map((res, i) => (
-                                            <tr key={i} className="hover:bg-white/5 transition-colors group">
-                                                <td className="px-6 py-4 font-medium text-purple-200">
-                                                    {res.strategy}
-                                                </td>
-                                                <td className="px-6 py-4 font-mono text-muted-foreground">
-                                                    #{i + 1}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {Object.entries(res.params).map(([k, v]) => (
-                                                            <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
-                                                                <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                                    {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    {res.win_rate.toFixed(1)}%
-                                                </td>
-                                                <td className="px-6 py-4 text-right text-muted-foreground font-mono">
-                                                    {res.trades}
-                                                </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    <div className="flex justify-center gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setStrategy(res.strategy);
-                                                                applyToBacktest(res.params);
-                                                            }}
-                                                            className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
-                                                        >
-                                                            Backtest
-                                                        </button>
+                                    </thead>
+                                    <tbody className="divide-y divide-white/5">
+                                        {ultimateResults.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="8" className="px-6 py-16 text-center text-muted-foreground">
+                                                    <div className="flex flex-col items-center justify-center gap-2 opacity-50">
+                                                        <Crown size={32} />
+                                                        <p>Run Ultimate Optimization to compare all strategies</p>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                                        ) : (
+                                            ultimateResults.sort((a, b) => b.return - a.return).map((res, i) => (
+                                                <tr key={i} className="hover:bg-white/5 transition-colors group">
+                                                    <td className="px-6 py-4 font-medium text-purple-200">
+                                                        {res.strategy}
+                                                    </td>
+                                                    <td className="px-6 py-4 font-mono text-cyan-300 text-xs">
+                                                        {res.params?.symbol || res.symbol || symbol}
+                                                    </td>
+                                                    <td className="px-6 py-4 font-mono text-muted-foreground">
+                                                        #{i + 1}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {Object.entries(res.params).map(([k, v]) => (
+                                                                <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
+                                                                    <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                    <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        {res.win_rate.toFixed(1)}%
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right text-muted-foreground font-mono">
+                                                        {res.trades}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <div className="flex justify-center gap-2">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setStrategy(res.strategy);
+                                                                    applyToBacktest(res.params);
+                                                                }}
+                                                                className="text-xs bg-white/10 text-white hover:bg-white/20 px-3 py-1.5 rounded-md font-medium transition-colors border border-white/20"
+                                                            >
+                                                                Backtest
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </div >
-            </div >
-        </PlanGate >
+                </div>
+            </div>
+        </PlanGate>
     );
 }
