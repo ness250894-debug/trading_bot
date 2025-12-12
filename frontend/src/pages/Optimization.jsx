@@ -190,6 +190,8 @@ export default function Optimization() {
 
     // Ultimate Optimization State
     const [isUltimateOptimizing, setIsUltimateOptimizing] = useState(false);
+    const [ultimateSymbol, setUltimateSymbol] = useState(() => localStorage.getItem('ultimate_optimization_symbol') || 'BTC/USDT');
+    const [ultimateCustomSymbol, setUltimateCustomSymbol] = useState(false);
     const [ultimateResults, setUltimateResults] = useState(() => {
         const saved = localStorage.getItem('ultimate_optimization_results');
         return saved ? JSON.parse(saved) : [];
@@ -281,6 +283,10 @@ export default function Optimization() {
     useEffect(() => {
         localStorage.setItem('optimization_ranges', JSON.stringify(ranges));
     }, [ranges]);
+
+    useEffect(() => {
+        localStorage.setItem('ultimate_optimization_symbol', ultimateSymbol);
+    }, [ultimateSymbol]);
 
     const clearResults = () => {
         setResults([]);
@@ -481,7 +487,7 @@ export default function Optimization() {
 
                 tasks.push({
                     strategy: stratName,
-                    symbol: symbol,
+                    symbol: ultimateSymbol,
                     timeframe: preset.timeframe || '1h',
                     days: 3,
                     param_ranges: taskRange,
@@ -961,17 +967,17 @@ export default function Optimization() {
                             {/* Symbol Selector for Ultimate */}
                             <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium text-purple-200">Symbol:</label>
-                                {customSymbol ? (
+                                {ultimateCustomSymbol ? (
                                     <div className="flex items-center gap-2">
                                         <input
                                             type="text"
                                             placeholder="e.g., BTC/USDT"
                                             className="bg-black/20 border border-purple-500/30 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm font-mono uppercase w-32"
-                                            value={symbol}
-                                            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                                            value={ultimateSymbol}
+                                            onChange={(e) => setUltimateSymbol(e.target.value.toUpperCase())}
                                         />
                                         <button
-                                            onClick={() => setCustomSymbol(false)}
+                                            onClick={() => setUltimateCustomSymbol(false)}
                                             className="text-xs text-purple-300 hover:text-purple-200 transition-colors"
                                         >
                                             ← Back
@@ -981,12 +987,12 @@ export default function Optimization() {
                                     <div className="relative">
                                         <select
                                             className="bg-black/20 border border-purple-500/30 rounded-lg p-2 pr-8 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm appearance-none cursor-pointer hover:bg-black/30 [&>option]:bg-zinc-900 [&>option]:text-white font-mono"
-                                            value={POPULAR_SYMBOLS.includes(symbol) ? symbol : 'CUSTOM'}
+                                            value={POPULAR_SYMBOLS.includes(ultimateSymbol) ? ultimateSymbol : 'CUSTOM'}
                                             onChange={(e) => {
                                                 if (e.target.value === 'CUSTOM') {
-                                                    setCustomSymbol(true);
+                                                    setUltimateCustomSymbol(true);
                                                 } else {
-                                                    setSymbol(e.target.value);
+                                                    setUltimateSymbol(e.target.value);
                                                 }
                                             }}
                                         >
