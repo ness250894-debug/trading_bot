@@ -65,6 +65,27 @@ const STRATEGY_PARAMS = {
     }
 };
 
+// Map display names to internal values (for suggestions from Backtest/Optimization)
+const STRATEGY_NAME_TO_VALUE = {
+    'Mean Reversion': 'mean_reversion',
+    'SMA Crossover': 'sma_crossover',
+    'MACD': 'macd',
+    'RSI': 'rsi',
+    'Bollinger Breakout': 'bollinger_breakout',
+    'Momentum': 'momentum',
+    'DCA Dip': 'dca_dip',
+    'Combined Strategy': 'combined',
+    // Also support already-converted values
+    'mean_reversion': 'mean_reversion',
+    'sma_crossover': 'sma_crossover',
+    'macd': 'macd',
+    'rsi': 'rsi',
+    'bollinger_breakout': 'bollinger_breakout',
+    'momentum': 'momentum',
+    'dca_dip': 'dca_dip',
+    'combined': 'combined'
+};
+
 export default function Strategies() {
     const navigate = useNavigate();
     const toast = useToast();
@@ -223,7 +244,7 @@ export default function Strategies() {
         let newTimeframe = config.timeframe;
         let newSymbol = config.symbol;
 
-        // Extract timeframe if present
+        // Extract timeframe if present in params
         if (params.timeframe) {
             newTimeframe = params.timeframe;
             delete params.timeframe;
@@ -234,12 +255,24 @@ export default function Strategies() {
             newSymbol = suggestion.symbol;
         }
 
+        // Convert strategy name to internal value (e.g., "Mean Reversion" -> "mean_reversion")
+        const strategyValue = STRATEGY_NAME_TO_VALUE[suggestion.strategy] || suggestion.strategy;
+
+        // Get valid parameter keys for this strategy and filter params
+        const validParamKeys = Object.keys(STRATEGY_PARAMS[strategyValue] || {});
+        const filteredParams = {};
+        validParamKeys.forEach(key => {
+            if (params[key] !== undefined) {
+                filteredParams[key] = params[key];
+            }
+        });
+
         setConfig(prev => ({
             ...prev,
-            strategy: suggestion.strategy,
+            strategy: strategyValue,
             symbol: newSymbol,
             timeframe: newTimeframe,
-            parameters: params
+            parameters: filteredParams
         }));
 
         localStorage.removeItem('suggested_strategy_params');
@@ -368,21 +401,46 @@ export default function Strategies() {
             </div>
 
             {suggestion && (
-                <div className="glass p-6 rounded-xl border-l-4 border-l-blue-500 flex items-center justify-between animate-in slide-in-from-top-4 duration-500">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-500/20 rounded-full text-blue-400">
-                            <TrendingUp size={24} />
+                <div className="glass p-6 rounded-xl border-l-4 border-l-blue-500 animate-in slide-in-from-top-4 duration-500">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-blue-500/20 rounded-full text-blue-400">
+                                <TrendingUp size={24} />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-blue-400">Optimization Result Found</h4>
+                                <p className="text-sm text-muted-foreground">
+                                    Ready to apply optimized configuration
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="font-bold text-blue-400">Optimization Result Found</h4>
-                            <p className="text-sm text-muted-foreground">
-                                Apply best parameters for <span className="font-medium text-foreground">{suggestion.strategy}</span>?
-                            </p>
+                        <div className="flex items-center gap-3">
+                            <button onClick={dismissSuggestion} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Dismiss</button>
+                            <button onClick={applySuggestion} className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all shadow-lg shadow-blue-500/20">Apply</button>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button onClick={dismissSuggestion} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Dismiss</button>
-                        <button onClick={applySuggestion} className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all shadow-lg shadow-blue-500/20">Apply</button>
+                    {/* Show suggestion details */}
+                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div className="bg-white/5 rounded-lg p-3">
+                            <span className="text-muted-foreground text-xs uppercase tracking-wider">Strategy</span>
+                            <p className="font-medium text-foreground mt-1">{suggestion.strategy}</p>
+                        </div>
+                        {suggestion.symbol && (
+                            <div className="bg-white/5 rounded-lg p-3">
+                                <span className="text-muted-foreground text-xs uppercase tracking-wider">Symbol</span>
+                                <p className="font-medium text-foreground mt-1 font-mono">{suggestion.symbol}</p>
+                            </div>
+                        )}
+                        {suggestion.params?.timeframe && (
+                            <div className="bg-white/5 rounded-lg p-3">
+                                <span className="text-muted-foreground text-xs uppercase tracking-wider">Timeframe</span>
+                                <p className="font-medium text-foreground mt-1 font-mono">{suggestion.params.timeframe}</p>
+                            </div>
+                        )}
+                        <div className="bg-white/5 rounded-lg p-3">
+                            <span className="text-muted-foreground text-xs uppercase tracking-wider">Parameters</span>
+                            <p className="font-medium text-foreground mt-1">{Object.keys(suggestion.params || {}).filter(k => k !== 'timeframe').length} customized</p>
+                        </div>
                     </div>
                 </div>
             )}
