@@ -149,11 +149,14 @@ const STRATEGY_NAME_MAP = {
 };
 
 const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];
+const POPULAR_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'CUSTOM'];
 
 export default function Optimization() {
     const toast = useToast();
     const modal = useModal();
     const [strategy, setStrategy] = useState(() => localStorage.getItem('optimization_strategy') || 'SMA Crossover');
+    const [symbol, setSymbol] = useState(() => localStorage.getItem('optimization_symbol') || 'BTC/USDT');
+    const [customSymbol, setCustomSymbol] = useState(false);
     const [timeframe, setTimeframe] = useState(() => localStorage.getItem('optimization_timeframe') || '1m');
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(() => {
@@ -259,6 +262,10 @@ export default function Optimization() {
     useEffect(() => {
         localStorage.setItem('optimization_strategy', strategy);
     }, [strategy]);
+
+    useEffect(() => {
+        localStorage.setItem('optimization_symbol', symbol);
+    }, [symbol]);
 
     useEffect(() => {
         localStorage.setItem('optimization_timeframe', timeframe);
@@ -504,7 +511,7 @@ export default function Optimization() {
         }
 
         socket.send(JSON.stringify({
-            symbol: 'BTC/USDT',
+            symbol: symbol,
             timeframe: timeframe,
             days: 3,
             strategy: strategy,
@@ -593,6 +600,48 @@ export default function Optimization() {
                             Configuration
                         </h3>
                         <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium text-foreground">Symbol:</label>
+                                {customSymbol ? (
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="e.g., BTC/USDT"
+                                            className="bg-black/20 border border-white/10 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm font-mono uppercase w-32"
+                                            value={symbol}
+                                            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                                        />
+                                        <button
+                                            onClick={() => setCustomSymbol(false)}
+                                            className="text-xs text-primary hover:text-primary/80 transition-colors"
+                                        >
+                                            ← Back
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <select
+                                            className="bg-black/20 border border-white/10 rounded-lg p-2 pr-8 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm appearance-none cursor-pointer hover:bg-black/30 [&>option]:bg-zinc-900 [&>option]:text-white font-mono"
+                                            value={POPULAR_SYMBOLS.includes(symbol) ? symbol : 'CUSTOM'}
+                                            onChange={(e) => {
+                                                if (e.target.value === 'CUSTOM') {
+                                                    setCustomSymbol(true);
+                                                } else {
+                                                    setSymbol(e.target.value);
+                                                }
+                                            }}
+                                        >
+                                            {POPULAR_SYMBOLS.map(s => <option key={s} value={s}>{s === 'CUSTOM' ? '+ Custom' : s}</option>)}
+                                        </select>
+                                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex items-center gap-2">
                                 <label className="text-sm font-medium text-foreground">Timeframe:</label>
                                 <div className="relative">

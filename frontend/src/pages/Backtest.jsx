@@ -19,12 +19,15 @@ const STRATEGIES = [
 ];
 
 const TIMEFRAME_OPTIONS = ['1m', '5m', '15m', '1h', '4h', '1d'];
+const POPULAR_SYMBOLS = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT', 'ADA/USDT', 'DOGE/USDT', 'CUSTOM'];
 
 export default function Backtest() {
     const toast = useToast();
     const [selectedStrategy, setSelectedStrategy] = useState(STRATEGIES[0]);
     const [params, setParams] = useState(STRATEGIES[0].params);
     const [timeframe, setTimeframe] = useState('1m');
+    const [symbol, setSymbol] = useState(() => localStorage.getItem('backtest_symbol') || 'BTC/USDT');
+    const [customSymbol, setCustomSymbol] = useState(false);
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(null);
 
@@ -59,6 +62,11 @@ export default function Backtest() {
         }
     }, []);
 
+    // Persist symbol selection
+    useEffect(() => {
+        localStorage.setItem('backtest_symbol', symbol);
+    }, [symbol]);
+
     // Template state
     const [templates, setTemplates] = useState([]);
     const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -84,7 +92,7 @@ export default function Backtest() {
         try {
             await api.post('/backtest-templates', {
                 name: newTemplateName,
-                symbol: 'BTC/USDT', // TODO: Make symbol dynamic in backtest
+                symbol: symbol,
                 timeframe,
                 strategy: selectedStrategy.name,
                 parameters: JSON.stringify(params)
@@ -140,7 +148,7 @@ export default function Backtest() {
         setLoading(true);
         try {
             const response = await api.post('/backtest', {
-                symbol: 'BTC/USDT',
+                symbol: symbol,
                 timeframe: timeframe,
                 days: 5,
                 strategy: selectedStrategy.name,
@@ -217,6 +225,52 @@ export default function Backtest() {
                                             </svg>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm text-muted-foreground mb-1">Trading Symbol</label>
+                                    {customSymbol ? (
+                                        <div className="space-y-2">
+                                            <input
+                                                type="text"
+                                                placeholder="e.g., BTC/USDT"
+                                                className="w-full bg-background border border-border rounded-md p-2 text-sm font-mono uppercase"
+                                                value={symbol}
+                                                onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                                            />
+                                            <button
+                                                onClick={() => setCustomSymbol(false)}
+                                                className="text-xs text-primary hover:text-primary/80 transition-colors"
+                                            >
+                                                ← Back to popular symbols
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="relative">
+                                            <select
+                                                className="w-full bg-background border border-border rounded-md p-2 pr-8 text-sm font-mono appearance-none cursor-pointer"
+                                                value={POPULAR_SYMBOLS.includes(symbol) ? symbol : 'CUSTOM'}
+                                                onChange={(e) => {
+                                                    if (e.target.value === 'CUSTOM') {
+                                                        setCustomSymbol(true);
+                                                    } else {
+                                                        setSymbol(e.target.value);
+                                                    }
+                                                }}
+                                            >
+                                                {POPULAR_SYMBOLS.map(s => (
+                                                    <option key={s} value={s}>
+                                                        {s === 'CUSTOM' ? '+ Custom Symbol' : s}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div>
