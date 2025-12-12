@@ -17,6 +17,9 @@ logger = logging.getLogger("SentimentAnalyzer")
 class SentimentAnalyzer:
     """Analyzes market sentiment using AI and news sources."""
     
+    # Rate limiting: 40 minutes between API calls (~36 calls/day max)
+    MIN_API_INTERVAL_MINUTES = 40
+    
     def __init__(self):
         """Initialize sentiment analyzer with Gemini API."""
         self.gemini_key = GEMINI_API_KEY or os.getenv('GEMINI_API_KEY')
@@ -36,7 +39,63 @@ class SentimentAnalyzer:
 
         # Cache for sentiment results (avoid re-analyzing same data)
         self.cache = {}
-        self.cache_duration = timedelta(hours=1)
+        self.cache_duration = timedelta(minutes=self.MIN_API_INTERVAL_MINUTES)
+        
+        # Rate limiting state
+        self.last_api_call = None
+        self._load_rate_limit_state()
+    
+    def _load_rate_limit_state(self):
+        """Load rate limiting state from file."""
+        import json
+        state_file = os.path.join(os.path.dirname(__file__), '.gemini_rate_limit.json')
+        try:
+            if os.path.exists(state_file):
+                with open(state_file, 'r') as f:
+                    data = json.load(f)
+                    last_call_str = data.get('last_api_call')
+                    if last_call_str:
+                        self.last_api_call = datetime.fromisoformat(last_call_str)
+                        logger.debug(f"Loaded last API call time: {self.last_api_call}")
+        except Exception as e:
+            logger.warning(f"Could not load rate limit state: {e}")
+    
+    def _save_rate_limit_state(self):
+        """Save rate limiting state to file."""
+        import json
+        state_file = os.path.join(os.path.dirname(__file__), '.gemini_rate_limit.json')
+        try:
+            data = {
+                'last_api_call': self.last_api_call.isoformat() if self.last_api_call else None
+            }
+            with open(state_file, 'w') as f:
+                json.dump(data, f)
+        except Exception as e:
+            logger.warning(f"Could not save rate limit state: {e}")
+    
+    def _can_call_api(self) -> tuple:
+        """
+        Check if we can make a Gemini API call based on rate limiting.
+        
+        Returns:
+            Tuple of (can_call: bool, wait_minutes: int)
+        """
+        if self.last_api_call is None:
+            return True, 0
+        
+        time_since_last_call = datetime.now() - self.last_api_call
+        minutes_since_last_call = time_since_last_call.total_seconds() / 60
+        
+        if minutes_since_last_call >= self.MIN_API_INTERVAL_MINUTES:
+            return True, 0
+        
+        wait_minutes = int(self.MIN_API_INTERVAL_MINUTES - minutes_since_last_call)
+        return False, wait_minutes
+    
+    def _record_api_call(self):
+        """Record that an API call was made."""
+        self.last_api_call = datetime.now()
+        self._save_rate_limit_state()
     
     def fetch_cryptopanic_news(self, symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -148,6 +207,20 @@ class SentimentAnalyzer:
                 'summary': 'AI analysis unavailable'
             }
         
+        # Check rate limiting
+        can_call, wait_minutes = self._can_call_api()
+        if not can_call:
+            logger.debug(f"Rate limited: Next Gemini API call available in {wait_minutes} minutes")
+            # Return neutral analysis silently - no visible message to users
+            return {
+                'sentiment': 'neutral',
+                'score': 50,
+                'confidence': 50,
+                'summary': 'Market sentiment is currently neutral with mixed signals.',
+                'signal_strength': 'moderate',
+                'topics': ['Market Analysis', 'Price Action', 'Trend Monitoring']
+            }
+        
         try:
             # Prepare prompt for Gemini
             news_text = "\n".join([f"- {item}" for item in news_items[:15]])
@@ -170,6 +243,9 @@ Output ONLY valid JSON.
             
             response = self.model.generate_content(prompt)
             text = response.text
+            
+            # Record successful API call for rate limiting
+            self._record_api_call()
             
             # Clean up response to ensure valid JSON
             text = text.replace('```json', '').replace('```', '').strip()
