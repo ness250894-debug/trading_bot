@@ -169,3 +169,113 @@ class UserRepository(BaseRepository):
         except Exception as e:
             self.logger.error(f"Error fetching all users: {e}")
             return []
+
+    def get_api_key(self, user_id, exchange):
+        """Get API keys for a user and exchange."""
+        try:
+            result = self.conn.execute(
+                "SELECT api_key_encrypted, api_secret_encrypted FROM api_keys WHERE user_id = ? AND exchange = ?",
+                [user_id, exchange]
+            ).fetchone()
+            
+            if result:
+                return {
+                    'api_key_encrypted': result[0],
+                    'api_secret_encrypted': result[1]
+                }
+            return None
+        except Exception as e:
+            self.logger.error(f"Error fetching API key: {e}")
+            return None
+
+    def save_api_key(self, user_id, exchange, api_key_encrypted, api_secret_encrypted):
+        """Save or update API keys."""
+        try:
+            # Check if exists
+            existing = self.conn.execute(
+                "SELECT 1 FROM api_keys WHERE user_id = ? AND exchange = ?",
+                [user_id, exchange]
+            ).fetchone()
+
+            if existing:
+                self.conn.execute(
+                    """UPDATE api_keys 
+                       SET api_key_encrypted = ?, api_secret_encrypted = ?, updated_at = ? 
+                       WHERE user_id = ? AND exchange = ?""",
+                    [api_key_encrypted, api_secret_encrypted, datetime.now(), user_id, exchange]
+                )
+            else:
+                self.conn.execute(
+                    """INSERT INTO api_keys (user_id, exchange, api_key_encrypted, api_secret_encrypted, created_at, updated_at) 
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    [user_id, exchange, api_key_encrypted, api_secret_encrypted, datetime.now(), datetime.now()]
+                )
+            return True
+        except Exception as e:
+            self.logger.error(f"Error saving API key: {e}")
+            return False
+
+    def get_risk_profile(self, user_id):
+        """Get risk profile for a user."""
+        try:
+            result = self.conn.execute(
+                "SELECT * FROM risk_profiles WHERE user_id = ?",
+                [user_id]
+            ).fetchone()
+            
+            if result:
+                return {
+                    'user_id': result[0],
+                    'max_daily_loss': result[1],
+                    'max_drawdown': result[2],
+                    'max_position_size': result[3],
+                    'max_open_positions': result[4],
+                    'stop_trading_on_breach': result[5],
+                    'updated_at': result[6]
+                }
+            return None
+        except Exception as e:
+            self.logger.error(f"Error fetching risk profile: {e}")
+            return None
+
+    def save_risk_profile(self, user_id, profile_data):
+        """Save or update risk profile."""
+        try:
+            existing = self.conn.execute("SELECT 1 FROM risk_profiles WHERE user_id = ?", [user_id]).fetchone()
+            
+            if existing:
+                query = """
+                    UPDATE risk_profiles SET 
+                    max_daily_loss=?, max_drawdown=?, max_position_size=?, 
+                    max_open_positions=?, stop_trading_on_breach=?, updated_at=?
+                    WHERE user_id=?
+                """
+                params = [
+                    profile_data.get('max_daily_loss'),
+                    profile_data.get('max_drawdown'),
+                    profile_data.get('max_position_size'),
+                    profile_data.get('max_open_positions'),
+                    profile_data.get('stop_trading_on_breach', True),
+                    datetime.now(),
+                    user_id
+                ]
+            else:
+                query = """
+                    INSERT INTO risk_profiles 
+                    (user_id, max_daily_loss, max_drawdown, max_position_size, max_open_positions, stop_trading_on_breach, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """
+                params = [
+                    user_id,
+                    profile_data.get('max_daily_loss'),
+                    profile_data.get('max_drawdown'),
+                    profile_data.get('max_position_size'),
+                    profile_data.get('max_open_positions'),
+                    profile_data.get('stop_trading_on_breach', True),
+                    datetime.now()
+                ]
+            self.conn.execute(query, params)
+            return True
+        except Exception as e:
+            self.logger.error(f"Error saving risk profile: {e}")
+            return False

@@ -455,9 +455,10 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                         'amount': amount,
                         'type': 'OPEN',
                         'pnl': 0.0,
-                        'strategy': strategy_name
+                        'strategy': strategy_name,
+                        'user_id': user_id
                     }
-                    db.save_trade(trade_data, user_id=user_id)
+                    db.log_trade(trade_data)
                     
                     # Persist State
                     db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(time.time()), active_order_id='NO_CHANGE')
@@ -655,12 +656,12 @@ def main(user_id: int = 0):
                             'amount': amount,
                             'type': 'OPEN',
                             'pnl': -fee,
-                            'strategy': strategy_name,
                             'fee': fee,
-                            'leverage': config.LEVERAGE
+                            'leverage': config.LEVERAGE,
+                            'user_id': user_id
                         }
                         if user_id:
-                            db.save_trade(trade_data, user_id=user_id)
+                            db.log_trade(trade_data)
                         notifier.send_trade_alert(trade_data)
                         
                         # Reset

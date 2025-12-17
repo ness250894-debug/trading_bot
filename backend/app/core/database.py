@@ -76,6 +76,18 @@ class DuckDBHandler:
     def get_all_users(self, skip=0, limit=100):
         return self.user_repo.get_all_users(skip, limit)
 
+    def get_api_key(self, user_id, exchange):
+        return self.user_repo.get_api_key(user_id, exchange)
+
+    def save_api_key(self, user_id, exchange, api_key_encrypted, api_secret_encrypted):
+        return self.user_repo.save_api_key(user_id, exchange, api_key_encrypted, api_secret_encrypted)
+
+    def get_risk_profile(self, user_id):
+        return self.user_repo.get_risk_profile(user_id)
+
+    def save_risk_profile(self, user_id, profile_data):
+        return self.user_repo.save_risk_profile(user_id, profile_data)
+
     # --- Strategy Repository Delegates ---
     def get_user_strategy(self, user_id):
         return self.strategy_repo.get_user_strategy(user_id)
