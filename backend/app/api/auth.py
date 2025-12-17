@@ -109,34 +109,10 @@ async def delete_account(current_user: dict = Depends(auth.get_current_user)):
     user_id = current_user["id"]
     
     try:
-        # Delete all user data in order (respecting foreign keys)
-        # 1. Delete bot configurations
-        db.conn.execute("DELETE FROM bot_configurations WHERE user_id = ?", [user_id])
-        
-        # 2. Delete API keys
-        db.conn.execute("DELETE FROM api_keys WHERE user_id = ?", [user_id])
-        
-        # 3. Delete trades
-        db.conn.execute("DELETE FROM trades WHERE user_id = ?", [user_id])
-        
-        # 4. Delete subscriptions
-        db.conn.execute("DELETE FROM subscriptions WHERE user_id = ?", [user_id])
-        
-        # 5. Delete price alerts
-        db.conn.execute("DELETE FROM price_alerts WHERE user_id = ?", [user_id])
-        
-        # 6. Delete watchlists
-        db.conn.execute("DELETE FROM watchlists WHERE user_id = ?", [user_id])
-        
-        # 7. Delete risk profile
-        db.conn.execute("DELETE FROM risk_profiles WHERE user_id = ?", [user_id])
-        
-        # 8. Delete user preferences
-        db.conn.execute("DELETE FROM user_preferences WHERE user_id = ?", [user_id])
-        
-        # 9. Finally, delete the user
-        db.conn.execute("DELETE FROM users WHERE id = ?", [user_id])
-        
-        return {"status": "success", "message": "Account deleted successfully"}
+        # Use centralized deletion logic
+        if db.delete_user(user_id):
+            return {"status": "success", "message": "Account deleted successfully"}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to delete account")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete account: {str(e)}")

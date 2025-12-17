@@ -50,7 +50,8 @@ export const ToastProvider = ({ children }) => {
     }, []);
 
     const addToast = useCallback((message, type = 'info', duration = 5000) => {
-        const id = Math.random().toString(36).substr(2, 9);
+        // Use crypto.randomUUID if available, fallback to random string
+        const id = window.crypto?.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substr(2, 9);
         setToasts(prev => [...prev, { id, message, type }]);
 
         if (duration) {

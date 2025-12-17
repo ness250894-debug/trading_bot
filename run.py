@@ -23,7 +23,7 @@ def start_backend(backend_dir, backend_env):
 
 def wait_for_backend(process):
     print("   Waiting for Backend to start...")
-    for i in range(10):
+    for i in range(30):
         if is_port_open(8000):
             print("   ✅ Backend is ready!")
             return True

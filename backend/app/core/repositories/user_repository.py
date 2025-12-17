@@ -129,17 +129,22 @@ class UserRepository(BaseRepository):
     def delete_user(self, user_id):
         """Delete a user and all their data."""
         try:
-            # Delete related data first
+            # Delete related data first (respecting foreign keys logic)
+            self.conn.execute("DELETE FROM bot_configurations WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM subscriptions WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM user_strategies WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM api_keys WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM trades WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM backtest_results WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM payments WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM risk_profiles WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM watchlists WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM price_alerts WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM user_preferences WHERE user_id = ?", [user_id])
             
             # Delete user
             self.conn.execute("DELETE FROM users WHERE id = ?", [user_id])
-            self.logger.info(f"Deleted user {user_id}")
+            self.logger.info(f"Deleted user {user_id} and all associated data.")
             return True
         except Exception as e:
             self.logger.error(f"Error deleting user: {e}")
