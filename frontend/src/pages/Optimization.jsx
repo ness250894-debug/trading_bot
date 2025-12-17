@@ -4,12 +4,9 @@ import PlanGate from '../components/PlanGate';
 
 // Hooks
 import useOptimization from '../hooks/useOptimization';
-import useUltimateOptimization from '../hooks/useUltimateOptimization';
-
 // Components
 import OptimizationConfig from '../components/optimization/OptimizationConfig';
 import OptimizationResults from '../components/optimization/OptimizationResults';
-import UltimateOptimization from '../components/optimization/UltimateOptimization';
 
 // Constants
 import {
@@ -27,8 +24,6 @@ export default function Optimization() {
     const [customSymbol, setCustomSymbol] = useState(false);
     const [timeframe, setTimeframe] = useState(() => localStorage.getItem('optimization_timeframe') || '1m');
     const [nTrials, setNTrials] = useState(50);
-    const [subscription, setSubscription] = useState(null);
-
     // Initial Ranges State
     const [ranges, setRanges] = useState(() => {
         const saved = localStorage.getItem('optimization_ranges');
@@ -49,17 +44,6 @@ export default function Optimization() {
         };
     });
 
-    // Ultimate Optimization State
-    const [ultimateSymbol, setUltimateSymbol] = useState(() => localStorage.getItem('ultimate_optimization_symbol') || 'BTC/USDT');
-    const [ultimateCustomSymbol, setUltimateCustomSymbol] = useState(false);
-
-    // Fetch subscription
-    useEffect(() => {
-        api.get('/billing/status')
-            .then(res => setSubscription(res.data))
-            .catch(err => console.error("Failed to fetch subscription:", err));
-    }, []);
-
     // Hooks
     const {
         results,
@@ -70,20 +54,11 @@ export default function Optimization() {
         runOptimization
     } = useOptimization(strategy, symbol, timeframe, ranges, nTrials);
 
-    const {
-        ultimateResults,
-        clearUltimateResults,
-        isUltimateOptimizing,
-        runUltimateOptimization,
-        progress: ultimateProgress
-    } = useUltimateOptimization(ultimateSymbol, presets, strategyInfo, STRATEGY_PARAM_KEYS, subscription);
-
     // Persistence Effects
     useEffect(() => { localStorage.setItem('optimization_strategy', strategy); }, [strategy]);
     useEffect(() => { localStorage.setItem('optimization_symbol', symbol); }, [symbol]);
     useEffect(() => { localStorage.setItem('optimization_timeframe', timeframe); }, [timeframe]);
     useEffect(() => { localStorage.setItem('optimization_ranges', JSON.stringify(ranges)); }, [ranges]);
-    useEffect(() => { localStorage.setItem('ultimate_optimization_symbol', ultimateSymbol); }, [ultimateSymbol]);
 
     // Handlers
     const strategies = Object.keys(strategyInfo);
@@ -163,24 +138,6 @@ export default function Optimization() {
                     </div>
                 </div>
 
-                {/* Ultimate Optimization Section */}
-                <UltimateOptimization
-                    ultimateSymbol={ultimateSymbol}
-                    setUltimateSymbol={setUltimateSymbol}
-                    ultimateCustomSymbol={ultimateCustomSymbol}
-                    setUltimateCustomSymbol={setUltimateCustomSymbol}
-                    POPULAR_SYMBOLS={POPULAR_SYMBOLS}
-                    isOptimizing={isOptimizing}
-                    isUltimateOptimizing={isUltimateOptimizing}
-                    runUltimateOptimization={runUltimateOptimization}
-                    clearUltimateResults={clearUltimateResults}
-                    ultimateResults={ultimateResults}
-                    progress={ultimateProgress}
-                    subscription={subscription}
-                    applyToBacktest={applyToBacktest}
-                    symbol={symbol}
-                />
-
                 {/* Main Configuration Config */}
                 <OptimizationConfig
                     symbol={symbol}
@@ -203,7 +160,6 @@ export default function Optimization() {
                     setNTrials={setNTrials}
                     runOptimization={runOptimization}
                     isOptimizing={isOptimizing}
-                    isUltimateOptimizing={isUltimateOptimizing}
                     progress={optimizationProgress}
                 />
 

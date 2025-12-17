@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, LogOut, LayoutDashboard, Settings, TrendingUp, History, Zap, DollarSign, Shield, Home } from 'lucide-react';
+import { ChevronDown, LogOut, LayoutDashboard, Settings, TrendingUp, History, Zap, DollarSign, Shield, Home, Crown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function UserDropdown({ user }) {
@@ -38,6 +38,7 @@ export default function UserDropdown({ user }) {
         { icon: Zap, label: 'Visual Builder', path: '/strategy-builder' },
         { icon: TrendingUp, label: 'Social Trading', path: '/marketplace' },
         { icon: TrendingUp, label: 'Optimization', path: '/optimization' },
+        { icon: Crown, label: 'Ultimate Opt.', path: '/ultimate-optimization' },
         { icon: History, label: 'Backtest', path: '/backtest' },
         { icon: DollarSign, label: 'Pricing', path: '/pricing' },
         { icon: Settings, label: 'Settings', path: '/settings' },

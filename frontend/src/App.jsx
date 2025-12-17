@@ -16,6 +16,7 @@ const Strategies = lazy(() => import('./pages/Strategies'));
 const StrategyBuilder = lazy(() => import('./pages/StrategyBuilder'));
 const Marketplace = lazy(() => import('./pages/Marketplace'));
 const Optimization = lazy(() => import('./pages/Optimization'));
+const UltimateOptimizationPage = lazy(() => import('./pages/UltimateOptimizationPage'));
 const Backtest = lazy(() => import('./pages/Backtest'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
@@ -145,6 +146,13 @@ function App() {
                     <ProtectedRoute>
                       <Layout>
                         <Optimization />
+                      </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/ultimate-optimization" element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <UltimateOptimizationPage />
                       </Layout>
                     </ProtectedRoute>
                   } />

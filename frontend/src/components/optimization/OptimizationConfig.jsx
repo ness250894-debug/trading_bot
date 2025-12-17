@@ -11,7 +11,7 @@ export default function OptimizationConfig({
     presets, applyPreset,
     ranges, handleRangeChange,
     nTrials, setNTrials,
-    runOptimization, isOptimizing, isUltimateOptimizing, progress
+    runOptimization, isOptimizing, progress
 }) {
     return (
         <div className="glass p-4 rounded-2xl">
@@ -175,7 +175,7 @@ export default function OptimizationConfig({
                 </div>
                 <button
                     onClick={runOptimization}
-                    disabled={isOptimizing || isUltimateOptimizing}
+                    disabled={isOptimizing}
                     className="flex-1 bg-primary hover:bg-primary/90 text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/25 hover:shadow-primary/40 disabled:opacity-70 disabled:cursor-not-allowed text-sm"
                 >
                     {isOptimizing ? (
@@ -188,7 +188,7 @@ export default function OptimizationConfig({
                         </>
                     )}
                 </button>
-                {isOptimizing && !isUltimateOptimizing && (
+                {isOptimizing && (
                     <div className="flex-1 flex flex-col gap-1">
                         <div className="flex justify-between text-xs text-muted-foreground">
                             <span>Progress</span>
