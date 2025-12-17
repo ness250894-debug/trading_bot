@@ -35,6 +35,10 @@ app.add_middleware(GZipMiddleware, minimum_size=500)
 from .middleware.https_middleware import HTTPSRedirectMiddleware
 app.add_middleware(HTTPSRedirectMiddleware)
 
+# Add Security Headers (HSTS, X-Frame-Options, etc.)
+from .middleware.security_headers import SecurityHeadersMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
+
 # Add rate limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
