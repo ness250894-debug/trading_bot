@@ -17,3 +17,5 @@ slowapi
 pydantic[email]
 psutil
 feedparser
+pytest
+httpx
