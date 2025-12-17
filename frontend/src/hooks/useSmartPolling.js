@@ -40,6 +40,11 @@ export const useSmartPolling = (
         };
     }, [pauseWhenHidden]);
 
+    const onErrorRef = useRef(onError);
+    useEffect(() => {
+        onErrorRef.current = onError;
+    }, [onError]);
+
     // Fetch function
     const doFetch = useCallback(async () => {
         if (!enabled) return;
@@ -52,11 +57,11 @@ export const useSmartPolling = (
             setLastFetch(Date.now());
         } catch (err) {
             setError(err);
-            if (onError) onError(err);
+            if (onErrorRef.current) onErrorRef.current(err);
         } finally {
             setLoading(false);
         }
-    }, [enabled, onError]);
+    }, [enabled]);
 
     // Initial fetch and polling setup
     useEffect(() => {

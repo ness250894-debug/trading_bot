@@ -8,6 +8,7 @@ import TradingGoalsWidget from '../components/TradingGoalsWidget';
 import { formatStrategyName } from '../lib/utils';
 import { ToastContext } from '../components/ToastContext';
 import EditableText from '../components/constructor/EditableText';
+import WidgetErrorBoundary from '../components/WidgetErrorBoundary';
 
 
 
@@ -225,136 +226,148 @@ export default function Dashboard() {
             </div>
 
             {/* Main Chart - Performance History */}
-            <div className="glass rounded-2xl p-6">
-                <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                    <TrendingUp size={20} className="text-primary" />
-                    Cumulative Performance
-                </h3>
-                <div className="w-full h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={pnlData}>
-                            <defs>
-                                <linearGradient id="colorPnl" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                            <XAxis
-                                dataKey="name"
-                                stroke="#ffffff40"
-                                tick={{ fontSize: 12 }}
-                                tickLine={false}
-                                axisLine={false}
-                            />
-                            <YAxis
-                                stroke="#ffffff40"
-                                tick={{ fontSize: 12 }}
-                                tickLine={false}
-                                axisLine={false}
-                                tickFormatter={(value) => `$${value}`}
-                            />
-                            <Tooltip
-                                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                                itemStyle={{ color: '#fff' }}
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="cumulative"
-                                stroke="#8b5cf6"
-                                strokeWidth={3}
-                                fillOpacity={1}
-                                fill="url(#colorPnl)"
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
+            <WidgetErrorBoundary>
+                <div className="glass rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                        <TrendingUp size={20} className="text-primary" />
+                        Cumulative Performance
+                    </h3>
+                    <div className="w-full h-[400px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={pnlData}>
+                                <defs>
+                                    <linearGradient id="colorPnl" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                                <XAxis
+                                    dataKey="name"
+                                    stroke="#ffffff40"
+                                    tick={{ fontSize: 12 }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <YAxis
+                                    stroke="#ffffff40"
+                                    tick={{ fontSize: 12 }}
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickFormatter={(value) => `$${value}`}
+                                />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                    itemStyle={{ color: '#fff' }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="cumulative"
+                                    stroke="#8b5cf6"
+                                    strokeWidth={3}
+                                    fillOpacity={1}
+                                    fill="url(#colorPnl)"
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
-            </div>
+            </WidgetErrorBoundary>
 
             {/* Analytics Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Win Rate Over Time */}
-                <div className="glass rounded-2xl p-6">
-                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                        <BarChart2 size={20} className="text-primary" />
-                        Win Rate Progress
-                    </h3>
-                    <div className="w-full h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={winRateData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                                <XAxis dataKey="name" stroke="#ffffff40" tick={{ fontSize: 10 }} />
-                                <YAxis stroke="#ffffff40" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                                    formatter={(value) => `${value.toFixed(1)}%`}
-                                />
-                                <Line type="monotone" dataKey="winRate" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} />
-                            </LineChart>
-                        </ResponsiveContainer>
+                <WidgetErrorBoundary>
+                    <div className="glass rounded-2xl p-6">
+                        <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                            <BarChart2 size={20} className="text-primary" />
+                            Win Rate Progress
+                        </h3>
+                        <div className="w-full h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={winRateData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                    <XAxis dataKey="name" stroke="#ffffff40" tick={{ fontSize: 10 }} />
+                                    <YAxis stroke="#ffffff40" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}%`} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                        formatter={(value) => `${value.toFixed(1)}%`}
+                                    />
+                                    <Line type="monotone" dataKey="winRate" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                </div>
+                </WidgetErrorBoundary>
 
                 {/* Symbol Performance */}
-                <div className="glass rounded-2xl p-6">
-                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                        <PieChartIcon size={20} className="text-primary" />
-                        Symbol Performance
-                    </h3>
-                    <div className="w-full h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={symbolPerformance}
-                                    dataKey="pnl"
-                                    nameKey="symbol"
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius={80}
-                                    label={(entry) => entry.symbol}
-                                >
-                                    {symbolPerformance.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                                    formatter={(value) => `$${value.toFixed(2)}`}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
+                <WidgetErrorBoundary>
+                    <div className="glass rounded-2xl p-6">
+                        <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                            <PieChartIcon size={20} className="text-primary" />
+                            Symbol Performance
+                        </h3>
+                        <div className="w-full h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={symbolPerformance}
+                                        dataKey="pnl"
+                                        nameKey="symbol"
+                                        cx="50%"
+                                        cy="50%"
+                                        outerRadius={80}
+                                        label={(entry) => entry.symbol}
+                                    >
+                                        {symbolPerformance.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                        formatter={(value) => `$${value.toFixed(2)}`}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                </div>
+                </WidgetErrorBoundary>
 
                 {/* Daily PnL */}
-                <div className="glass rounded-2xl p-6">
-                    <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                        <BarChart2 size={20} className="text-primary" />
-                        Daily PnL
-                    </h3>
-                    <div className="w-full h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={dailyPnlData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                                <XAxis dataKey="date" stroke="#ffffff40" tick={{ fontSize: 10 }} />
-                                <YAxis stroke="#ffffff40" tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                                    formatter={(value) => `$${value.toFixed(2)}`}
-                                />
-                                <Bar dataKey="pnl" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                <WidgetErrorBoundary>
+                    <div className="glass rounded-2xl p-6">
+                        <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                            <BarChart2 size={20} className="text-primary" />
+                            Daily PnL
+                        </h3>
+                        <div className="w-full h-[300px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={dailyPnlData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                    <XAxis dataKey="date" stroke="#ffffff40" tick={{ fontSize: 10 }} />
+                                    <YAxis stroke="#ffffff40" tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v}`} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                                        formatter={(value) => `$${value.toFixed(2)}`}
+                                    />
+                                    <Bar dataKey="pnl" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                </div>
+                </WidgetErrorBoundary>
             </div>
 
             {/* Trading Goals Widget */}
-            <TradingGoalsWidget />
+            <WidgetErrorBoundary>
+                <TradingGoalsWidget />
+            </WidgetErrorBoundary>
 
             {/* Trade History Section */}
             <div className="h-[500px] mt-8">
-                <TradeHistory trades={trades} onRefresh={refreshTrades} />
+                <WidgetErrorBoundary>
+                    <TradeHistory trades={trades} onRefresh={refreshTrades} />
+                </WidgetErrorBoundary>
             </div>
         </div>
     );

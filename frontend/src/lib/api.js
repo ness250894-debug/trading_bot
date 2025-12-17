@@ -27,13 +27,31 @@ api.interceptors.request.use(
 // Response interceptor to handle 401s
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
+        const originalRequest = error.config;
+
+        // Retry logic for 5xx errors or network errors
+        if (error.response && (error.response.status >= 500 && error.response.status <= 599) || error.message === 'Network Error') {
+            originalRequest._retryCount = originalRequest._retryCount || 0;
+            const maxRetries = 3;
+
+            if (originalRequest._retryCount < maxRetries) {
+                originalRequest._retryCount += 1;
+
+                // Exponential backoff: 1s, 2s, 4s...
+                const delay = Math.pow(2, originalRequest._retryCount - 1) * 1000;
+                await new Promise(resolve => setTimeout(resolve, delay));
+
+                return api(originalRequest);
+            }
+        }
+
         if (error.response && error.response.status === 401) {
             // Don't redirect if this is a login or signup request (wrong password is expected)
             const isAuthEndpoint = error.config?.url?.includes('/auth/login') ||
                 error.config?.url?.includes('/auth/signup');
 
-            if (!isAuthEndpoint) {
+            if (!isAuthEndpoint && !originalRequest._retry) {
                 // Clear token and redirect to login for protected routes
                 localStorage.removeItem('token');
                 if (window.location.pathname !== '/login' &&
