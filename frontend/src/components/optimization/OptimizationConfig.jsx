@@ -15,12 +15,12 @@ export default function OptimizationConfig({
 }) {
     return (
         <div className="glass p-4 rounded-2xl">
-            <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-3">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 border-b border-white/10 pb-3 gap-4">
                 <h3 className="font-semibold flex items-center gap-2 text-base text-foreground">
                     <Settings size={18} className="text-primary" />
                     Configuration
                 </h3>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row w-full md:w-auto items-start sm:items-center gap-4">
                     <div className="flex items-center gap-2">
                         <label className="text-sm font-medium text-foreground">Symbol:</label>
                         {customSymbol ? (
@@ -160,8 +160,8 @@ export default function OptimizationConfig({
                 })}
             </div>
 
-            <div className="mt-6 flex items-center gap-4">
-                <div className="w-48">
+            <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <div className="w-full sm:w-48">
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Trials: {nTrials}</label>
                     <input
                         type="range"

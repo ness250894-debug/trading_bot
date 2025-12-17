@@ -379,7 +379,7 @@ export default function Backtest() {
                                     <div className="p-4 border-b border-border">
                                         <h3 className="font-semibold">Trade History</h3>
                                     </div>
-                                    <div className="max-h-[400px] overflow-y-auto">
+                                    <div className="max-h-[400px] overflow-y-auto overflow-x-auto">
                                         <table className="w-full text-sm item-center">
                                             <thead className="bg-muted/50 sticky top-0">
                                                 <tr className="text-left text-muted-foreground">

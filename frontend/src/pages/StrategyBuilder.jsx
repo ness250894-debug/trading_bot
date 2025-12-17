@@ -458,8 +458,8 @@ function ConditionRow({ condition, index, type, selectedIndicators, operators, o
     const allOps = { ...comparisonOps, ...crossOps };
 
     return (
-        <div className="bg-white/5 rounded-xl p-4 flex items-center gap-4">
-            <div className="flex-1 grid grid-cols-3 gap-4">
+        <div className="bg-white/5 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
                 <div>
                     <label className="text-xs text-muted-foreground">Left Value</label>
                     <div className="relative">
