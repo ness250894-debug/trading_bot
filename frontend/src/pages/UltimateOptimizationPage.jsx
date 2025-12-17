@@ -41,19 +41,12 @@ export default function UltimateOptimizationPage() {
     // Persistence Effects
     useEffect(() => { localStorage.setItem('ultimate_optimization_symbol', ultimateSymbol); }, [ultimateSymbol]);
 
-    const applyToBacktest = (params) => {
-        // Implementation similar to Optimization.jsx
-        // UltimateResults returns params structure, we need to adapt it if necessary
-        // Assuming params is the full strategy config
-
-        // Wait, UltimateOptimization component handles the display, checking how it passes params
-        // Checking Optimization.jsx: applyToBacktest takes (params, strategyOverride, timeframeOverride, symbolOverride)
-
+    const applyToBacktest = (params, strategyOverride = null, timeframeOverride = null, symbolOverride = null) => {
         const suggestion = {
-            strategy: params.strategy, // Ultimate results have strategy name
-            timeframe: params.timeframe || '1h',
-            symbol: ultimateSymbol,
-            params: params.params
+            strategy: strategyOverride, // Ultimate results always have a strategy override
+            timeframe: timeframeOverride || '1h',
+            symbol: symbolOverride || ultimateSymbol,
+            params: params // Params is already the flat object passed from component
         };
         localStorage.setItem('backtest_params_suggestion', JSON.stringify(suggestion));
         window.location.href = '/backtest';

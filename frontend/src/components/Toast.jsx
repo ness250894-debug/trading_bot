@@ -1,13 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ToastContext } from './ToastContext';
 
-
-
-
-
 const Toast = ({ id, type, message, onClose }) => {
+    // ... existing Toast component ...
     const icons = {
         success: <CheckCircle size={20} className="text-green-400" />,
         error: <AlertCircle size={20} className="text-red-400" />,
@@ -63,13 +60,22 @@ export const ToastProvider = ({ children }) => {
         }
     }, [removeToast]);
 
-    const success = (msg) => addToast(msg, 'success');
-    const error = (msg) => addToast(msg, 'error');
-    const info = (msg) => addToast(msg, 'info');
-    const warning = (msg) => addToast(msg, 'warning');
+    const success = useCallback((msg) => addToast(msg, 'success'), [addToast]);
+    const error = useCallback((msg) => addToast(msg, 'error'), [addToast]);
+    const info = useCallback((msg) => addToast(msg, 'info'), [addToast]);
+    const warning = useCallback((msg) => addToast(msg, 'warning'), [addToast]);
+
+    const value = useMemo(() => ({
+        addToast,
+        removeToast,
+        success,
+        error,
+        info,
+        warning
+    }), [addToast, removeToast, success, error, info, warning]);
 
     return (
-        <ToastContext.Provider value={{ addToast, removeToast, success, error, info, warning }}>
+        <ToastContext.Provider value={value}>
             {children}
             <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
                 <AnimatePresence mode="popLayout">
