@@ -1,10 +1,11 @@
 """
 API endpoints for AI-powered sentiment analysis.
 """
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from typing import Optional
 from ..core.sentiment_analyzer import SentimentAnalyzer
 from ..core import auth
+from ..core.rate_limit import limiter
 
 router = APIRouter()
 
@@ -13,7 +14,9 @@ sentiment_analyzer = SentimentAnalyzer()
 
 
 @router.get("/sentiment/{symbol}", tags=["ai-insights"])
+@limiter.limit("60/minute")
 async def get_sentiment_analysis(
+    request: Request,
     symbol: str,
     use_cache: bool = Query(True, description="Use cached results if available"),
     current_user: dict = Depends(auth.get_current_user)
@@ -60,7 +63,9 @@ async def get_sentiment_analysis(
 
 
 @router.get("/sentiment/{symbol}/advanced", tags=["ai-insights"])
+@limiter.limit("60/minute")
 async def get_advanced_sentiment(
+    request: Request,
     symbol: str,
     use_cache: bool = Query(True, description="Use cached results"),
     current_user: dict = Depends(auth.get_current_user)
@@ -98,7 +103,12 @@ async def get_advanced_sentiment(
 
 
 @router.get("/sentiment/{symbol}/simple", tags=["ai-insights"])
-async def get_simple_sentiment(symbol: str, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("60/minute")
+async def get_simple_sentiment(
+    request: Request, 
+    symbol: str, 
+    current_user: dict = Depends(auth.get_current_user)
+):
     """
     Get simplified sentiment (just the score and emoji) for quick display.
     
@@ -129,7 +139,9 @@ async def get_simple_sentiment(symbol: str, current_user: dict = Depends(auth.ge
 
 
 @router.get("/news/{symbol}", tags=["ai-insights"])
+@limiter.limit("60/minute")
 async def get_crypto_news(
+    request: Request,
     symbol: str,
     limit: int = Query(10, ge=1, le=50, description="Number of news items"),
     current_user: dict = Depends(auth.get_current_user)
@@ -163,7 +175,12 @@ async def get_crypto_news(
 
 
 @router.post("/sentiment/analyze", tags=["ai-insights"])
-async def manual_sentiment_analysis(data: dict, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("10/minute")
+async def manual_sentiment_analysis(
+    request: Request,
+    data: dict, 
+    current_user: dict = Depends(auth.get_current_user)
+):
     """
     Manually trigger sentiment analysis with custom text.
     

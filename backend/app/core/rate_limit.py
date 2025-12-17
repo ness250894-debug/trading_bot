@@ -11,7 +11,7 @@ logger = logging.getLogger("RateLimit")
 # Initialize rate limiter
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=["100/minute"],  # Global default
+    default_limits=["300/minute"],  # Global default
     storage_uri="memory://",  # Use in-memory storage (consider Redis for production)
 )
 
