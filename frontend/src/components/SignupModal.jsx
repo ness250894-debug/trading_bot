@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
-import { Lock, Mail, AlertCircle, X, UserPlus, User, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, AlertCircle, X, UserPlus, User, Eye, EyeOff, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSuccess }) {
@@ -46,6 +46,27 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
         } finally {
             setLoading(false);
         }
+    };
+
+    // Password strength calculation
+    const getStrength = (pass) => {
+        return {
+            length: pass.length >= 8,
+            upper: /[A-Z]/.test(pass),
+            lower: /[a-z]/.test(pass),
+            number: /[0-9]/.test(pass)
+        };
+    };
+
+    const strength = getStrength(password);
+    const validCount = Object.values(strength).filter(Boolean).length;
+    const strengthScore = (validCount / 4) * 100;
+
+    const getStrengthColor = () => {
+        if (validCount <= 1) return 'bg-red-500';
+        if (validCount === 2) return 'bg-yellow-500';
+        if (validCount === 3) return 'bg-blue-500';
+        return 'bg-green-500';
     };
 
     if (!isOpen) return null;
@@ -146,6 +167,35 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
                                     </div>
                                 </div>
 
+
+
+                                <div className="space-y-2 px-1 mb-4">
+                                    <div className="flex gap-1 h-1.5">
+                                        <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 1 ? getStrengthColor() : 'bg-white/10'}`} />
+                                        <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 2 ? getStrengthColor() : 'bg-white/10'}`} />
+                                        <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 3 ? getStrengthColor() : 'bg-white/10'}`} />
+                                        <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 4 ? getStrengthColor() : 'bg-white/10'}`} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1">
+                                        <div className={`flex items-center gap-1.5 transition-colors ${strength.length ? 'text-green-400 font-medium' : ''}`}>
+                                            {strength.length ? <Check size={12} strokeWidth={3} /> : <div className="w-3 h-3 rounded-full border border-current opacity-30" />}
+                                            8+ Characters
+                                        </div>
+                                        <div className={`flex items-center gap-1.5 transition-colors ${strength.upper ? 'text-green-400 font-medium' : ''}`}>
+                                            {strength.upper ? <Check size={12} strokeWidth={3} /> : <div className="w-3 h-3 rounded-full border border-current opacity-30" />}
+                                            Uppercase Letter
+                                        </div>
+                                        <div className={`flex items-center gap-1.5 transition-colors ${strength.lower ? 'text-green-400 font-medium' : ''}`}>
+                                            {strength.lower ? <Check size={12} strokeWidth={3} /> : <div className="w-3 h-3 rounded-full border border-current opacity-30" />}
+                                            Lowercase Letter
+                                        </div>
+                                        <div className={`flex items-center gap-1.5 transition-colors ${strength.number ? 'text-green-400 font-medium' : ''}`}>
+                                            {strength.number ? <Check size={12} strokeWidth={3} /> : <div className="w-3 h-3 rounded-full border border-current opacity-30" />}
+                                            Number
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-gray-300">Confirm Password</label>
                                     <div className="relative">
@@ -187,9 +237,10 @@ export default function SignupModal({ isOpen, onClose, onSwitchToLogin, onSucces
                                 </button>
                             </p>
                         </motion.div>
-                    </div>
+                    </div >
                 </>
             )}
-        </AnimatePresence>
+
+        </AnimatePresence >
     );
 }
