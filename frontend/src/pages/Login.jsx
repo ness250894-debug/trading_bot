@@ -1,14 +1,34 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
-import { Lock, Mail, AlertCircle } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useModal } from '../components/Modal';
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
+    const { show } = useModal();
+
+    const handleForgotPassword = () => {
+        show({
+            title: 'Reset Password',
+            content: (
+                <div className="space-y-4">
+                    <p className="text-gray-300 text-sm leading-relaxed">
+                        To reset your password, please contact the administrator securely. We verify your identity manually to ensure account safety.
+                    </p>
+                    <div className="bg-white/5 p-4 rounded-lg border border-white/10 text-sm font-mono text-center select-all">
+                        admin@tradingbot.local
+                    </div>
+                </div>
+            ),
+            type: 'info'
+        });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -72,14 +92,31 @@ export default function Login() {
                         <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                             <input
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                                className="w-full bg-black/20 border border-white/10 rounded-xl py-2.5 pl-10 pr-10 text-white focus:outline-none focus:border-primary/50 transition-colors"
                                 placeholder="••••••••"
                                 required
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={handleForgotPassword}
+                            className="text-sm text-primary hover:text-primary/80 transition-colors"
+                        >
+                            Forgot password?
+                        </button>
                     </div>
 
                     <button
