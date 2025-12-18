@@ -155,6 +155,7 @@ class UserRepository(BaseRepository):
             self.conn.execute("DELETE FROM watchlists WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM price_alerts WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM dashboard_preferences WHERE user_id = ?", [user_id])
+            self.conn.execute("DELETE FROM audit_log WHERE user_id = ?", [user_id])
             
             # 3. Delete user
             self.conn.execute("DELETE FROM users WHERE id = ?", [user_id])
