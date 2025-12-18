@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import { Lock, Mail, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useModal } from './Modal';
 
 export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSuccess }) {
     const [email, setEmail] = useState('');
@@ -11,6 +12,71 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { show } = useModal();
+
+    const handleForgotPassword = () => {
+        onClose(); // Close existing login modal first
+        show({
+            title: 'Reset Password',
+            content: <ForgotPasswordForm onClose={() => show(null)} />,
+            type: 'info'
+        });
+    };
+
+    // Helper component for the modal form
+    const ForgotPasswordForm = ({ onClose }) => {
+        const [resetEmail, setResetEmail] = useState('');
+        const [status, setStatus] = useState('idle'); // idle, loading, success, error
+        const [msg, setMsg] = useState('');
+
+        const onResetSubmit = async (e) => {
+            e.preventDefault();
+            setStatus('loading');
+            try {
+                await api.post('/auth/forgot-password', { email: resetEmail });
+                setStatus('success');
+                setMsg('If this email is registered, you will receive a reset link shortly.');
+            } catch (err) {
+                setStatus('error');
+                setMsg('Failed to process request. Please try again.');
+            }
+        };
+
+        if (status === 'success') {
+            return (
+                <div className="text-center space-y-4">
+                    <div className="p-3 bg-green-500/10 text-green-400 rounded-lg text-sm">
+                        {msg}
+                    </div>
+                    <button onClick={onClose} className="text-sm text-muted-foreground hover:text-white">Close</button>
+                </div>
+            );
+        }
+
+        return (
+            <form onSubmit={onResetSubmit} className="space-y-4">
+                <p className="text-sm text-gray-300">Enter your email address and we'll send you a link to reset your password.</p>
+                <div className="space-y-2">
+                    <input
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        className="w-full bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-primary/50"
+                        placeholder="name@example.com"
+                        required
+                    />
+                </div>
+                {status === 'error' && <p className="text-xs text-red-400">{msg}</p>}
+                <button
+                    type="submit"
+                    disabled={status === 'loading'}
+                    className="w-full bg-primary hover:bg-primary/90 text-white rounded-lg py-2 font-medium disabled:opacity-50"
+                >
+                    {status === 'loading' ? 'Sending...' : 'Send Reset Link'}
+                </button>
+            </form>
+        );
+    };
 
     // Clear form and errors when modal opens/closes
     useEffect(() => {
@@ -132,6 +198,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
                                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
                                     </div>
+                                </div>
+
+                                <div className="flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={handleForgotPassword}
+                                        className="text-sm text-primary hover:text-primary/80 transition-colors"
+                                    >
+                                        Forgot password?
+                                    </button>
                                 </div>
 
                                 <button
