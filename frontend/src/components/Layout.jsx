@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, DollarSign, Shield } from 'lucide-react';
+import { LayoutDashboard, Settings, TrendingUp, History, Zap, Menu, X, Bell, DollarSign, Shield, Crown, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserDropdown from './UserDropdown';
 import ExchangeLinks from './ExchangeLinks';
@@ -47,12 +47,20 @@ export default function Layout({ children }) {
         { icon: Zap, label: 'Visual Builder', path: '/strategy-builder' },
         { icon: TrendingUp, label: 'Social Trading', path: '/marketplace' },
         { icon: TrendingUp, label: 'Optimization', path: '/optimization' },
+        { icon: Crown, label: 'Ultimate Opt.', path: '/ultimate-optimization' },
+        { icon: History, label: 'Backtest', path: '/backtest' },
         { icon: DollarSign, label: 'Pricing', path: '/pricing' },
+        { icon: Settings, label: 'Settings', path: '/settings' },
     ];
 
     if (isAdmin) {
         menuItems.push({ icon: Shield, label: 'Admin Panel', path: '/admin' });
     }
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        window.location.href = '/';
+    };
 
     return (
         <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">
@@ -131,6 +139,13 @@ export default function Layout({ children }) {
                                             <p className="text-xs text-muted-foreground truncate max-w-[150px]">{currentUser.email}</p>
                                         </div>
                                     </div>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                                    >
+                                        <LogOut size={20} />
+                                        <span className="font-medium">Sign Out</span>
+                                    </button>
                                 </div>
                             )}
                         </motion.div>
@@ -167,7 +182,9 @@ export default function Layout({ children }) {
                         <Bell size={20} />
                         <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-background" />
                     </button>
-                    {currentUser && <UserDropdown user={currentUser} />}
+                    <div className="hidden md:block">
+                        {currentUser && <UserDropdown user={currentUser} />}
+                    </div>
                 </div>
             </header>
 
