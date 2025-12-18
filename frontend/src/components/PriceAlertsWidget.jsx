@@ -3,7 +3,7 @@ import { Bell, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import api from '../lib/api';
 import { useToast } from './ToastContext';
 import { POPULAR_SYMBOLS } from '../constants/symbols';
-import EditableWidget from './constructor/EditableWidget';
+
 import Combobox from './Combobox';
 
 export default function PriceAlertsWidget() {
@@ -74,15 +74,7 @@ export default function PriceAlertsWidget() {
     }
 
     return (
-        <EditableWidget
-            configPath="widgets.priceAlerts"
-            widgetName="Price Alerts"
-            editableFields={{
-                title: 'Price Alerts',
-                emptyMessage: 'No active alerts'
-            }}
-            className="glass p-6 rounded-xl h-full flex flex-col"
-        >
+        <div className="glass p-6 rounded-xl h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                     <Bell size={20} className="text-primary" />
@@ -155,6 +147,6 @@ export default function PriceAlertsWidget() {
                     ))
                 )}
             </div>
-        </EditableWidget>
+        </div>
     );
 }

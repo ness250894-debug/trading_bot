@@ -4,7 +4,7 @@ import {
     TrendingUp, TrendingDown, Minus, RefreshCw,
     Activity, Zap, MessageSquare, ChevronDown, ChevronUp
 } from 'lucide-react';
-import EditableWidget from './constructor/EditableWidget';
+
 
 export default function CombinedSentimentWidget({ symbol = 'BTC' }) {
     const [simpleData, setSimpleData] = useState(null);
@@ -120,15 +120,7 @@ export default function CombinedSentimentWidget({ symbol = 'BTC' }) {
     }
 
     return (
-        <EditableWidget
-            configPath="widgets.combinedSentiment"
-            widgetName="AI Sentiment & Analysis"
-            editableFields={{
-                title: 'AI Sentiment & Analysis',
-                refreshIntervalMinutes: 30
-            }}
-            className="glass rounded-xl p-6 h-full flex flex-col"
-        >
+        <div className="glass rounded-xl p-6 h-full flex flex-col">
             {/* Header */}
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
@@ -269,6 +261,6 @@ export default function CombinedSentimentWidget({ symbol = 'BTC' }) {
                     )}
                 </div>
             )}
-        </EditableWidget>
+        </div>
     );
 }
