@@ -16,18 +16,64 @@ export default function Login() {
     const handleForgotPassword = () => {
         show({
             title: 'Reset Password',
-            content: (
-                <div className="space-y-4">
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                        To reset your password, please contact the administrator securely. We verify your identity manually to ensure account safety.
-                    </p>
-                    <div className="bg-white/5 p-4 rounded-lg border border-white/10 text-sm font-mono text-center select-all">
-                        admin@tradingbot.local
-                    </div>
-                </div>
-            ),
+            content: <ForgotPasswordForm onClose={() => show(null)} />, // We'll need to define this component or inline it
             type: 'info'
         });
+    };
+
+    // Helper component for the modal form
+    const ForgotPasswordForm = ({ onClose }) => {
+        const [resetEmail, setResetEmail] = useState('');
+        const [status, setStatus] = useState('idle'); // idle, loading, success, error
+        const [msg, setMsg] = useState('');
+
+        const onResetSubmit = async (e) => {
+            e.preventDefault();
+            setStatus('loading');
+            try {
+                await api.post('/auth/forgot-password', { email: resetEmail });
+                setStatus('success');
+                setMsg('If this email is registered, you will receive a reset link shortly.');
+            } catch (err) {
+                setStatus('error');
+                setMsg('Failed to process request. Please try again.');
+            }
+        };
+
+        if (status === 'success') {
+            return (
+                <div className="text-center space-y-4">
+                    <div className="p-3 bg-green-500/10 text-green-400 rounded-lg text-sm">
+                        {msg}
+                    </div>
+                    <button onClick={onClose} className="text-sm text-muted-foreground hover:text-white">Close</button>
+                </div>
+            );
+        }
+
+        return (
+            <form onSubmit={onResetSubmit} className="space-y-4">
+                <p className="text-sm text-gray-300">Enter your email address and we'll send you a link to reset your password.</p>
+                <div className="space-y-2">
+                    <input
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        className="w-full bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-primary/50"
+                        placeholder="name@example.com"
+                        required
+                    />
+                </div>
+                {status === 'error' && <p className="text-xs text-red-400">{msg}</p>}
+                <button
+                    type="submit"
+                    disabled={status === 'loading'}
+                    className="w-full bg-primary hover:bg-primary/90 text-white rounded-lg py-2 font-medium disabled:opacity-50"
+                >
+                    {status === 'loading' ? 'Sending...' : 'Send Reset Link'}
+                </button>
+            </form>
+        );
     };
 
     const handleSubmit = async (e) => {

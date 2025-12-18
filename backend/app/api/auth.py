@@ -5,6 +5,9 @@ from ..core import auth
 from ..core.database import DuckDBHandler
 from pydantic import BaseModel
 from ..core.rate_limit import limiter
+from ..core.email_service import EmailService
+
+email_service = EmailService()
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 db = DuckDBHandler()
@@ -116,3 +119,71 @@ async def delete_account(current_user: dict = Depends(auth.get_current_user)):
             raise HTTPException(status_code=500, detail="Failed to delete account")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete account: {str(e)}")
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+@router.post("/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, body: ForgotPasswordRequest):
+    """
+    Initiates password reset flow.
+    Sends an email with a reset token if the email exists.
+    Always returns success to prevent email enumeration.
+    """
+    user = db.get_user_by_email(body.email)
+    if user:
+        token = db.create_reset_token(user['id'])
+        if token:
+            # Construct reset link (assuming frontend is at origin)
+            origin = request.headers.get('origin', 'http://localhost:5173')
+            reset_links = f"{origin}/reset-password?token={token}"
+            
+            # Send email (async in background would be better, but simple for now)
+            email_service.send_reset_email(user['email'], reset_links)
+            
+    return {"status": "success", "message": "If this email is registered, you will receive a reset link."}
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)
+
+    @validator('new_password')
+    def password_strength(cls, v):
+        if len(v) < 8: raise ValueError('Password too short')
+        if not any(c.isupper() for c in v): raise ValueError('Missing uppercase')
+        if not any(c.islower() for c in v): raise ValueError('Missing lowercase')
+        if not any(c.isdigit() for c in v): raise ValueError('Missing digit')
+        return v
+
+@router.post("/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(request: Request, body: ResetPasswordRequest):
+    """
+    Verifies token and resets password.
+    """
+    user_id = db.verify_reset_token(body.token)
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+        
+    hashed_password = auth.get_password_hash(body.new_password)
+    
+    # Update password
+    # We need a direct method in UserRepository or via generic update.
+    # Currently we lack 'update_password', so we'll access raw query via repo connection or add method.
+    # Ideally add method to UserRepository. For now, let's assume we can add it or execute raw.
+    # Checking UserRepository... we don't have update_password exposed in Database delegates yet.
+    # Let's check repository files.
+    
+    # Actually, we should check if we can update it. 
+    # Since I cannot modify UserRepository in this chunk easily, I will use raw execution if needed
+    # BUT clean code prefers a method. I will add 'update_password' to UserRepository in a separate step?
+    # No, I should add it here if possible or use db.conn directly if exposed.
+    # db is DuckDBHandler, which has .conn.
+    
+    try:
+        db.conn.execute("UPDATE users SET hashed_password = ? WHERE id = ?", [hashed_password, user_id])
+        db.consume_reset_token(body.token)
+        return {"status": "success", "message": "Password reset successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to reset password")

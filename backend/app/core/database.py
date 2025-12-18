@@ -41,6 +41,9 @@ class DuckDBHandler:
         self.system_repo = SystemRepository(self.conn)
         self.dashboard_repo = DashboardRepository(self.conn)
         self.billing_repo = BillingRepository(self.conn)
+        
+        from .repositories.auth_repository import AuthRepository
+        self.auth_repo = AuthRepository(self.conn)
 
         # Run Migrations
         from .migration_manager import MigrationManager
@@ -245,3 +248,13 @@ class DuckDBHandler:
     @retry(max_attempts=3, delay=0.5, backoff=2)
     def save_preferences(self, user_id, theme=None, layout_config=None, widgets_enabled=None):
         return self.dashboard_repo.save_preferences(user_id, theme, layout_config, widgets_enabled)
+
+    # --- Auth Repository Delegates ---
+    def create_reset_token(self, user_id):
+        return self.auth_repo.create_reset_token(user_id)
+
+    def verify_reset_token(self, token):
+        return self.auth_repo.verify_reset_token(token)
+
+    def consume_reset_token(self, token):
+        return self.auth_repo.consume_reset_token(token)

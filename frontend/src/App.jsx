@@ -23,6 +23,7 @@ const Signup = lazy(() => import('./pages/Signup'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Pricing = lazy(() => import('./pages/Pricing'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 // Loading component
 const PageLoader = () => (
@@ -104,6 +105,7 @@ function App() {
                     <Route path="/" element={<Landing />} />
                     {/* <Route path="/login" element={<Login />} /> */}
                     <Route path="/signup" element={<Signup />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                   </Route>
 
                   {/* Protected Routes */}
