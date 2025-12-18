@@ -244,9 +244,6 @@ export default function CombinedSentimentWidget({ symbol = 'BTC' }) {
                                 </div>
                             </div>
 
-                            {/* News Sources Used */}
-
-
                             {/* Footer */}
                             <div className="pt-4 border-t border-white/5 text-[10px] text-muted-foreground text-center">
                                 Powered by Gemini AI • Updated {new Date(advancedData.analyzed_at).toLocaleTimeString()}

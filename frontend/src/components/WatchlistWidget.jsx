@@ -97,10 +97,8 @@ export default function WatchlistWidget() {
                             <div>
                                 <div className="font-bold text-sm">{item.symbol}</div>
                                 <div className="text-xs text-muted-foreground">
-                                    {/* Mock price data for now */}
-                                    <span className="text-green-400 flex items-center gap-1">
-                                        <TrendingUp size={12} /> +2.4%
-                                    </span>
+                                    {/* Real price data would go here */}
+                                    <span className="text-muted-foreground text-[10px]">-</span>
                                 </div>
                             </div>
                             <button
