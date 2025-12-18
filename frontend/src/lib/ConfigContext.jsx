@@ -1,6 +1,6 @@
 /**
  * ConfigContext - React Context for UI Configuration
- * Provides centralized access to UI config and constructor mode state.
+ * Provides centralized access to UI config.
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -8,7 +8,6 @@ import api from './api';
 
 // Create contexts
 const ConfigContext = createContext(null);
-const ConstructorContext = createContext(null);
 
 // Default config fallback
 const DEFAULT_CONFIG = {
@@ -28,30 +27,11 @@ export function ConfigProvider({ children }) {
     const [config, setConfig] = useState(DEFAULT_CONFIG);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [constructorMode, setConstructorMode] = useState(false);
-    const [pendingChanges, setPendingChanges] = useState({});
-    const [isAdmin, setIsAdmin] = useState(false);
 
     // Load config on mount
     useEffect(() => {
         loadConfig();
-        checkAdminStatus();
     }, []);
-
-    // Check if current user is admin
-    const checkAdminStatus = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setIsAdmin(false);
-                return;
-            }
-            const response = await api.get('/auth/me');
-            setIsAdmin(response.data?.is_admin || false);
-        } catch {
-            setIsAdmin(false);
-        }
-    };
 
     // Load config from backend
     const loadConfig = async () => {
@@ -72,11 +52,6 @@ export function ConfigProvider({ children }) {
 
     // Get a nested config value using dot notation
     const getValue = useCallback((path, defaultValue = '') => {
-        // Check pending changes first
-        if (pendingChanges[path] !== undefined) {
-            return pendingChanges[path];
-        }
-
         const keys = path.split('.');
         let result = config;
 
@@ -89,64 +64,7 @@ export function ConfigProvider({ children }) {
         }
 
         return result ?? defaultValue;
-    }, [config, pendingChanges]);
-
-    // Set a value locally (pending changes)
-    const setValue = useCallback((path, value) => {
-        setPendingChanges(prev => ({
-            ...prev,
-            [path]: value
-        }));
-    }, []);
-
-    // Save all pending changes to backend
-    const saveChanges = async () => {
-        if (Object.keys(pendingChanges).length === 0) return true;
-
-        try {
-            // Apply pending changes to config
-            let newConfig = JSON.parse(JSON.stringify(config));
-
-            for (const [path, value] of Object.entries(pendingChanges)) {
-                const keys = path.split('.');
-                let current = newConfig;
-
-                for (let i = 0; i < keys.length - 1; i++) {
-                    if (!(keys[i] in current)) {
-                        current[keys[i]] = {};
-                    }
-                    current = current[keys[i]];
-                }
-                current[keys[keys.length - 1]] = value;
-            }
-
-            await api.put('/constructor/config', { config: newConfig });
-            setConfig(newConfig);
-            setPendingChanges({});
-            return true;
-        } catch (err) {
-            console.error('Failed to save config:', err);
-            return false;
-        }
-    };
-
-    // Discard pending changes
-    const discardChanges = useCallback(() => {
-        setPendingChanges({});
-    }, []);
-
-    // Toggle constructor mode (admin only)
-    const toggleConstructorMode = useCallback(() => {
-        if (!isAdmin) return;
-        setConstructorMode(prev => !prev);
-        if (constructorMode) {
-            // Exiting constructor mode - discard unsaved changes
-            discardChanges();
-        }
-    }, [isAdmin, constructorMode, discardChanges]);
-
-    // Check if there are unsaved changes
-    const hasChanges = Object.keys(pendingChanges).length > 0;
+    }, [config]);
 
     const configValue = {
         config,
@@ -156,22 +74,9 @@ export function ConfigProvider({ children }) {
         reload: loadConfig
     };
 
-    const constructorValue = {
-        constructorMode,
-        toggleConstructorMode,
-        isAdmin,
-        setValue,
-        saveChanges,
-        discardChanges,
-        hasChanges,
-        pendingChanges
-    };
-
     return (
         <ConfigContext.Provider value={configValue}>
-            <ConstructorContext.Provider value={constructorValue}>
-                {children}
-            </ConstructorContext.Provider>
+            {children}
         </ConfigContext.Provider>
     );
 }
@@ -187,16 +92,6 @@ export function useConfig() {
     return context;
 }
 
-/**
- * Hook to access constructor mode state
- */
-export function useConstructorMode() {
-    const context = useContext(ConstructorContext);
-    if (!context) {
-        throw new Error('useConstructorMode must be used within a ConfigProvider');
-    }
-    return context;
-}
 
 /**
  * Convenience hook to get a config value with default

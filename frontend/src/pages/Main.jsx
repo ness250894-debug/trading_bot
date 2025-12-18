@@ -16,8 +16,7 @@ import PlanGate from '../components/PlanGate';
 import { useModal } from '../components/Modal';
 import { formatPlanName } from '../lib/utils';
 import { useToast } from '../components/ToastContext';
-import EditableText from '../components/constructor/EditableText';
-import DraggableWidget from '../components/constructor/DraggableWidget';
+
 
 const InfoCard = ({ title, value, icon: Icon, subtext, trend }) => (
     <div className="glass p-6 rounded-2xl relative overflow-hidden group hover:border-primary/20 transition-all">
@@ -407,10 +406,7 @@ export default function Main() {
                         Welcome back, {user?.nickname || user?.email?.split('@')[0] || 'Trader'}!
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        <EditableText
-                            configPath="pages.main.subtitle"
-                            defaultValue="Your trading overview and account information."
-                        />
+                        Your trading overview and account information.
                     </p>
                 </div>
 
@@ -451,22 +447,7 @@ export default function Main() {
             {/* Account Info Grid */}
             <div className="grid md:grid-cols-2 gap-6">
                 {/* Subscription Details Card - Resized */}
-                <DraggableWidget
-                    id="subscriptionCard"
-                    widgetName="Subscription Details"
-                    className="glass p-6 rounded-2xl h-full"
-                    defaultWidth="auto"
-                    defaultHeight="auto"
-                    editableFields={{
-                        title: 'Subscription Details',
-                        planLabel: 'Current Plan',
-                        statusLabel: 'Status',
-                        activeText: 'Active',
-                        expiresLabel: 'Expires',
-                        actionsLabel: 'Actions',
-                        upgradeText: 'Upgrade Plan'
-                    }}
-                >
+                <div className="glass p-6 rounded-2xl h-full">
                     <div className="flex items-center gap-2 mb-4">
                         <Shield size={20} className="text-primary" />
                         <h2 className="text-xl font-bold">Subscription Details</h2>
@@ -520,7 +501,7 @@ export default function Main() {
                             </a>
                         </div>
                     </div>
-                </DraggableWidget>
+                </div>
 
                 {/* Balance Card - with Practice Mode State */}
                 <div className="h-full">

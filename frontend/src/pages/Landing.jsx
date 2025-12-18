@@ -6,7 +6,7 @@ import {
     CheckCircle, Star, Award
 } from 'lucide-react';
 import Testimonials from '../components/Testimonials';
-import EditableText from '../components/constructor/EditableText';
+
 
 export default function Landing() {
     const navigate = useNavigate();
@@ -116,25 +116,15 @@ export default function Landing() {
                         </div>
                         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 animate-in fade-in slide-in-from-top-8 duration-1000 delay-100">
                             <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400">
-                                <EditableText
-                                    configPath="pages.landing.heroTitle1"
-                                    defaultValue="Trade Smarter with"
-                                />
+                                Trade Smarter with
                             </span>
                             <br />
                             <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary via-purple-400 to-pink-400">
-                                <EditableText
-                                    configPath="pages.landing.heroTitle2"
-                                    defaultValue="AI-Powered Automation"
-                                />
+                                AI-Powered Automation
                             </span>
                         </h1>
                         <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-10 animate-in fade-in slide-in-from-top-12 duration-1000 delay-200">
-                            <EditableText
-                                configPath="pages.landing.heroSubtitle"
-                                defaultValue="Execute winning strategies 24/7. Optimize performance with advanced backtesting. Manage risk automatically. Join thousands of traders maximizing their profits."
-                                multiline
-                            />
+                            Execute winning strategies 24/7. Optimize performance with advanced backtesting. Manage risk automatically. Join thousands of traders maximizing their profits.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center animate-in fade-in slide-in-from-top-16 duration-1000 delay-300">
                             <button

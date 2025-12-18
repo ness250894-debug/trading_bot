@@ -10,7 +10,7 @@ import {
 import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
 import { DEFAULT_EXCHANGES } from '../constants/exchanges';
-import EditableText from '../components/constructor/EditableText';
+
 
 export default function Settings() {
     const [activeTab, setActiveTab] = useState('profile');
@@ -267,16 +267,10 @@ export default function Settings() {
         <div className="max-w-5xl mx-auto space-y-8">
             <div>
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                    <EditableText
-                        configPath="pages.settings.pageTitle"
-                        defaultValue="Settings"
-                    />
+                    Settings
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                    <EditableText
-                        configPath="pages.settings.subtitle"
-                        defaultValue="Manage your account, trading keys, and preferences"
-                    />
+                    Manage your account, trading keys, and preferences
                 </p>
             </div>
 

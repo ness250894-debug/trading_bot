@@ -6,7 +6,7 @@ import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2
 import { useModal } from '../components/Modal';
 
 import { useToast } from '../components/ToastContext';
-import EditableText from '../components/constructor/EditableText';
+
 
 const STRATEGY_OPTIONS = [
     { value: 'mean_reversion', label: 'Mean Reversion', desc: 'Buy low, sell high using Bollinger Bands & RSI.', icon: Activity },
@@ -379,16 +379,10 @@ export default function Strategies() {
             <div className="flex justify-between items-center">
                 <div>
                     <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                        <EditableText
-                            configPath="pages.strategies.pageTitle"
-                            defaultValue="Bot Management"
-                        />
+                        Bot Management
                     </h2>
                     <p className="text-muted-foreground mt-1">
-                        <EditableText
-                            configPath="pages.strategies.subtitle"
-                            defaultValue="Configure your bot's trading logic and risk parameters."
-                        />
+                        Configure your bot's trading logic and risk parameters.
                     </p>
                 </div>
                 <button

@@ -6,7 +6,7 @@ import { ModalProvider } from './components/Modal';
 import PublicLayout from './components/PublicLayout';
 import HybridLayout from './components/HybridLayout';
 import { ConfigProvider } from './lib/ConfigContext';
-import ConstructorToolbar from './components/constructor/ConstructorToolbar';
+
 
 // Lazy load pages for performance optimization
 const Landing = lazy(() => import('./pages/Landing'));
@@ -182,7 +182,7 @@ function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
-              <ConstructorToolbar />
+
             </ModalProvider>
           </ToastProvider>
         </ConfigProvider>

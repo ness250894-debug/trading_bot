@@ -6,7 +6,7 @@ import { useToast } from '../components/ToastContext';
 
 import PlanGate from '../components/PlanGate';
 import { formatLabel } from '../lib/utils';
-import EditableText from '../components/constructor/EditableText';
+
 
 const STRATEGIES = [
     { name: 'Mean Reversion', params: { bb_period: 20, bb_std: 2.0, rsi_period: 14, rsi_oversold: 30, rsi_overbought: 70 } },
@@ -182,10 +182,7 @@ export default function Backtest() {
             <div className="max-w-7xl mx-auto space-y-8">
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-3xl font-bold">
-                        <EditableText
-                            configPath="pages.backtest.pageTitle"
-                            defaultValue="Backtest Lab"
-                        />
+                        Backtest Lab
                     </h2>
                 </div>
 
