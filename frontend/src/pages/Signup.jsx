@@ -134,34 +134,32 @@ export default function Signup() {
                         </div>
                     </div>
 
-                    {password && (
-                        <div className="space-y-2 px-1 mb-4">
-                            <div className="flex gap-1 h-1">
-                                <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 1 ? getStrengthColor() : 'bg-gray-700'}`} />
-                                <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 2 ? getStrengthColor() : 'bg-gray-700'}`} />
-                                <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 3 ? getStrengthColor() : 'bg-gray-700'}`} />
-                                <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 4 ? getStrengthColor() : 'bg-gray-700'}`} />
+                    <div className="space-y-2 px-1 mb-4">
+                        <div className="flex gap-1 h-1.5">
+                            <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 1 ? getStrengthColor() : 'bg-white/10'}`} />
+                            <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 2 ? getStrengthColor() : 'bg-white/10'}`} />
+                            <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 3 ? getStrengthColor() : 'bg-white/10'}`} />
+                            <div className={`flex-1 rounded-full transition-all duration-300 ${validCount >= 4 ? getStrengthColor() : 'bg-white/10'}`} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1">
+                            <div className={`flex items-center gap-1.5 transition-colors ${strength.length ? 'text-green-400 font-medium' : ''}`}>
+                                {strength.length ? <Check size={12} strokeWidth={3} /> : <div className="w-3 h-3 rounded-full border border-current opacity-30" />}
+                                8+ Characters
                             </div>
-                            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                                <div className={`flex items-center gap-1.5 ${strength.length ? 'text-green-400' : ''}`}>
-                                    {strength.length ? <Check size={12} /> : <div className="w-3 h-3 rounded-full border border-current opacity-50" />}
-                                    8+ Characters
-                                </div>
-                                <div className={`flex items-center gap-1.5 ${strength.upper ? 'text-green-400' : ''}`}>
-                                    {strength.upper ? <Check size={12} /> : <div className="w-3 h-3 rounded-full border border-current opacity-50" />}
-                                    Uppercase Letter
-                                </div>
-                                <div className={`flex items-center gap-1.5 ${strength.lower ? 'text-green-400' : ''}`}>
-                                    {strength.lower ? <Check size={12} /> : <div className="w-3 h-3 rounded-full border border-current opacity-50" />}
-                                    Lowercase Letter
-                                </div>
-                                <div className={`flex items-center gap-1.5 ${strength.number ? 'text-green-400' : ''}`}>
-                                    {strength.number ? <Check size={12} /> : <div className="w-3 h-3 rounded-full border border-current opacity-50" />}
-                                    Number
-                                </div>
+                            <div className={`flex items-center gap-1.5 transition-colors ${strength.upper ? 'text-green-400 font-medium' : ''}`}>
+                                {strength.upper ? <Check size={12} strokeWidth={3} /> : <div className="w-3 h-3 rounded-full border border-current opacity-30" />}
+                                Uppercase Letter
+                            </div>
+                            <div className={`flex items-center gap-1.5 transition-colors ${strength.lower ? 'text-green-400 font-medium' : ''}`}>
+                                {strength.lower ? <Check size={12} strokeWidth={3} /> : <div className="w-3 h-3 rounded-full border border-current opacity-30" />}
+                                Lowercase Letter
+                            </div>
+                            <div className={`flex items-center gap-1.5 transition-colors ${strength.number ? 'text-green-400 font-medium' : ''}`}>
+                                {strength.number ? <Check size={12} strokeWidth={3} /> : <div className="w-3 h-3 rounded-full border border-current opacity-30" />}
+                                Number
                             </div>
                         </div>
-                    )}
+                    </div>
 
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-300">Confirm Password</label>
