@@ -13,7 +13,6 @@ import BalanceCard from '../components/dashboard/BalanceCard';
 import PracticeModeToggle from '../components/PracticeModeToggle';
 
 import PlanGate from '../components/PlanGate';
-import { useModal } from '../components/Modal';
 import { formatPlanName } from '../lib/utils';
 import { useToast } from '../components/ToastContext';
 
@@ -307,6 +306,18 @@ export default function Main() {
         }
     };
 
+    const handleQuickScalp = async () => {
+        try {
+            await api.post('/bot/quick-scalping');
+            toast.success('Quick Scalp Bot Created! 🚀');
+            // Refresh config list and status
+            const configRes = await api.get('/bot-configs');
+            setBotConfigs(configRes.data.configs || []);
+        } catch (err) {
+            toast.error(err.response?.data?.detail || 'Failed to create Quick Scalp bot');
+        }
+    };
+
     const handleStartBot = async (symbol, configId) => {
         try {
             const key = configId ? `${symbol}-${configId}` : symbol;
@@ -441,6 +452,7 @@ export default function Main() {
                     subscription={subscription}
                     startingBots={startingBots}
                     isBotRunning={isBotRunning}
+                    onQuickScalp={handleQuickScalp}
                 />
             </div>
 

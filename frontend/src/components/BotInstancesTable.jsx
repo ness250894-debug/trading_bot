@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Square, Plus, RefreshCw, Trash2, Settings } from 'lucide-react';
+import { Play, Square, Plus, RefreshCw, Trash2, Settings, Zap } from 'lucide-react';
 import { useModal } from './Modal';
 import BotRow from './BotRow';
 import BotCard from './BotCard';
@@ -17,7 +17,8 @@ export default function BotInstancesTable({
     onStop,
     loading,
     subscription,
-    startingBots
+    startingBots,
+    onQuickScalp
 }) {
     const navigate = useNavigate();
     const modal = useModal();
@@ -225,6 +226,16 @@ export default function BotInstancesTable({
                         <Plus size={16} />
                         Add Bot
                     </button>
+                    {!subscription || (subscription.plan && subscription.plan !== 'free') || (botConfigs && botConfigs.length === 0) ? (
+                        <button
+                            onClick={onQuickScalp}
+                            className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white rounded-xl transition-all font-medium whitespace-nowrap shadow-lg shadow-orange-500/20"
+                            title="Create Quick Scalping Bot"
+                        >
+                            <Zap size={16} />
+                            Quick Scalp
+                        </button>
+                    ) : null}
                     {someSelected && (
                         <>
                             <button

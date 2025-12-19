@@ -411,6 +411,67 @@ async def get_bot_configs(request: Request, current_user: dict = Depends(auth.ge
         logger.error(f"Error getting bot configs: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch bot configurations")
 
+@router.post("/quick-scalping")
+@limiter.limit("5/minute")
+async def create_quick_scalp_bot(request: Request, current_user: dict = Depends(auth.get_current_user)):
+    """Create a Quick Scalping Bot with loose parameters."""
+    try:
+        user_id = current_user['id']
+        is_admin = current_user.get('is_admin', False)
+        
+        # Check plan limits
+        if not is_admin:
+            subscription = db.get_subscription(user_id)
+            is_free_plan = True
+            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
+                is_free_plan = False
+            
+            if is_free_plan:
+                existing_configs = db.get_bot_configs(user_id)
+                if len(existing_configs) >= 1:
+                    raise HTTPException(
+                        status_code=403, 
+                        detail="Free plan is limited to 1 bot. Upgrade to add more bots."
+                    )
+        
+        # Define Loose Scalping Parameters
+        # Strategy: Momentum (ROC + RSI)
+        # Timeframe: 1m
+        # Parameters: ROC period 1, RSI period 2 (very sensitive)
+        # Risk: 5% TP/SL (loose)
+        
+        config_data = {
+            "symbol": "BTC/USDT", # Default to BTC
+            "strategy": "momentum",
+            "timeframe": "1m",
+            "amount_usdt": 100.0, # Safe default
+            "take_profit_pct": 5.0,
+            "stop_loss_pct": 5.0,
+            "dry_run": True,
+            "parameters": {
+                "roc_period": 1,
+                "rsi_period": 2,
+                "rsi_min": 10,
+                "rsi_max": 90
+            }
+        }
+        
+        config_id = db.create_bot_config(user_id, config_data)
+        
+        if config_id:
+            created_config = db.get_bot_config(user_id, config_id)
+            logger.info(f"Created Quick Scalp bot for user {user_id}")
+            return {"status": "success", "config": created_config, "message": "Quick Scalp Bot Created! 🚀"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to create bot configuration.")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating quick scalp bot: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/bot-configs")
 @limiter.limit("20/minute")
 async def create_bot_config(request: Request, config: BotConfigCreate, current_user: dict = Depends(auth.get_current_user)):
