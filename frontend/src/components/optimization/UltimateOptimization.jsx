@@ -9,7 +9,7 @@ export default function UltimateOptimization({
 }) {
     return (
         <div className="glass rounded-2xl overflow-hidden flex flex-col border border-purple-500/20 shadow-lg shadow-purple-900/10 mb-8">
-            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-gradient-to-r from-purple-900/20 to-transparent">
+            <div className="p-6 border-b border-white/10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-gradient-to-r from-purple-900/20 to-transparent">
                 <div className="flex items-center gap-3">
                     <h3 className="font-semibold flex items-center gap-2 text-lg text-purple-100">
                         <Crown size={20} className="text-purple-400" />
@@ -22,30 +22,30 @@ export default function UltimateOptimization({
                     )}
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
                     {/* Symbol Selector for Ultimate */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 justify-between sm:justify-start">
                         <label className="text-sm font-medium text-purple-200">Symbol:</label>
                         {ultimateCustomSymbol ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-grow sm:flex-grow-0">
                                 <input
                                     type="text"
                                     placeholder="e.g., BTC/USDT"
-                                    className="bg-black/20 border border-purple-500/30 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm font-mono uppercase w-32"
+                                    className="bg-black/20 border border-purple-500/30 rounded-lg p-2 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm font-mono uppercase w-full sm:w-32"
                                     value={ultimateSymbol}
                                     onChange={(e) => setUltimateSymbol(e.target.value.toUpperCase())}
                                 />
                                 <button
                                     onClick={() => setUltimateCustomSymbol(false)}
-                                    className="text-xs text-purple-300 hover:text-purple-200 transition-colors"
+                                    className="text-xs text-purple-300 hover:text-purple-200 transition-colors whitespace-nowrap"
                                 >
                                     ← Back
                                 </button>
                             </div>
                         ) : (
-                            <div className="relative">
+                            <div className="relative flex-grow sm:flex-grow-0">
                                 <select
-                                    className="bg-black/20 border border-purple-500/30 rounded-lg p-2 pr-8 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm appearance-none cursor-pointer hover:bg-black/30 [&>option]:bg-zinc-900 [&>option]:text-white font-mono"
+                                    className="w-full sm:w-auto bg-black/20 border border-purple-500/30 rounded-lg p-2 pr-8 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm appearance-none cursor-pointer hover:bg-black/30 [&>option]:bg-zinc-900 [&>option]:text-white font-mono"
                                     value={POPULAR_SYMBOLS.includes(ultimateSymbol) ? ultimateSymbol : 'CUSTOM'}
                                     onChange={(e) => {
                                         if (e.target.value === 'CUSTOM') {
@@ -66,29 +66,31 @@ export default function UltimateOptimization({
                         )}
                     </div>
 
-                    <button
-                        onClick={runUltimateOptimization}
-                        disabled={isOptimizing || isUltimateOptimizing}
-                        className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm ${subscription?.plan === 'free'
-                            ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer'
-                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25'
-                            }`}
-                    >
-                        {isUltimateOptimizing ? (
-                            <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></span>
-                        ) : (
-                            subscription?.plan === 'free' ? <Lock size={16} /> : <Play size={16} fill="currentColor" />
-                        )}
-                        Run Ultimate Optimization
-                    </button>
-                    {ultimateResults.length > 0 && (
+                    <div className="flex items-center gap-2">
                         <button
-                            onClick={clearUltimateResults}
-                            className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors"
+                            onClick={runUltimateOptimization}
+                            disabled={isOptimizing || isUltimateOptimizing}
+                            className={`flex-1 sm:flex-none justify-center px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm whitespace-nowrap ${subscription?.plan === 'free'
+                                ? 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 cursor-pointer'
+                                : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-500/25'
+                                }`}
                         >
-                            Clear
+                            {isUltimateOptimizing ? (
+                                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white"></span>
+                            ) : (
+                                subscription?.plan === 'free' ? <Lock size={16} /> : <Play size={16} fill="currentColor" />
+                            )}
+                            Run Ultimate Optimization
                         </button>
-                    )}
+                        {ultimateResults.length > 0 && (
+                            <button
+                                onClick={clearUltimateResults}
+                                className="text-xs text-red-400 hover:text-red-300 font-medium px-3 py-1 hover:bg-red-500/10 rounded transition-colors"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 

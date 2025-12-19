@@ -209,7 +209,7 @@ export default function BotInstancesTable({
 
     return (
         <div className="glass rounded-2xl overflow-hidden">
-            <div className="p-6 border-b border-white/5 flex justify-between items-center">
+            <div className="p-6 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h3 className="text-lg font-semibold text-foreground">Active Bot Instances</h3>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -217,10 +217,10 @@ export default function BotInstancesTable({
                         {someSelected && ` • ${selectedBots.size} selected`}
                     </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                     <button
                         onClick={handleAddBot}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-lg transition-all font-medium"
+                        className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-lg transition-all font-medium whitespace-nowrap"
                     >
                         <Plus size={16} />
                         Add Bot
@@ -229,21 +229,21 @@ export default function BotInstancesTable({
                         <>
                             <button
                                 onClick={handleStartSelected}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-lg transition-colors border border-green-500/20"
+                                className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-500 hover:bg-green-500/20 rounded-lg transition-colors border border-green-500/20"
                                 title="Start Selected"
                             >
                                 <Play size={16} fill="currentColor" />
                             </button>
                             <button
                                 onClick={handleStopSelected}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
+                                className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
                                 title="Stop Selected"
                             >
                                 <Square size={16} fill="currentColor" />
                             </button>
                             <button
                                 onClick={handleBulkDelete}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
+                                className="flex-1 md:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
                                 title="Delete Selected"
                             >
                                 <Trash2 size={16} />
