@@ -15,9 +15,11 @@ class LogCaptureHandler(logging.Handler):
             # Format: "Bot-User-{user_id}-Config-{config_id}"
             if "Bot-User-" in thread_name:
                 parts = thread_name.split("-")
-                if len(parts) >= 6:
+                # Expected: ['Bot', 'User', '1', 'Config', '123'] (len=5)
+                if len(parts) >= 5:
                     # user_id = int(parts[2])
                     config_id = int(parts[4])
+                    # We need access to bot_manager instance to find the bot
                     # We need access to bot_manager instance to find the bot
                     # Since this is a class, we can access the singleton via global or class method
                     manager = BotManager.get_instance()

@@ -47,7 +47,7 @@ export default function BotLogs({ logs = [], isRunning }) {
                         // Highlight key phases
                         let colorClass = "text-muted-foreground";
                         if (log.includes("Fetching Market Data")) colorClass = "text-blue-400";
-                        else if (log.includes("Signal Generated")) colorClass = "text-purple-400";
+                        else if (log.includes("Signal:")) colorClass = "text-purple-400";
                         else if (log.includes("Running Risk Checks")) colorClass = "text-orange-400";
                         else if (log.includes("Executing Order")) colorClass = "text-green-400 font-bold";
                         else if (log.includes("ERROR")) colorClass = "text-red-400 font-bold";
