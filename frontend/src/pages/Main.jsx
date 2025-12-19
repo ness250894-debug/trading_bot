@@ -308,7 +308,7 @@ export default function Main() {
 
     const handleQuickScalp = async () => {
         try {
-            await api.post('/bot/quick-scalping');
+            await api.post('/quick-scalping');
             toast.success('Quick Scalp Bot Created! 🚀');
             // Refresh config list and status
             const configRes = await api.get('/bot-configs');
