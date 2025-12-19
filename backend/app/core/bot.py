@@ -925,7 +925,14 @@ def main(user_id: int = 0):
                     
                     # --- PnL Heartbeat Log (Explicit "Everything" Request) ---
                     # Log monitoring status every loop while position is open
-                    logger.info(f"5. 👁️ Monitoring | PnL: {pnl_pct*100:+.2f}% (${unrealized_pnl:+.2f}) | Duration: {duration_minutes:.1f}m")
+                    entry_p = float(position.get('entry_price', current_price))
+                    tp_price = entry_p * (1 + config.TAKE_PROFIT_PCT) if config.TAKE_PROFIT_PCT and current_pos_side == 'Buy' else entry_p * (1 - config.TAKE_PROFIT_PCT) if config.TAKE_PROFIT_PCT else 0
+                    sl_price = entry_p * (1 - config.STOP_LOSS_PCT) if config.STOP_LOSS_PCT and current_pos_side == 'Buy' else entry_p * (1 + config.STOP_LOSS_PCT) if config.STOP_LOSS_PCT else 0
+                    
+                    tp_str = f"${tp_price:.2f}" if tp_price else "N/A"
+                    sl_str = f"${sl_price:.2f}" if sl_price else "N/A"
+                    
+                    logger.info(f"5. 👁️ Monitoring | PnL: {pnl_pct*100:+.2f}% (${unrealized_pnl:+.2f}) | TP: {tp_str} | SL: {sl_str}")
                     # ---------------------------------------------------------
                     # -------------------------------------------
                 # -----------------------
