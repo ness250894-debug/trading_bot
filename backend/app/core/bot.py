@@ -277,10 +277,23 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 time.sleep(min(30, remaining))  # Check every 30s or remaining time
                 continue
                 
+            # Determine required data points dynamically
+            required_limit = 100 # Default
+            for param_key, param_value in strategy_config.get('STRATEGY_PARAMS', {}).items():
+                if isinstance(param_value, (int, float)) and 'period' in param_key.lower():
+                    # If parameter is like 'rsi_period', we need at least that much history
+                    # Add buffer (e.g. 50 extra candles or 2x)
+                    needed = int(param_value) + 50
+                    if needed > required_limit:
+                        required_limit = needed
+            
+            # Cap at safe maximum (e.g. 1000 for standard exchanges)
+            ohlcv_limit = min(required_limit, 1000)
+            
             # Fetch market data with retry
             @retry(max_attempts=3, delay=1, backoff=2)
             def fetch_ohlcv_with_retry():
-                return client.fetch_ohlcv(symbol, timeframe, limit=100)
+                return client.fetch_ohlcv(symbol, timeframe, limit=ohlcv_limit)
                 
             try:
                 df = fetch_ohlcv_with_retry()
