@@ -18,7 +18,7 @@ const Marketplace = lazy(() => import('./pages/Marketplace'));
 const Optimization = lazy(() => import('./pages/Optimization'));
 const UltimateOptimizationPage = lazy(() => import('./pages/UltimateOptimizationPage'));
 const Backtest = lazy(() => import('./pages/Backtest'));
-const Login = lazy(() => import('./pages/Login'));
+// const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Pricing = lazy(() => import('./pages/Pricing'));
