@@ -94,7 +94,8 @@ export default function UltimateOptimization({
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
                 <div className="max-h-[500px] overflow-y-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
@@ -167,6 +168,73 @@ export default function UltimateOptimization({
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden p-4 space-y-4 max-h-[500px] overflow-y-auto">
+                {ultimateResults.length === 0 ? (
+                    <div className="py-12 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center justify-center gap-2 opacity-50">
+                            <Crown size={32} />
+                            <p>Run Ultimate Optimization to compare all strategies</p>
+                        </div>
+                    </div>
+                ) : (
+                    ultimateResults.sort((a, b) => b.return - a.return).map((res, i) => (
+                        <div key={i} className="glass p-4 rounded-xl border border-white/5 space-y-3">
+                            {/* Header: Strategy & Rank */}
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded">#{i + 1}</span>
+                                        <h4 className="font-semibold text-purple-200 capitalize">{res.strategy.replace(/_/g, ' ')}</h4>
+                                    </div>
+                                    <div className="text-xs text-cyan-300 font-mono mt-1">
+                                        {res.params?.symbol || res.symbol || symbol}
+                                    </div>
+                                </div>
+                                <div className={`text-lg font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                    {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
+                                </div>
+                            </div>
+
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-2 gap-2 bg-black/20 p-3 rounded-lg">
+                                <div className="text-center">
+                                    <div className="text-xs text-muted-foreground">Win Rate</div>
+                                    <div className="font-semibold text-sm">{res.win_rate.toFixed(1)}%</div>
+                                </div>
+                                <div className="text-center border-l border-white/10">
+                                    <div className="text-xs text-muted-foreground">Trades</div>
+                                    <div className="font-mono text-sm">{res.trades}</div>
+                                </div>
+                            </div>
+
+                            {/* Parameters */}
+                            <div>
+                                <div className="text-xs text-muted-foreground mb-1.5">Parameters</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {Object.entries(res.params).map(([k, v]) => (
+                                        <span key={k} className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-white/5 text-foreground border border-white/5">
+                                            <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            <button
+                                onClick={() => {
+                                    applyToBacktest(res.params, res.strategy, res.timeframe || '1h', res.symbol);
+                                }}
+                                className="w-full mt-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium py-2 rounded-lg transition-colors border border-white/10 flex items-center justify-center gap-2"
+                            >
+                                <Play size={14} fill="currentColor" />
+                                Run Backtest
+                            </button>
+                        </div>
+                    ))
+                )}
             </div>
         </div>
     );
