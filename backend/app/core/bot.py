@@ -697,18 +697,9 @@ def main(user_id: int = 0):
     # Track position duration
     position_start_time = None
     
-    # Initialize runtime state
-    runtime_state = {'active_trades': 0}
-    
-    # Track Open Orders (Limit Order Management)
-    open_order = None # {'id': '...', 'time': 1234567890, 'side': 'Buy', 'type': 'limit'}
-
-    # Initialize running event
-    import threading
-    running_event = threading.Event()
-    running_event.set()
-    
-    runtime_state = {'active_trades': 0}
+    # If runtime_state is not provided, initialize it locally (for standalone mode)
+    if runtime_state is None:
+        runtime_state = {'active_trades': 0}
 
     while True:
         try:
