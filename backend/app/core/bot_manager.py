@@ -2,8 +2,34 @@ import threading
 import logging
 from typing import Dict, Optional, Any
 from datetime import datetime
+from collections import deque
 
 logger = logging.getLogger("BotManager")
+
+class LogCaptureHandler(logging.Handler):
+    """Intercepts logs and routes them to the correct BotInstance based on thread name."""
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            thread_name = record.threadName
+            # Format: "Bot-User-{user_id}-Config-{config_id}"
+            if "Bot-User-" in thread_name:
+                parts = thread_name.split("-")
+                if len(parts) >= 6:
+                    # user_id = int(parts[2])
+                    config_id = int(parts[4])
+                    # We need access to bot_manager instance to find the bot
+                    # Since this is a class, we can access the singleton via global or class method
+                    manager = BotManager.get_instance()
+                    # We need to find the user_id context efficiently or iterate
+                    # Since we have config_id and user_id in thread name, we can lookup directly
+                    user_id = int(parts[2])
+                    
+                    if user_id in manager.instances and config_id in manager.instances[user_id]:
+                        bot_instance = manager.instances[user_id][config_id]
+                        bot_instance.logs.append(msg)
+        except Exception:
+            self.handleError(record)
 
 class BotInstance:
     """Represents a single user's bot instance."""
@@ -18,6 +44,8 @@ class BotInstance:
         self.stopped_at: Optional[datetime] = None
         # Runtime state for dynamic metrics (like active trades)
         self.runtime_state: Dict[str, Any] = {"active_trades": 0}
+        # Log buffer
+        self.logs = deque(maxlen=50)
     
     def is_running(self) -> bool:
         """Check if bot instance is currently running."""
@@ -36,7 +64,8 @@ class BotInstance:
             "active_trades": self.runtime_state.get("active_trades", 0),
             "pnl": self.runtime_state.get("pnl", 0.0),
             "roi": self.runtime_state.get("roi", 0.0),
-            "current_price": self.runtime_state.get("current_price", 0.0)
+            "current_price": self.runtime_state.get("current_price", 0.0),
+            "logs": list(self.logs)
         }
 
 
@@ -63,7 +92,22 @@ class BotManager:
         self.instances: Dict[int, Dict[int, BotInstance]] = {}
         self.instances_lock = threading.Lock()
         self._initialized = True
-        logger.info("BotManager initialized with multi-instance support (config_id keyed)")
+        self.instances: Dict[int, Dict[int, BotInstance]] = {}
+        self.instances_lock = threading.Lock()
+        self._initialized = True
+        
+        # Attach Log Capture Handler
+        capture_handler = LogCaptureHandler()
+        capture_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%H:%M:%S')
+        capture_handler.setFormatter(formatter)
+        
+        # Attach to the TradingBot logger (defined in bot.py)
+        # We need to ensure bot.py imports don't cycle, but getting logger by name is safe
+        bot_logger = logging.getLogger("TradingBot")
+        bot_logger.addHandler(capture_handler)
+        
+        logger.info("BotManager initialized with multi-instance support and LogCapture")
     
     @classmethod
     def get_instance(cls):

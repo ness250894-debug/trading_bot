@@ -276,6 +276,10 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     running_event.wait()
                     logger.info(f"▶️ User {user_id} bot resumed")
 
+                # --- Debug Logging Start ---
+                logger.info(f"--- [User {user_id}] {symbol} Loop Start ---")
+                # ---------------------------
+
             # Check circuit breaker
                 if circuit_breaker.is_open():
                     remaining = circuit_breaker.get_cooldown_remaining()
@@ -301,6 +305,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 def fetch_ohlcv_with_retry():
                     return client.fetch_ohlcv(symbol, timeframe, limit=ohlcv_limit)
                 
+                logger.info(f"1. 📥 [User {user_id}] Fetching Market Data ({ohlcv_limit} candles)...")
                 try:
                     df = fetch_ohlcv_with_retry()
                     circuit_breaker.record_success()  # Success, reset failures
@@ -328,8 +333,35 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
 
                 # Generate signal
                 try:
-                    signal = strategy.generate_signal(df)
-                    logger.debug(f"User {user_id} Signal Generated: {signal}")
+                    signal_result = strategy.generate_signal(df)
+                    
+                    # Parse Signal Result (Handle dict vs string)
+                    if isinstance(signal_result, dict):
+                        raw_signal = signal_result.get('signal', 'HOLD').upper()
+                        score = signal_result.get('score', 0)
+                        details = signal_result.get('details', {})
+                    else:
+                        raw_signal = str(signal_result).upper()
+                        score = 0
+                        details = {}
+                    
+                    # Normalize to 'long'/'short' for internal logic
+                    if raw_signal == 'BUY':
+                        signal = 'long'
+                    elif raw_signal == 'SELL':
+                        signal = 'short'
+                    else:
+                        signal = 'hold'
+
+                    # Format Log Message for UI
+                    # Example: "2. 📊 Signal: BUY (Score: 3) | RSI: 35.5 | ROC: 1.2"
+                    details_str = " | ".join([f"{k}: {v}" for k, v in details.items()])
+                    log_msg = f"2. 📊 [User {user_id}] Signal: {raw_signal} (Score: {score})"
+                    if details_str:
+                        log_msg += f" | {details_str}"
+                    
+                    logger.info(log_msg)
+
                 except Exception as e:
                     logger.error(f"❌ User {user_id} signal generation failed: {type(e).__name__}: {e}")
                     time.sleep(config.LOOP_DELAY_SECONDS)
@@ -390,6 +422,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                         continue
 
                     # --- Risk Management Checks ---
+                    logger.info(f"3. 🛡️ [User {user_id}] Running Risk Checks...")
                     risk_profile = db.get_risk_profile(user_id)
                     if risk_profile:
                         # 1. Check Max Daily Loss
@@ -453,7 +486,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     amount = amount_usdt / current_price
                     side = 'buy' if signal == 'long' else 'sell'
                 
-                
+                    logger.info(f"4. 🚀 [User {user_id}] Executing Order: {side.upper()} {amount:.6f} {symbol}")
                     try:
                         order = client.create_order(symbol=symbol, type='market', side=side, amount=amount)
                     

@@ -11,6 +11,7 @@ import WatchlistWidget from '../components/WatchlistWidget';
 import PriceAlertsWidget from '../components/PriceAlertsWidget';
 import BalanceCard from '../components/dashboard/BalanceCard';
 import PracticeModeToggle from '../components/PracticeModeToggle';
+import BotLogs from '../components/BotLogs';
 
 import PlanGate from '../components/PlanGate';
 import { formatPlanName } from '../lib/utils';
@@ -455,6 +456,16 @@ export default function Main() {
                     onQuickScalp={handleQuickScalp}
                 />
             </div>
+
+            {/* Live Bot Logs */}
+            {botStatus?.is_running && (
+                <div className="mb-8">
+                    <BotLogs
+                        logs={Object.values(botStatus?.instances || {})[0]?.logs || []}
+                        isRunning={botStatus?.is_running}
+                    />
+                </div>
+            )}
 
             {/* Account Info Grid */}
             <div className="grid md:grid-cols-2 gap-6">
