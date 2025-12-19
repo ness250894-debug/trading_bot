@@ -9,7 +9,7 @@ export default function UltimateOptimization({
 }) {
     return (
         <div className="glass rounded-2xl overflow-hidden flex flex-col border border-purple-500/20 shadow-lg shadow-purple-900/10 mb-8">
-            <div className="p-6 border-b border-white/10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-gradient-to-r from-purple-900/20 to-transparent">
+            <div className="p-4 sm:p-6 border-b border-white/10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-gradient-to-r from-purple-900/20 to-transparent">
                 <div className="flex items-center gap-3">
                     <h3 className="font-semibold flex items-center gap-2 text-lg text-purple-100">
                         <Crown size={20} className="text-purple-400" />
@@ -99,14 +99,14 @@ export default function UltimateOptimization({
                     <table className="w-full text-sm text-left">
                         <thead className="bg-white/5 text-muted-foreground uppercase text-xs font-medium sticky top-0 backdrop-blur-md z-10">
                             <tr>
-                                <th className="px-6 py-4">Strategy</th>
-                                <th className="px-6 py-4">Symbol</th>
-                                <th className="px-6 py-4">Rank</th>
-                                <th className="px-6 py-4">Parameters</th>
-                                <th className="px-6 py-4 text-right">Return</th>
-                                <th className="px-6 py-4 text-right">Win Rate</th>
-                                <th className="px-6 py-4 text-right">Trades</th>
-                                <th className="px-6 py-4 text-center">Action</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4">Strategy</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4">Symbol</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4">Rank</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4">Parameters</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4 text-right">Return</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4 text-right">Win Rate</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4 text-right">Trades</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -122,16 +122,16 @@ export default function UltimateOptimization({
                             ) : (
                                 ultimateResults.sort((a, b) => b.return - a.return).map((res, i) => (
                                     <tr key={i} className="hover:bg-white/5 transition-colors group">
-                                        <td className="px-6 py-4 font-medium text-purple-200">
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 font-medium text-purple-200">
                                             {res.strategy}
                                         </td>
-                                        <td className="px-6 py-4 font-mono text-cyan-300 text-xs">
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 font-mono text-cyan-300 text-xs">
                                             {res.params?.symbol || res.symbol || symbol}
                                         </td>
-                                        <td className="px-6 py-4 font-mono text-muted-foreground">
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 font-mono text-muted-foreground">
                                             #{i + 1}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4">
                                             <div className="flex flex-wrap gap-2">
                                                 {Object.entries(res.params).map(([k, v]) => (
                                                     <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
@@ -140,16 +140,16 @@ export default function UltimateOptimization({
                                                 ))}
                                             </div>
                                         </td>
-                                        <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        <td className={`px-4 py-3 sm:px-6 sm:py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                             {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 text-right">
                                             {res.win_rate.toFixed(1)}%
                                         </td>
-                                        <td className="px-6 py-4 text-right text-muted-foreground font-mono">
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 text-right text-muted-foreground font-mono">
                                             {res.trades}
                                         </td>
-                                        <td className="px-6 py-4 text-center">
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 text-center">
                                             <div className="flex justify-center gap-2">
                                                 <button
                                                     onClick={() => {
