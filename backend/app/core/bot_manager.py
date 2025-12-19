@@ -127,6 +127,11 @@ class BotManager:
             
             self.instances[user_id][config_id] = instance
             logger.info(f"Started bot instance for user {user_id}, config {config_id} ({symbol})")
+            
+            # Start Notification Scheduler for this user
+            from .notification_scheduler import start_scheduler
+            start_scheduler(user_id)
+            
             return True
     
     
@@ -143,6 +148,8 @@ class BotManager:
             del self.instances[user_id][config_id]
             if not self.instances[user_id]:
                 del self.instances[user_id]
+                from .notification_scheduler import stop_scheduler
+                stop_scheduler(user_id)
             return True
         
         # Signal bot to stop
@@ -159,6 +166,8 @@ class BotManager:
         # Clean up user entry if no instances left
         if not self.instances[user_id]:
             del self.instances[user_id]
+            from .notification_scheduler import stop_scheduler
+            stop_scheduler(user_id)
         
         logger.info(f"Stopped bot instance for user {user_id}, config {config_id}")
         return True

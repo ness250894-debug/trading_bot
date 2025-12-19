@@ -264,262 +264,297 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     SUBSCRIPTION_CHECK_INTERVAL = 10  # Check every 10 loops (~5 minutes with 30s delay)
 
     # Main trading loop - simplified version
-    while True:
-        try:
-            if not running_event.is_set():
-                running_event.wait()
-                logger.info(f"▶️ User {user_id} bot resumed")
+    try:
+        while True:
+            try:
+                if not running_event.is_set():
+                    running_event.wait()
+                    logger.info(f"▶️ User {user_id} bot resumed")
 
             # Check circuit breaker
-            if circuit_breaker.is_open():
-                remaining = circuit_breaker.get_cooldown_remaining()
-                logger.warning(f"⚠️ Circuit breaker is {circuit_breaker.get_state()} - cooling down for {remaining:.0f}s")
-                time.sleep(min(30, remaining))  # Check every 30s or remaining time
-                continue
+                if circuit_breaker.is_open():
+                    remaining = circuit_breaker.get_cooldown_remaining()
+                    logger.warning(f"⚠️ Circuit breaker is {circuit_breaker.get_state()} - cooling down for {remaining:.0f}s")
+                    time.sleep(min(30, remaining))  # Check every 30s or remaining time
+                    continue
                 
-            # Determine required data points dynamically
-            required_limit = 100 # Default
-            for param_key, param_value in strategy_config.get('STRATEGY_PARAMS', {}).items():
-                if isinstance(param_value, (int, float)) and 'period' in param_key.lower():
-                    # If parameter is like 'rsi_period', we need at least that much history
-                    # Add buffer (e.g. 50 extra candles or 2x)
-                    needed = int(param_value) + 50
-                    if needed > required_limit:
-                        required_limit = needed
+                # Determine required data points dynamically
+                required_limit = 100 # Default
+                for param_key, param_value in strategy_config.get('STRATEGY_PARAMS', {}).items():
+                    if isinstance(param_value, (int, float)) and 'period' in param_key.lower():
+                        # If parameter is like 'rsi_period', we need at least that much history
+                        # Add buffer (e.g. 50 extra candles or 2x)
+                        needed = int(param_value) + 50
+                        if needed > required_limit:
+                            required_limit = needed
             
-            # Cap at safe maximum (e.g. 1000 for standard exchanges)
-            ohlcv_limit = min(required_limit, 1000)
+                # Cap at safe maximum (e.g. 1000 for standard exchanges)
+                ohlcv_limit = min(required_limit, 1000)
             
-            # Fetch market data with retry
-            @retry(max_attempts=3, delay=1, backoff=2)
-            def fetch_ohlcv_with_retry():
-                return client.fetch_ohlcv(symbol, timeframe, limit=ohlcv_limit)
+                # Fetch market data with retry
+                @retry(max_attempts=3, delay=1, backoff=2)
+                def fetch_ohlcv_with_retry():
+                    return client.fetch_ohlcv(symbol, timeframe, limit=ohlcv_limit)
                 
-            try:
-                df = fetch_ohlcv_with_retry()
-                circuit_breaker.record_success()  # Success, reset failures
-            except Exception as e:
-                logger.error(f"User {user_id} OHLCV fetch failed after retries: {e}")
-                circuit_breaker.record_failure()
-                time.sleep(config.LOOP_DELAY_SECONDS)
-                continue
-
-            # Get current position with retry
-            @retry(max_attempts=3, delay=1, backoff=2)
-            def fetch_position_with_retry():
-                return client.fetch_position(symbol)
-                
-            try:
-                position = fetch_position_with_retry()
-                position_size = position.get('size', 0.0)
-                logger.debug(f"User {user_id} Position: size={position_size}, side={position.get('side', 'N/A')}")
-                circuit_breaker.record_success()
-            except Exception as e:
-                logger.error(f"❌ User {user_id} position fetch failed after retries: {type(e).__name__}: {e}")
-                circuit_breaker.record_failure()
-                time.sleep(config.LOOP_DELAY_SECONDS)
-                continue
-
-            # Generate signal
-            try:
-                signal = strategy.generate_signal(df)
-                logger.debug(f"User {user_id} Signal Generated: {signal}")
-            except Exception as e:
-                logger.error(f"❌ User {user_id} signal generation failed: {type(e).__name__}: {e}")
-                time.sleep(config.LOOP_DELAY_SECONDS)
-                continue
-            
-            # --- Periodic Subscription Check ---
-            subscription_check_counter += 1
-            if subscription_check_counter >= SUBSCRIPTION_CHECK_INTERVAL:
-                subscription_check_counter = 0
-                
-                if not db.is_subscription_active(user_id):
-                    logger.warning(f"⚠️ User {user_id} subscription expired!")
-                    
-                    # Check if position is open
-                    if position_size > 0:
-                        logger.info(f"📤 Closing position gracefully for user {user_id} (subscription expired)")
-                        notifier.send_message(
-                            f"⚠️ *Subscription Expired*\n"
-                            f"Closing your open position gracefully.\n"
-                            f"Please renew to continue trading."
-                        )
-                        
-                        # Close position at market
-                        try:
-                            side = 'sell' if position.get('side') == 'Buy' else 'buy'
-                            close_order = client.create_order(
-                                symbol=symbol,
-                                type='market',
-                                side=side,
-                                amount=position_size
-                            )
-                            logger.info(f"✅ Position closed for user {user_id} due to subscription expiry")
-                            
-                            # Clear state
-                            db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
-                            
-                        except Exception as e:
-                            logger.error(f"❌ Failed to close position on subscription expiry: {e}")
-                            notifier.send_error(f"Failed to close position: {e}")
-                    
-                    # Send final notification and exit
-                    notifier.send_message(
-                        f"🛑 *Bot Stopped*\n"
-                        f"Your subscription has expired.\n"
-                        f"Please renew to resume trading."
-                    )
-                    
-                    logger.info(f"Bot stopped for user {user_id} - subscription expired")
-                    break  # Exit loop gracefully
-            # -----------------------------------
-
-            # Simple trading logic (enter/exit based on signal)
-            if position_size == 0 and signal in ['long', 'short']:
-                # Check subscription before opening new position
-                if not db.is_subscription_active(user_id):
-                    logger.warning(f"⚠️ User {user_id} subscription inactive - skipping new trade")
+                try:
+                    df = fetch_ohlcv_with_retry()
+                    circuit_breaker.record_success()  # Success, reset failures
+                except Exception as e:
+                    logger.error(f"User {user_id} OHLCV fetch failed after retries: {e}")
+                    circuit_breaker.record_failure()
                     time.sleep(config.LOOP_DELAY_SECONDS)
                     continue
 
-                # --- Risk Management Checks ---
-                risk_profile = db.get_risk_profile(user_id)
-                if risk_profile:
-                    # 1. Check Max Daily Loss
-                    if risk_profile.get('max_daily_loss'):
-                        daily_pnl = db.get_daily_pnl(user_id)
-                        limit = abs(float(risk_profile['max_daily_loss']))
-                        if daily_pnl <= -limit:
-                            logger.warning(f"⛔ Max Daily Loss breached for user {user_id}. PnL: {daily_pnl}, Limit: {limit}")
-                            notifier.send_message(f"⛔ *Risk Warning*: Daily Loss Limit Hit ({daily_pnl:.2f}). Trading paused.")
-                            
-                            if risk_profile.get('stop_trading_on_breach'):
-                                logger.info(f"Stopping bot for user {user_id} due to risk breach")
-                                running_event.clear()
-                                break # Exit loop
-                            
-                            time.sleep(config.LOOP_DELAY_SECONDS)
-                            continue # Skip trade
-                    
-                    # 2. Check Max Position Size
-                    if risk_profile.get('max_position_size'):
-                        max_size = float(risk_profile['max_position_size'])
-                        if amount_usdt > max_size:
-                            logger.warning(f"⛔ Max Position Size exceeded for user {user_id}. Amount: {amount_usdt}, Max: {max_size}")
-                            notifier.send_message(f"⚠️ Trade blocked: Amount ({amount_usdt}) exceeds limit ({max_size})")
-                            time.sleep(config.LOOP_DELAY_SECONDS)
-                            continue
-
-                    # 3. Check Max Open Positions
-                    if risk_profile.get('max_open_positions'):
-                        max_pos = int(risk_profile['max_open_positions'])
-                        try:
-                            # Dynamic import to avoid circular dependency
-                            from .bot_manager import bot_manager
-                            bot_stats = bot_manager.get_status(user_id)
-                            
-                            open_positions = 0
-                            if bot_stats:
-                                if isinstance(bot_stats, dict) and 'is_running' not in bot_stats:
-                                    # Multi-instance dict: count instances with active trades
-                                    for s in bot_stats.values():
-                                        if s.get('active_trades', 0) > 0:
-                                            open_positions += 1
-                                elif bot_stats.get('active_trades', 0) > 0:
-                                    open_positions = 1
-                            
-                            # Note: We are currently at 0 (checked by position_size == 0)
-                            # So open_positions represents *other* bots. 
-                            # If we trade now, we will be open_positions + 1
-                            if open_positions >= max_pos:
-                                logger.warning(f"⛔ Max Open Positions reached for user {user_id}. Current: {open_positions}, Max: {max_pos}")
-                                notifier.send_message(f"⚠️ Trade blocked: Max open positions reached ({max_pos})")
-                                time.sleep(config.LOOP_DELAY_SECONDS)
-                                continue
-                        except Exception as e:
-                            logger.error(f"Failed to check open positions: {e}")
-                # ------------------------------
-                    
-                # Open position
-                ticker = client.fetch_ticker(symbol)
-                current_price = ticker['last']
-                amount = amount_usdt / current_price
-                side = 'buy' if signal == 'long' else 'sell'
-                
+                # Get current position with retry
+                @retry(max_attempts=3, delay=1, backoff=2)
+                def fetch_position_with_retry():
+                    return client.fetch_position(symbol)
                 
                 try:
-                    order = client.create_order(symbol=symbol, type='market', side=side, amount=amount)
-                    
-                    # Verify Fill
-                    time.sleep(1) # Wait for fill
-                    exec_price = current_price
-                    if order and 'id' in order:
-                        fetched = client.fetch_order(order['id'], symbol)
-                        if fetched and fetched.get('average'):
-                            exec_price = fetched.get('average')
-                            logger.info(f"Verified Fill Price: {exec_price}")
-
-                    # Log trade to database
-                    trade_data = {
-                        'symbol': symbol,
-                        'side': side,
-                        'price': exec_price,
-                        'amount': amount,
-                        'type': 'OPEN',
-                        'pnl': 0.0,
-                        'strategy': strategy_name,
-                        'user_id': user_id
-                    }
-                    db.log_trade(trade_data)
-                    
-                    # Persist State
-                    db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(time.time()), active_order_id='NO_CHANGE')
-                    
-                    logger.info(f"✓ User {user_id}: {signal} entry at {exec_price}")
+                    position = fetch_position_with_retry()
+                    position_size = position.get('size', 0.0)
+                    logger.debug(f"User {user_id} Position: size={position_size}, side={position.get('side', 'N/A')}")
+                    circuit_breaker.record_success()
                 except Exception as e:
-                    logger.error(f"❌ User {user_id} order creation failed:")
-                    logger.error(f"   Symbol: {symbol}, Side: {side}, Amount: {amount:.6f}")
-                    logger.error(f"   Error: {type(e).__name__}: {str(e)}")
-                    import traceback
-                    logger.debug(f"   Stack: {traceback.format_exc()}")
+                    logger.error(f"❌ User {user_id} position fetch failed after retries: {type(e).__name__}: {e}")
+                    circuit_breaker.record_failure()
+                    time.sleep(config.LOOP_DELAY_SECONDS)
+                    continue
 
-            elif position_size > 0:
-                # Check exit (simplified - just on opposite signal)
-                position_side = position.get('side')
-                if (position_side == 'long' and signal == 'short') or (position_side == 'short' and signal == 'long'):
-                    ticker = client.fetch_ticker(symbol)
-                    side = 'sell' if position_side == 'long' else 'buy'
-                    try:
-                        client.create_order(symbol=symbol, type='market', side=side, amount=position_size)
-                        logger.info(f"✓ User {user_id}: Closed position")
+                # Generate signal
+                try:
+                    signal = strategy.generate_signal(df)
+                    logger.debug(f"User {user_id} Signal Generated: {signal}")
+                except Exception as e:
+                    logger.error(f"❌ User {user_id} signal generation failed: {type(e).__name__}: {e}")
+                    time.sleep(config.LOOP_DELAY_SECONDS)
+                    continue
+            
+                # --- Periodic Subscription Check ---
+                subscription_check_counter += 1
+                if subscription_check_counter >= SUBSCRIPTION_CHECK_INTERVAL:
+                    subscription_check_counter = 0
+                
+                    if not db.is_subscription_active(user_id):
+                        logger.warning(f"⚠️ User {user_id} subscription expired!")
+                    
+                        # Check if position is open
+                        if position_size > 0:
+                            logger.info(f"📤 Closing position gracefully for user {user_id} (subscription expired)")
+                            notifier.send_message(
+                                f"⚠️ *Subscription Expired*\n"
+                                f"Closing your open position gracefully.\n"
+                                f"Please renew to continue trading."
+                            )
                         
-                        # Fetch Realized PnL
-                        time.sleep(2)
-                        trades = client.fetch_my_trades(symbol, limit=1)
-                        if trades:
-                            last_trade = trades[0]
-                            # Note: This is a simplification. Real PnL might need matching open/close.
-                            # But for now, getting the fee is a good start.
-                            logger.info(f"Trade Info: {last_trade}")
+                            # Close position at market
+                            try:
+                                side = 'sell' if position.get('side') == 'Buy' else 'buy'
+                                close_order = client.create_order(
+                                    symbol=symbol,
+                                    type='market',
+                                    side=side,
+                                    amount=position_size
+                                )
+                                logger.info(f"✅ Position closed for user {user_id} due to subscription expiry")
                             
-                        # Clear State
-                        db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
-                        
+                                # Clear state
+                                db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
+                            
+                            except Exception as e:
+                                logger.error(f"❌ Failed to close position on subscription expiry: {e}")
+                                notifier.send_error(f"Failed to close position: {e}")
+                    
+                        # Send final notification and exit
+                        notifier.send_message(
+                            f"🛑 *Bot Stopped*\n"
+                            f"Your subscription has expired.\n"
+                            f"Please renew to resume trading."
+                        )
+                    
+                        logger.info(f"Bot stopped for user {user_id} - subscription expired")
+                        break  # Exit loop gracefully
+                # -----------------------------------
+
+                # Simple trading logic (enter/exit based on signal)
+                if position_size == 0 and signal in ['long', 'short']:
+                    # Check subscription before opening new position
+                    if not db.is_subscription_active(user_id):
+                        logger.warning(f"⚠️ User {user_id} subscription inactive - skipping new trade")
+                        time.sleep(config.LOOP_DELAY_SECONDS)
+                        continue
+
+                    # --- Risk Management Checks ---
+                    risk_profile = db.get_risk_profile(user_id)
+                    if risk_profile:
+                        # 1. Check Max Daily Loss
+                        if risk_profile.get('max_daily_loss'):
+                            daily_pnl = db.get_daily_pnl(user_id)
+                            limit = abs(float(risk_profile['max_daily_loss']))
+                            if daily_pnl <= -limit:
+                                logger.warning(f"⛔ Max Daily Loss breached for user {user_id}. PnL: {daily_pnl}, Limit: {limit}")
+                                notifier.send_message(f"⛔ *Risk Warning*: Daily Loss Limit Hit ({daily_pnl:.2f}). Trading paused.")
+                            
+                                if risk_profile.get('stop_trading_on_breach'):
+                                    logger.info(f"Stopping bot for user {user_id} due to risk breach")
+                                    running_event.clear()
+                                    break # Exit loop
+                            
+                                time.sleep(config.LOOP_DELAY_SECONDS)
+                                continue # Skip trade
+                    
+                        # 2. Check Max Position Size
+                        if risk_profile.get('max_position_size'):
+                            max_size = float(risk_profile['max_position_size'])
+                            if amount_usdt > max_size:
+                                logger.warning(f"⛔ Max Position Size exceeded for user {user_id}. Amount: {amount_usdt}, Max: {max_size}")
+                                notifier.send_message(f"⚠️ Trade blocked: Amount ({amount_usdt}) exceeds limit ({max_size})")
+                                time.sleep(config.LOOP_DELAY_SECONDS)
+                                continue
+
+                        # 3. Check Max Open Positions
+                        if risk_profile.get('max_open_positions'):
+                            max_pos = int(risk_profile['max_open_positions'])
+                            try:
+                                # Dynamic import to avoid circular dependency
+                                from .bot_manager import bot_manager
+                                bot_stats = bot_manager.get_status(user_id)
+                            
+                                open_positions = 0
+                                if bot_stats:
+                                    if isinstance(bot_stats, dict) and 'is_running' not in bot_stats:
+                                        # Multi-instance dict: count instances with active trades
+                                        for s in bot_stats.values():
+                                            if s.get('active_trades', 0) > 0:
+                                                open_positions += 1
+                                    elif bot_stats.get('active_trades', 0) > 0:
+                                        open_positions = 1
+                            
+                                # Note: We are currently at 0 (checked by position_size == 0)
+                                # So open_positions represents *other* bots. 
+                                # If we trade now, we will be open_positions + 1
+                                if open_positions >= max_pos:
+                                    logger.warning(f"⛔ Max Open Positions reached for user {user_id}. Current: {open_positions}, Max: {max_pos}")
+                                    notifier.send_message(f"⚠️ Trade blocked: Max open positions reached ({max_pos})")
+                                    time.sleep(config.LOOP_DELAY_SECONDS)
+                                    continue
+                            except Exception as e:
+                                logger.error(f"Failed to check open positions: {e}")
+                    # ------------------------------
+                    
+                    # Open position
+                    ticker = client.fetch_ticker(symbol)
+                    current_price = ticker['last']
+                    amount = amount_usdt / current_price
+                    side = 'buy' if signal == 'long' else 'sell'
+                
+                
+                    try:
+                        order = client.create_order(symbol=symbol, type='market', side=side, amount=amount)
+                    
+                        # Verify Fill
+                        time.sleep(1) # Wait for fill
+                        exec_price = current_price
+                        if order and 'id' in order:
+                            fetched = client.fetch_order(order['id'], symbol)
+                            if fetched and fetched.get('average'):
+                                exec_price = fetched.get('average')
+                                logger.info(f"Verified Fill Price: {exec_price}")
+
+                        # Log trade to database
+                        trade_data = {
+                            'symbol': symbol,
+                            'side': side,
+                            'price': exec_price,
+                            'amount': amount,
+                            'type': 'OPEN',
+                            'pnl': 0.0,
+                            'strategy': strategy_name,
+                            'user_id': user_id
+                        }
+                        db.log_trade(trade_data)
+                    
+                        # Send Notification
+                        notifier.send_trade_alert(trade_data)
+                    
+                        # Persist State
+                        db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(time.time()), active_order_id='NO_CHANGE')
+                    
+                        logger.info(f"✓ User {user_id}: {signal} entry at {exec_price}")
                     except Exception as e:
-                        logger.error(f"❌ User {user_id} position close failed:")
-                        logger.error(f"   Symbol: {symbol}, Side: {side}, Size: {position_size}")
+                        logger.error(f"❌ User {user_id} order creation failed:")
+                        logger.error(f"   Symbol: {symbol}, Side: {side}, Amount: {amount:.6f}")
                         logger.error(f"   Error: {type(e).__name__}: {str(e)}")
+                        import traceback
+                        logger.debug(f"   Stack: {traceback.format_exc()}")
 
-            time.sleep(config.LOOP_DELAY_SECONDS)
+                elif position_size > 0:
+                    # Check exit (simplified - just on opposite signal)
+                    position_side = position.get('side')
+                    if (position_side == 'long' and signal == 'short') or (position_side == 'short' and signal == 'long'):
+                        ticker = client.fetch_ticker(symbol)
+                        side = 'sell' if position_side == 'long' else 'buy'
+                        try:
+                            client.create_order(symbol=symbol, type='market', side=side, amount=position_size)
+                            logger.info(f"✓ User {user_id}: Closed position")
+                        
+                            # Fetch Realized PnL
+                            time.sleep(2)
+                            trades = client.fetch_my_trades(symbol, limit=1)
+                            if trades:
+                                last_trade = trades[0]
+                                # Note: This is a simplification. Real PnL might need matching open/close.
+                                # But for now, getting the fee is a good start.
+                                logger.info(f"Trade Info: {last_trade}")
+                            
+                            # Log trade to database
+                            trade_data = {
+                                'symbol': symbol,
+                                'side': side, # 'buy' or 'sell' (closing side)
+                                'price': current_price, # We might want fetched exec price if available
+                                'amount': position_size,
+                                'type': 'CLOSE',
+                                'pnl': 0.0, # Placeholder, should be calculated if possible
+                                'strategy': strategy_name,
+                                'user_id': user_id
+                            }
+                            # Try to get actual PnL from trades if available
+                            if trades and trades[0].get('pnl'):
+                                 trade_data['pnl'] = trades[0].get('pnl')
+                             
+                            db.log_trade(trade_data)
+                            notifier.send_trade_alert(trade_data)
+                            
+                            # Clear State
+                            db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
+                        
+                        except Exception as e:
+                            logger.error(f"❌ User {user_id} position close failed:")
+                            logger.error(f"   Symbol: {symbol}, Side: {side}, Size: {position_size}")
+                            logger.error(f"   Error: {type(e).__name__}: {str(e)}")
 
-        except KeyboardInterrupt:
-            break
-        except Exception as e:
-            logger.error(f"User {user_id} bot error: {e}")
-            time.sleep(10)
-    
-    logger.info(f"Bot instance for user {user_id} terminated")
+                time.sleep(config.LOOP_DELAY_SECONDS)
+
+
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                logger.error(f"User {user_id} bot error: {e}")
+                notifier.send_message(f"⚠️ *Bot Error*\n`{str(e)}`")
+                time.sleep(10)
+    except Exception as e:
+        logger.error(f"CRITICAL: User {user_id} bot crashed: {e}")
+        try:
+            notifier.send_error(f"Bot Crashed:\n{str(e)}")
+        except:
+            pass
+            
+    finally:
+        logger.info(f"Bot instance for user {user_id} terminated")
+        try:
+            notifier.send_message(f"🛑 *Bot Stopped for User {user_id}*")
+        except:
+            pass
 
 
 def main(user_id: int = 0):
