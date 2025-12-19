@@ -33,7 +33,10 @@ class BotInstance:
             "stopped_at": self.stopped_at.isoformat() if self.stopped_at else None,
             "strategy": self.strategy_config.get("STRATEGY", "unknown"),
             "symbol": self.strategy_config.get("SYMBOL", "unknown"),
-            "active_trades": self.runtime_state.get("active_trades", 0)
+            "active_trades": self.runtime_state.get("active_trades", 0),
+            "pnl": self.runtime_state.get("pnl", 0.0),
+            "roi": self.runtime_state.get("roi", 0.0),
+            "current_price": self.runtime_state.get("current_price", 0.0)
         }
 
 

@@ -825,6 +825,10 @@ def main(user_id: int = 0):
                 # Update Runtime State (Active Trades)
                 if runtime_state is not None:
                     runtime_state['active_trades'] = 1 if current_pos_size > 0 else 0
+                    if current_pos_size == 0:
+                        # Reset PnL if no position
+                        runtime_state['pnl'] = 0.0
+                        runtime_state['roi'] = 0.0
                 
                 # Execute Trading Logic
                 
@@ -847,6 +851,13 @@ def main(user_id: int = 0):
                         pnl_pct = (current_price - float(position.get('avgPrice', current_price))) / float(position.get('avgPrice', current_price))
                     else:
                         pnl_pct = (float(position.get('avgPrice', current_price)) - current_price) / float(position.get('avgPrice', current_price))
+                    
+                    # Update Runtime State with Live PnL
+                    unrealized_pnl = pnl_pct * amount_usdt
+                    if runtime_state is not None:
+                         runtime_state['pnl'] = unrealized_pnl
+                         runtime_state['roi'] = pnl_pct * 100
+                         runtime_state['current_price'] = current_price
                     
                     # Check against Smart ROI table
                     for time_threshold, target_roi in sorted(config.SMART_ROI.items()):
