@@ -496,9 +496,23 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     amount = amount_usdt / current_price
                     side = 'buy' if signal == 'long' else 'sell'
                 
+                    # --- TP/SL Logging ---
+                    entry_price_log = current_price
+                    tp_log = f"{entry_price_log * (1 + config.TAKE_PROFIT_PCT):.2f}" if config.TAKE_PROFIT_PCT and side == 'buy' else f"{entry_price_log * (1 - config.TAKE_PROFIT_PCT):.2f}" if config.TAKE_PROFIT_PCT else "N/A"
+                    sl_log = f"{entry_price_log * (1 - config.STOP_LOSS_PCT):.2f}" if config.STOP_LOSS_PCT and side == 'buy' else f"{entry_price_log * (1 + config.STOP_LOSS_PCT):.2f}" if config.STOP_LOSS_PCT else "N/A"
+                    logger.info(f"📝 Order Params | TP: {tp_log} ({config.TAKE_PROFIT_PCT*100}%) | SL: {sl_log} ({config.STOP_LOSS_PCT*100}%)")
+                    # ---------------------
+
                     logger.info(f"4. 🚀 [User {user_id}] Executing Order: {side.upper()} {amount:.6f} {symbol}")
                     try:
-                        order = client.create_order(symbol=symbol, order_type='market', side=side, amount=amount)
+                        order = client.create_order(
+                            symbol=symbol, 
+                            order_type='market', 
+                            side=side, 
+                            amount=amount,
+                            take_profit_pct=config.TAKE_PROFIT_PCT,
+                            stop_loss_pct=config.STOP_LOSS_PCT
+                        )
                     
                         # Verify Fill
                         time.sleep(1) # Wait for fill
@@ -580,6 +594,33 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                             logger.error(f"❌ User {user_id} position close failed:")
                             logger.error(f"   Symbol: {symbol}, Side: {side}, Size: {position_size}")
                             logger.error(f"   Error: {type(e).__name__}: {str(e)}")
+                            
+                    else:
+                        # --- PnL Heartbeat Log (Explicit "Everything" Request) ---
+                        # Log monitoring status every loop while position is open
+                        # Calculate current PnL
+                        entry_p = float(position.get('entry_price', current_price))
+                        if position_side == 'Buy':
+                            pnl_pct = (current_price - entry_p) / entry_p
+                        else:
+                            pnl_pct = (entry_p - current_price) / entry_p
+                        
+                        unrealized_pnl = pnl_pct * (amount_usdt if amount_usdt else (position_size * current_price / config.LEVERAGE))
+                        
+                        tp_price = entry_p * (1 + config.TAKE_PROFIT_PCT) if config.TAKE_PROFIT_PCT and position_side == 'Buy' else entry_p * (1 - config.TAKE_PROFIT_PCT) if config.TAKE_PROFIT_PCT else 0
+                        sl_price = entry_p * (1 - config.STOP_LOSS_PCT) if config.STOP_LOSS_PCT and position_side == 'Buy' else entry_p * (1 + config.STOP_LOSS_PCT) if config.STOP_LOSS_PCT else 0
+                        
+                        tp_str = f"${tp_price:.2f}" if tp_price else "N/A"
+                        sl_str = f"${sl_price:.2f}" if sl_price else "N/A"
+                        
+                        # Calculate duration if we have start time
+                        duration_str = "?"
+                        if position_start_time:
+                             dur = (time.time() - position_start_time) / 60
+                             duration_str = f"{dur:.1f}m"
+
+                        logger.info(f"5. 👁️ Monitoring | PnL: {pnl_pct*100:+.2f}% (${unrealized_pnl:+.2f}) | TP: {tp_str} | SL: {sl_str} | Dur: {duration_str}")
+                        # ---------------------------------------------------------
 
                 time.sleep(config.LOOP_DELAY_SECONDS)
 
