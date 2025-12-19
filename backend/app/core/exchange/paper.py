@@ -225,3 +225,20 @@ class PaperExchange(BaseExchangeClient):
             open_orders = [o for o in open_orders if o['symbol'] == symbol]
         return open_orders
 
+        return open_orders
+
+    def cancel_order(self, order_id, symbol=None):
+        """Cancels a virtual order."""
+        order = self.orders.get(order_id)
+        if order:
+            if order['status'] == 'open':
+                order['status'] = 'canceled'
+                self.orders[order_id] = order
+                logger.info(f"PAPER: Order {order_id} canceled")
+                return True
+            else:
+                logger.warning(f"PAPER: Cannot cancel order {order_id} with status {order['status']}")
+                return False
+        else:
+            logger.warning(f"PAPER: Order {order_id} not found for cancellation")
+            return False

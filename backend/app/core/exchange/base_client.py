@@ -261,6 +261,20 @@ class BaseExchangeClient(ABC):
         df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
         return df
     
+    @abstractmethod
+    def cancel_order(self, order_id: str, symbol: Optional[str] = None) -> bool:
+        """
+        Cancel an order.
+        
+        Args:
+            order_id: Order ID
+            symbol: Trading pair symbol (optional for some exchanges)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        pass
+    
     def set_trailing_stop(self, symbol: str, trailing_stop_dist: float) -> bool:
         """
         Set trailing stop for current position.

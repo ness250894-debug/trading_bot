@@ -255,3 +255,15 @@ class ByBitClient(BaseExchangeClient):
             self.logger.error(f"Error fetching trades for {symbol}: {e}")
             return []
 
+            self.logger.error(f"Error fetching trades for {symbol}: {e}")
+            return []
+
+    def cancel_order(self, order_id, symbol=None):
+        """
+        Cancels an order by ID.
+        """
+        try:
+            return self.exchange.cancel_order(order_id, symbol)
+        except Exception as e:
+            self.logger.error(f"Error cancelling order {order_id}: {e}")
+            return None

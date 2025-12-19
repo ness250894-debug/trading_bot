@@ -389,7 +389,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                                 side = 'sell' if position.get('side') == 'Buy' else 'buy'
                                 close_order = client.create_order(
                                     symbol=symbol,
-                                    type='market',
+                                    order_type='market',
                                     side=side,
                                     amount=position_size
                                 )
@@ -488,7 +488,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 
                     logger.info(f"4. 🚀 [User {user_id}] Executing Order: {side.upper()} {amount:.6f} {symbol}")
                     try:
-                        order = client.create_order(symbol=symbol, type='market', side=side, amount=amount)
+                        order = client.create_order(symbol=symbol, order_type='market', side=side, amount=amount)
                     
                         # Verify Fill
                         time.sleep(1) # Wait for fill
@@ -533,7 +533,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                         ticker = client.fetch_ticker(symbol)
                         side = 'sell' if position_side == 'long' else 'buy'
                         try:
-                            client.create_order(symbol=symbol, type='market', side=side, amount=position_size)
+                            client.create_order(symbol=symbol, order_type='market', side=side, amount=position_size)
                             logger.info(f"✓ User {user_id}: Closed position")
                         
                             # Fetch Realized PnL
@@ -881,9 +881,9 @@ def main(user_id: int = 0):
                     
                     # Calculate current unrealized PnL %
                     if current_pos_side == 'Buy':
-                        pnl_pct = (current_price - float(position.get('avgPrice', current_price))) / float(position.get('avgPrice', current_price))
+                        pnl_pct = (current_price - float(position.get('entry_price', current_price))) / float(position.get('entry_price', current_price))
                     else:
-                        pnl_pct = (float(position.get('avgPrice', current_price)) - current_price) / float(position.get('avgPrice', current_price))
+                        pnl_pct = (float(position.get('entry_price', current_price)) - current_price) / float(position.get('entry_price', current_price))
                     
                     # Update Runtime State with Live PnL
                     unrealized_pnl = pnl_pct * amount_usdt
@@ -920,7 +920,7 @@ def main(user_id: int = 0):
                         strategy.highest_price = current_price
                     
                     # Check Activation
-                    entry_price = float(position.get('avgPrice', current_price))
+                    entry_price = float(position.get('entry_price', current_price))
                     if strategy.highest_price >= entry_price * (1 + config.TRAILING_STOP_ACTIVATION_PCT):
                         # Check Trailing Stop
                         stop_price = strategy.highest_price * (1 - config.TRAILING_STOP_PCT)
@@ -935,7 +935,7 @@ def main(user_id: int = 0):
                         strategy.lowest_price = current_price
                     
                     # Check Activation
-                    entry_price = float(position.get('avgPrice', current_price))
+                    entry_price = float(position.get('entry_price', current_price))
                     if strategy.lowest_price <= entry_price * (1 - config.TRAILING_STOP_ACTIVATION_PCT):
                         # Check Trailing Stop
                         stop_price = strategy.lowest_price * (1 + config.TRAILING_STOP_PCT)
