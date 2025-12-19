@@ -630,6 +630,12 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                              duration_str = f"{dur:.1f}m"
 
                         logger.info(f"5. 👁️ Monitoring | PnL: {pnl_pct*100:+.2f}% (${unrealized_pnl:+.2f}) | TP: {tp_str} | SL: {sl_str} | Dur: {duration_str}")
+                        
+                        # Update Runtime State for API/UI
+                        if runtime_state is not None:
+                            runtime_state['pnl'] = unrealized_pnl
+                            runtime_state['roi'] = pnl_pct * 100
+                            runtime_state['current_price'] = current_price
                         # ---------------------------------------------------------
 
                 time.sleep(config.LOOP_DELAY_SECONDS)
