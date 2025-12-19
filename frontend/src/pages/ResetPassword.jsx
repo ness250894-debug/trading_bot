@@ -40,7 +40,7 @@ export default function ResetPassword() {
                 new_password: password
             });
             setStatus('success');
-            setTimeout(() => navigate('/login'), 3000);
+            setTimeout(() => navigate('/'), 3000);
         } catch (err) {
             setStatus('error');
             setErrorMessage(err.response?.data?.detail || "Failed to reset password. Token may check expired.");

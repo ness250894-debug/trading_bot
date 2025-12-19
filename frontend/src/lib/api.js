@@ -54,8 +54,7 @@ api.interceptors.response.use(
             if (!isAuthEndpoint && !originalRequest._retry) {
                 // Clear token and redirect to login for protected routes
                 localStorage.removeItem('token');
-                if (window.location.pathname !== '/login' &&
-                    window.location.pathname !== '/signup' &&
+                if (window.location.pathname !== '/signup' &&
                     window.location.pathname !== '/') {
                     window.location.href = '/';
                 }

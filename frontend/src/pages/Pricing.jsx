@@ -27,10 +27,16 @@ export default function Pricing() {
 
     const fetchData = async () => {
         try {
-            const [plansRes, statusRes] = await Promise.allSettled([
-                api.get('/billing/plans'),
-                api.get('/billing/status')
-            ]);
+            const token = localStorage.getItem('token');
+            const promises = [api.get('/billing/plans')];
+
+            if (token) {
+                promises.push(api.get('/billing/status'));
+            }
+
+            const results = await Promise.allSettled(promises);
+            const plansRes = results[0];
+            const statusRes = token ? results[1] : null;
 
             if (plansRes.status === 'fulfilled' && plansRes.value?.data) {
                 processPlans(plansRes.value.data);
