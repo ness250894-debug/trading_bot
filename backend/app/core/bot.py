@@ -263,6 +263,11 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     subscription_check_counter = 0
     SUBSCRIPTION_CHECK_INTERVAL = 10  # Check every 10 loops (~5 minutes with 30s delay)
 
+    # Smart Error Handling Initializers
+    error_count = 0
+    last_error_time = 0
+    MAX_RETRIES_BEFORE_ALERT = 2
+    
     # Main trading loop - simplified version
     try:
         while True:
@@ -539,9 +544,40 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
             except KeyboardInterrupt:
                 break
             except Exception as e:
-                logger.error(f"User {user_id} bot error: {e}")
-                notifier.send_message(f"⚠️ *Bot Error*\n`{str(e)}`")
-                time.sleep(10)
+                # --- Smart Error Handling ---
+                current_time = time.time()
+                error_count += 1
+                
+                # Check for Fatal Code Errors (Stop immediately to prevent infinite spam)
+                if isinstance(e, (NameError, SyntaxError, TypeError, AttributeError, ImportError)):
+                    logger.critical(f"❌ FATAL ERROR for User {user_id}: {type(e).__name__}: {e}")
+                    notifier.send_error(f"🛑 *Fatal Bot Error*\nUser: {user_id}\nType: `{type(e).__name__}`\nError: `{str(e)}`\n\nBot has been stopped to prevent spam.")
+                    running_event.clear()
+                    break
+
+                # Calculate Backoff (Exponential: 10s, 20s, 40s... max 300s)
+                backoff_delay = min(300, 10 * (2 ** (error_count - 1)))
+                
+                logger.error(f"User {user_id} bot error (Count: {error_count}): {e}")
+                
+                # Notification Suppression Logic
+                should_notify = False
+                if error_count == 1:
+                    should_notify = True # Notify on first error
+                elif error_count % 5 == 0:
+                     should_notify = True # Persisting error reminder every 5th time
+                
+                if should_notify:
+                    notifier.send_message(f"⚠️ *Bot Error (x{error_count})*\n`{str(e)[:200]}`\nWaiting {backoff_delay}s...")
+                
+                # Reset error count if last error was long ago (e.g. > 10 mins)
+                # This treats it as a "fresh" error if the bot has been stable.
+                if current_time - last_error_time > 600:
+                    error_count = 1 
+                
+                last_error_time = current_time
+                time.sleep(backoff_delay)
+                # ----------------------------
     except Exception as e:
         logger.error(f"CRITICAL: User {user_id} bot crashed: {e}")
         try:
@@ -618,8 +654,18 @@ def main(user_id: int = 0):
     # Track position duration
     position_start_time = None
     
+    # Initialize runtime state
+    runtime_state = {'active_trades': 0}
+    
     # Track Open Orders (Limit Order Management)
     open_order = None # {'id': '...', 'time': 1234567890, 'side': 'Buy', 'type': 'limit'}
+
+    # Initialize running event
+    import threading
+    running_event = threading.Event()
+    running_event.set()
+    
+    runtime_state = {'active_trades': 0}
 
     while True:
         try:
@@ -1097,7 +1143,7 @@ def main(user_id: int = 0):
             import traceback
             error_details = {
                 'user_id': user_id,
-                'symbol': symbol,
+                'symbol': config.SYMBOL,
                 'strategy': strategy_name,
                 'position_size': position.get('size', 'unknown') if 'position' in locals() else 'unknown',
                 'signal': signal if 'signal' in locals() else 'unknown',
