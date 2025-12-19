@@ -315,6 +315,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     time.sleep(config.LOOP_DELAY_SECONDS)
                     continue
 
+                # Get current price from latest candle for consistent PnL calculation
+                current_price = df['close'].iloc[-1]
+                
                 # Get current position with retry
                 @retry(max_attempts=3, delay=1, backoff=2)
                 def fetch_position_with_retry():
@@ -543,6 +546,10 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                         db.update_bot_state(user_id, position_start_time=datetime.fromtimestamp(time.time()), active_order_id='NO_CHANGE')
                     
                         logger.info(f"✓ User {user_id}: {signal} entry at {exec_price}")
+                        
+                        # Update local state for duration tracking
+                        position_start_time = time.time()
+                        
                     except Exception as e:
                         logger.error(f"❌ User {user_id} order creation failed:")
                         logger.error(f"   Symbol: {symbol}, Side: {side}, Amount: {amount:.6f}")
@@ -589,6 +596,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                             
                             # Clear State
                             db.update_bot_state(user_id, position_start_time=None, active_order_id='NO_CHANGE')
+                            
+                            # Update local state
+                            position_start_time = None
                         
                         except Exception as e:
                             logger.error(f"❌ User {user_id} position close failed:")
