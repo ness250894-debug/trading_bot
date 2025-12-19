@@ -423,6 +423,16 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
 
                     # --- Risk Management Checks ---
                     logger.info(f"3. 🛡️ [User {user_id}] Running Risk Checks...")
+                    
+                    # --- Balance & Sizing Log ---
+                    try:
+                        balance_data = client.fetch_balance()
+                        total_balance = balance_data['total']['USDT'] if balance_data else 0.0
+                        logger.info(f"💰 Balance: ${total_balance:.2f} | Trade Amount: ${amount_usdt:.2f} ({(amount_usdt/total_balance)*100:.1f}% of total)")
+                    except Exception as e:
+                        logger.warning(f"Failed to log balance: {e}")
+                    # ----------------------------
+
                     risk_profile = db.get_risk_profile(user_id)
                     if risk_profile:
                         # 1. Check Max Daily Loss
@@ -873,6 +883,8 @@ def main(user_id: int = 0):
                         # We continue the loop but we must ensure we don't enter new trades.
                         # We can set signal to HOLD to prevent entry.
                         signal = 'HOLD'
+                    else:
+                        logger.info("✅ Edge Analysis Passed: Positive Expectancy")
                 # ------------------------------
                 
                 # --- Smart ROI Logic ---
@@ -910,6 +922,11 @@ def main(user_id: int = 0):
                         logger.info(f"⏰ Time-Based Exit Triggered! Duration: {duration_minutes:.1f}m, PnL: {pnl_pct*100:.2f}% (stagnant)")
                         signal = 'SELL' if current_pos_side == 'Buy' else 'BUY'
                         details['reason'] = 'Stagnant Position Timeout'
+                    
+                    # --- PnL Heartbeat Log (Explicit "Everything" Request) ---
+                    # Log monitoring status every loop while position is open
+                    logger.info(f"5. 👁️ Monitoring | PnL: {pnl_pct*100:+.2f}% (${unrealized_pnl:+.2f}) | Duration: {duration_minutes:.1f}m")
+                    # ---------------------------------------------------------
                     # -------------------------------------------
                 # -----------------------
 
@@ -997,11 +1014,17 @@ def main(user_id: int = 0):
                         order_type = getattr(config, 'ORDER_TYPE', 'market')
                         price = None
                         if order_type == 'limit':
-                            # Get Best Bid
                             ticker = client.fetch_ticker(config.SYMBOL)
                             price = ticker['bid']
                             logger.info(f"🎯 Placing LIMIT BUY at {price}")
                         
+                        # --- TP/SL Logging ---
+                        entry_price_log = price if price else current_price
+                        tp_log = f"{entry_price_log * (1 + config.TAKE_PROFIT_PCT):.2f}" if config.TAKE_PROFIT_PCT else "N/A"
+                        sl_log = f"{entry_price_log * (1 - config.STOP_LOSS_PCT):.2f}" if config.STOP_LOSS_PCT else "N/A"
+                        logger.info(f"📝 Order Params | TP: {tp_log} ({config.TAKE_PROFIT_PCT*100}%) | SL: {sl_log} ({config.STOP_LOSS_PCT*100}%)")
+                        # ---------------------
+
                         order = client.create_order(
                             symbol=config.SYMBOL,
                             side='Buy',
@@ -1110,10 +1133,16 @@ def main(user_id: int = 0):
                         order_type = getattr(config, 'ORDER_TYPE', 'market')
                         price = None
                         if order_type == 'limit':
-                            # Get Best Ask
                             ticker = client.fetch_ticker(config.SYMBOL)
                             price = ticker['ask']
                             logger.info(f"🎯 Placing LIMIT SELL at {price}")
+
+                        # --- TP/SL Logging ---
+                        entry_price_log = price if price else current_price
+                        tp_log = f"{entry_price_log * (1 - config.TAKE_PROFIT_PCT):.2f}" if config.TAKE_PROFIT_PCT else "N/A"
+                        sl_log = f"{entry_price_log * (1 + config.STOP_LOSS_PCT):.2f}" if config.STOP_LOSS_PCT else "N/A"
+                        logger.info(f"📝 Order Params | TP: {tp_log} ({config.TAKE_PROFIT_PCT*100}%) | SL: {sl_log} ({config.STOP_LOSS_PCT*100}%)")
+                        # ---------------------
 
                         order = client.create_order(
                             symbol=config.SYMBOL,
