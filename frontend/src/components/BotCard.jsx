@@ -66,6 +66,7 @@ export default function BotCard({
                 <div>Timeframe: <span className="text-foreground font-mono">{bot.timeframe || '-'}</span></div>
                 <div>Amount: <span className="text-foreground font-mono">${bot.amount_usdt?.toFixed(0) || '-'}</span></div>
                 <div>Leverage: <span className="text-foreground font-mono">{bot.leverage || 10}x</span></div>
+                <div>Exchange: <span className="text-foreground capitalize">{bot.exchange || 'Bybit'}</span></div>
                 <div>TP/SL:
                     <span className="text-green-400 font-mono">
                         {bot.take_profit_pct ? (bot.take_profit_pct * 100).toFixed(1) + '%' : '-'} / {bot.tp_price ? `${bot.tp_price.toFixed(2)} USDT` : '-'}

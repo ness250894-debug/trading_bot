@@ -300,6 +300,7 @@ export default function BotInstancesTable({
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Timeframe</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Leverage</th>
+                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Exchange</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">TP / SL</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
                                     <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Current PnL</th>
