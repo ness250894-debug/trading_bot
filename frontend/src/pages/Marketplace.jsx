@@ -81,7 +81,7 @@ export default function Marketplace() {
                 )}
 
                 {/* Leaderboard */}
-                <div className="glass rounded-2xl p-8">
+                <div className="glass rounded-2xl p-4 md:p-8">
                     <div className="flex items-center gap-3 mb-6">
                         <Trophy className="text-yellow-400" size={24} />
                         <h3 className="text-xl font-bold">Top Performers</h3>
@@ -89,8 +89,8 @@ export default function Marketplace() {
 
                     <div className="space-y-3">
                         {leaderboard.map((item) => (
-                            <div key={item.strategy_id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
-                                <div className="flex items-center gap-4 flex-1">
+                            <div key={item.strategy_id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4 sm:gap-0 bg-white/5 rounded-xl hover:bg-white/10 transition-all">
+                                <div className="flex items-center gap-4 w-full sm:flex-1">
                                     <span className={`text-2xl font-bold w-12 text-center ${getRankColor(item.rank)}`}>
                                         {getRankEmoji(item.rank)}
                                     </span>
@@ -100,7 +100,7 @@ export default function Marketplace() {
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-6">
+                                <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-4 sm:gap-6 border-t border-white/5 pt-4 sm:border-0 sm:pt-0">
                                     <div className="text-right">
                                         <div className={`font-bold ${item.total_pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                             ${item.total_pnl.toLocaleString()}
@@ -118,7 +118,7 @@ export default function Marketplace() {
                 </div>
 
                 {/* Filter Bar */}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     {[
                         { value: 'rating', label: 'Top Rated', icon: Star },
                         { value: 'pnl', label: 'Most Profitable', icon: TrendingUp },

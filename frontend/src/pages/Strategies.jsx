@@ -376,7 +376,7 @@ export default function Strategies() {
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                         Bot Management
@@ -396,7 +396,7 @@ export default function Strategies() {
 
             {suggestion && (
                 <div className="glass p-6 rounded-xl border-l-4 border-l-blue-500 animate-in slide-in-from-top-4 duration-500">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-blue-500/20 rounded-full text-blue-400">
                                 <TrendingUp size={24} />
@@ -408,9 +408,9 @@ export default function Strategies() {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
                             <button onClick={dismissSuggestion} className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors">Dismiss</button>
-                            <button onClick={applySuggestion} className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all shadow-lg shadow-blue-500/20">Apply</button>
+                            <button onClick={applySuggestion} className="flex-1 md:flex-none px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-all shadow-lg shadow-blue-500/20">Apply</button>
                         </div>
                     </div>
                     {/* Show suggestion details */}
@@ -447,12 +447,12 @@ export default function Strategies() {
             )}
 
             <div className="glass rounded-2xl overflow-hidden">
-                <div className="p-8 border-b border-white/5">
+                <div className="p-4 md:p-8 border-b border-white/5">
                     <h3 className="font-semibold text-lg text-foreground">Global Configuration</h3>
                     <p className="text-sm text-muted-foreground mt-1">These settings apply to the live trading bot.</p>
                 </div>
 
-                <div className="p-8 space-y-8">
+                <div className="p-4 md:p-8 space-y-8">
                     {/* Exchange Selection */}
                     <div className="space-y-3">
                         <div className="flex items-center gap-2">
@@ -514,7 +514,7 @@ export default function Strategies() {
                     <div className="space-y-4 p-6 bg-white/5 rounded-xl border border-white/5">
                         <div className="flex justify-between items-center mb-4">
                             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Risk Management</label>
-                            <div className="flex gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {riskPresets.map(preset => (
                                     <button
                                         key={preset.name}
@@ -567,7 +567,7 @@ export default function Strategies() {
                             <div className="flex justify-between items-center mb-4">
                                 <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Strategy Parameters</label>
                                 {currentPresets.length > 0 && (
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-wrap gap-2">
                                         {currentPresets.map(preset => (
                                             <button
                                                 key={preset.name}
@@ -599,7 +599,7 @@ export default function Strategies() {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         <div className="space-y-3">
                             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Trading Symbol</label>
                             {customSymbol ? (
