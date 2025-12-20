@@ -262,11 +262,23 @@ async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(
         # Get PnL from database for this user
         total_pnl = db.get_total_pnl(user_id=current_user['id'])
         
+        # Calculate Total Unrealized PnL from active instances
+        total_unrealized_pnl = 0.0
+        if bot_status:
+            if isinstance(bot_status, dict) and not bot_status.get('is_running'):
+                # Multi-instance dict
+                for inst in bot_status.values():
+                    total_unrealized_pnl += inst.get('pnl', 0.0)
+            else:
+                # Single instance
+                total_unrealized_pnl = bot_status.get('pnl', 0.0)
+
         return {
             "status": "Active" if is_running else "Stopped",
             "is_running": is_running,
             "balance": balance_info,
             "total_pnl": total_pnl,
+            "total_unrealized_pnl": total_unrealized_pnl,
             "active_trades": bot_status.get('active_trades', 0) if bot_status and isinstance(bot_status, dict) else 0,
             "instances": bot_status if bot_status and isinstance(bot_status, dict) else {},
             "config": strategy_config

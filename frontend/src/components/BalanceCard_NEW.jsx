@@ -8,6 +8,11 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
     // Practice balance - either from status or default to initial_balance config
     const practiceBalance = status?.practice_balance || status?.config?.initial_balance || 1000;
 
+    // Calculate Equity (Balance + Unrealized PnL)
+    const unrealizedPnl = status?.total_unrealized_pnl || 0;
+    const realEquity = realBalance + unrealizedPnl;
+    const practiceEquity = practiceBalance + (isPracticeMode ? unrealizedPnl : 0);
+
     return (
         <div className="glass p-8 rounded-2xl relative overflow-hidden group col-span-1">
 
@@ -54,20 +59,34 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                         {/* Real Exchange Balance */}
                         <div>
-                            <div className="text-sm text-muted-foreground mb-2">Balance (Exchange)</div>
+                            <div className="text-sm text-muted-foreground mb-2">Equity (Exchange)</div>
                             <div className="text-4xl font-bold text-foreground tracking-tight mb-1">
-                                ${realBalance.toFixed(2)}
+                                ${realEquity.toFixed(2)}
                             </div>
-                            <div className="text-xs text-muted-foreground">💰 Real money on Binance</div>
+                            <div className="flex items-center gap-2 text-xs">
+                                <span className="text-muted-foreground">💰 Real money</span>
+                                {unrealizedPnl !== 0 && !isPracticeMode && (
+                                    <span className={`${unrealizedPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        ({unrealizedPnl >= 0 ? '+' : ''}{unrealizedPnl.toFixed(2)} PnL)
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Practice Balance */}
                         <div>
-                            <div className="text-sm text-muted-foreground mb-2">Practice Balance</div>
+                            <div className="text-sm text-muted-foreground mb-2">Practice Equity</div>
                             <div className="text-4xl font-bold text-yellow-400 tracking-tight mb-1">
-                                ${practiceBalance.toFixed(2)}
+                                ${practiceEquity.toFixed(2)}
                             </div>
-                            <div className="text-xs text-yellow-400/70">⚠️ Not real money (for testing)</div>
+                            <div className="flex items-center gap-2 text-xs">
+                                <span className="text-yellow-400/70">⚠️ Practice</span>
+                                {unrealizedPnl !== 0 && isPracticeMode && (
+                                    <span className={`${unrealizedPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        ({unrealizedPnl >= 0 ? '+' : ''}{unrealizedPnl.toFixed(2)} PnL)
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
 

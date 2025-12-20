@@ -62,6 +62,12 @@ export default function BotRow({
                 </span>
             </td>
             <td className="px-6 py-4">
+                <div className="flex flex-col text-xs font-mono">
+                    <span className="text-green-400">TP: {bot.take_profit_pct ? (bot.take_profit_pct * 100).toFixed(1) + '%' : '-'}</span>
+                    <span className="text-red-400">SL: {bot.stop_loss_pct ? (bot.stop_loss_pct * 100).toFixed(1) + '%' : '-'}</span>
+                </div>
+            </td>
+            <td className="px-6 py-4">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${isRunning
                     ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                     : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'

@@ -65,6 +65,7 @@ export default function BotCard({
                 <div>Strategy: <span className="text-foreground capitalize">{(bot.strategy || 'Unknown').replace(/_/g, ' ')}</span></div>
                 <div>Timeframe: <span className="text-foreground font-mono">{bot.timeframe || '-'}</span></div>
                 <div>Amount: <span className="text-foreground font-mono">${bot.amount_usdt?.toFixed(0) || '-'}</span></div>
+                <div>TP/SL: <span className="text-green-400 font-mono">{bot.take_profit_pct ? (bot.take_profit_pct * 100).toFixed(1) + '%' : '-'}</span> / <span className="text-red-400 font-mono">{bot.stop_loss_pct ? (bot.stop_loss_pct * 100).toFixed(1) + '%' : '-'}</span></div>
                 <div>Trades: <span className="text-foreground font-mono">{bot.active_trades || 0}</span></div>
             </div>
 
