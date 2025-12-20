@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import PlanGate from '../components/PlanGate';
+import { useAppState } from '../hooks/useAppState';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import secureStorage from '../lib/secureStorage';
 
 // Hooks
 import useOptimization from '../hooks/useOptimization';
@@ -19,38 +22,17 @@ import {
 } from '../lib/constants/strategyConstants';
 
 export default function Optimization() {
-    const [strategy, setStrategy] = useState(() => localStorage.getItem('optimization_strategy') || 'SMA Crossover');
-    const [symbol, setSymbol] = useState(() => localStorage.getItem('optimization_symbol') || 'BTC/USDT');
+    const [strategy, setStrategy] = useAppState(STORAGE_KEYS.OPTIMIZATION_STRATEGY, 'SMA Crossover');
+    const [symbol, setSymbol] = useAppState(STORAGE_KEYS.OPTIMIZATION_SYMBOL, 'BTC/USDT');
     const [customSymbol, setCustomSymbol] = useState(false);
-    const [timeframe, setTimeframe] = useState(() => localStorage.getItem('optimization_timeframe') || '1m');
+    const [timeframe, setTimeframe] = useAppState(STORAGE_KEYS.OPTIMIZATION_TIMEFRAME, '1m');
     const [nTrials, setNTrials] = useState(50);
-    const [leverage, setLeverage] = useState(() => Number(localStorage.getItem('optimization_leverage')) || 10);
-    // Initial Ranges State
-    const [ranges, setRanges] = useState(() => {
-        const saved = localStorage.getItem('optimization_ranges');
-        if (saved) {
-            const parsed = JSON.parse(saved);
+    const [leverage, setLeverage] = useAppState(STORAGE_KEYS.OPTIMIZATION_LEVERAGE, 10);
 
-            if (!parsed || typeof parsed !== 'object') {
-                return {
-                    fast_period: { start: 5, end: 20, step: 5 },
-                    slow_period: { start: 30, end: 60, step: 10 }
-                };
-            }
-
-            // Quick validation for legacy keys
-            if (parsed.short_window || parsed.rsi_length) {
-                return {
-                    fast_period: { start: 5, end: 20, step: 5 },
-                    slow_period: { start: 30, end: 60, step: 10 }
-                };
-            }
-            return parsed;
-        }
-        return {
-            fast_period: { start: 5, end: 20, step: 5 },
-            slow_period: { start: 30, end: 60, step: 10 }
-        };
+    // Initial Ranges State with validation
+    const [ranges, setRanges] = useAppState(STORAGE_KEYS.OPTIMIZATION_RANGES, {
+        fast_period: { start: 5, end: 20, step: 5 },
+        slow_period: { start: 30, end: 60, step: 10 }
     });
 
     // Hooks
@@ -62,13 +44,6 @@ export default function Optimization() {
         progress: optimizationProgress,
         runOptimization
     } = useOptimization(strategy, symbol, timeframe, ranges, nTrials, leverage);
-
-    // Persistence Effects
-    useEffect(() => { localStorage.setItem('optimization_strategy', strategy); }, [strategy]);
-    useEffect(() => { localStorage.setItem('optimization_symbol', symbol); }, [symbol]);
-    useEffect(() => { localStorage.setItem('optimization_timeframe', timeframe); }, [timeframe]);
-    useEffect(() => { localStorage.setItem('optimization_leverage', leverage); }, [leverage]);
-    useEffect(() => { localStorage.setItem('optimization_ranges', JSON.stringify(ranges)); }, [ranges]);
 
     // Handlers
     const strategies = Object.keys(strategyInfo);
@@ -122,7 +97,7 @@ export default function Optimization() {
             leverage: leverage,
             params: params
         };
-        localStorage.setItem('backtest_params_suggestion', JSON.stringify(suggestion));
+        secureStorage.setAppState(STORAGE_KEYS.BACKTEST_PARAMS, suggestion);
         window.location.href = '/backtest';
     };
 
