@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
 import secureStorage from '../lib/secureStorage';
+import { z } from 'zod';
+import { signupSchema } from '../lib/validators';
 import { Lock, Mail, AlertCircle, UserPlus, User, Eye, EyeOff, Check, X } from 'lucide-react';
 
 
@@ -20,25 +22,33 @@ export default function Signup() {
         e.preventDefault();
         setError('');
 
-        // Validate passwords match
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
-            return;
-        }
-
         setLoading(true);
 
         try {
+            // Validate input with Zod
+            const validated = signupSchema.parse({
+                email: email.trim(),
+                password,
+                confirmPassword,
+                nickname: nickname.trim() || undefined,
+            });
+
+            // Proceed with API call if validation passes
             const response = await api.post('/auth/signup', {
-                email,
-                nickname: nickname || null,
-                password
+                email: validated.email,
+                nickname: validated.nickname || null,
+                password: validated.password
             });
 
             secureStorage.setToken(response.data.access_token);
             navigate('/main');
         } catch (err) {
-            setError(err.response?.data?.detail || 'Signup failed');
+            // Handle validation errors
+            if (err instanceof z.ZodError) {
+                setError(err.errors[0].message);
+            } else {
+                setError(err.response?.data?.detail || 'Signup failed');
+            }
         } finally {
             setLoading(false);
         }

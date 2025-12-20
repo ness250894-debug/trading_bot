@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../lib/api';
+import secureStorage from '../lib/secureStorage';
+import { z } from 'zod';
+import { loginSchema } from '../lib/validators';
 import { Lock, Mail, AlertCircle, X, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useModal } from './Modal';
@@ -94,15 +97,21 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
         setLoading(true);
 
         try {
+            // Validate input with Zod
+            const validated = loginSchema.parse({
+                email: email.trim(),
+                password,
+            });
+
             const formData = new FormData();
-            formData.append('username', email);
-            formData.append('password', password);
+            formData.append('username', validated.email);
+            formData.append('password', validated.password);
 
             const response = await api.post('/auth/login', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
-            localStorage.setItem('token', response.data.access_token);
+            secureStorage.setToken(response.data.access_token);
             onClose();
             if (onSuccess) {
                 onSuccess();
@@ -110,7 +119,12 @@ export default function LoginModal({ isOpen, onClose, onSwitchToSignup, onSucces
                 navigate('/main');
             }
         } catch (err) {
-            setError(err.response?.data?.detail || 'Invalid email or password. Please try again.');
+            // Handle validation errors
+            if (err instanceof z.ZodError) {
+                setError(err.errors[0].message);
+            } else {
+                setError(err.response?.data?.detail || 'Invalid email or password. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

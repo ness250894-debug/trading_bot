@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useStaticData } from '../lib/swr';
+import { z } from 'zod';
+import { apiKeySchema } from '../lib/validators';
 
 import {
     User, Key, Bell, Settings as SettingsIcon, Shield,
@@ -142,11 +144,20 @@ export default function Settings() {
     const handleSaveKeys = async (e) => {
         e.preventDefault();
         setLoading(true);
+
         try {
-            await api.post('/api-keys', {
+            // Validate input with Zod
+            const validated = apiKeySchema.parse({
                 exchange,
-                api_key: apiKey,
-                api_secret: apiSecret
+                apiKey: apiKey.trim(),
+                apiSecret: apiSecret.trim(),
+            });
+
+            // Proceed with API call if validation passes
+            await api.post('/api-keys', {
+                exchange: validated.exchange,
+                api_key: validated.apiKey,
+                api_secret: validated.apiSecret
             });
             toast.success('API keys saved successfully!');
             setApiKey('');
@@ -154,7 +165,12 @@ export default function Settings() {
             checkApiKeyStatus();
             await loadSavedApiKeys(); // Refresh the saved APIs table
         } catch (error) {
-            toast.error(error.response?.data?.detail || 'Failed to save API keys');
+            // Handle validation errors
+            if (error instanceof z.ZodError) {
+                toast.error(error.errors[0].message);
+            } else {
+                toast.error(error.response?.data?.detail || 'Failed to save API keys');
+            }
         } finally {
             setLoading(false);
         }
@@ -380,7 +396,7 @@ export default function Settings() {
                                                     try {
                                                         await api.delete('/auth/account');
                                                         toast.success('Account deleted');
-                                                        localStorage.removeItem('token');
+                                                        secureStorage.clearAll();
                                                         window.location.href = '/';
                                                     } catch (error) {
                                                         toast.error(error.response?.data?.detail || 'Failed to delete account');
