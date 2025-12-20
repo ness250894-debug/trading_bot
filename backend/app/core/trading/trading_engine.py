@@ -10,6 +10,8 @@ import threading
 
 from ..resilience import CircuitBreaker
 from .. import config
+from ..socket_manager import socket_manager
+import asyncio
 
 from .strategy_factory import create_strategy
 from .market_data import MarketDataFetcher
@@ -239,6 +241,21 @@ class TradingEngine:
                 # 3. Generate signal
                 signal, score, details, log_msg = self.signal_gen.generate_and_parse_signal(df, self.strategy_params)
                 
+                # Emit Signal
+                asyncio.run_coroutine_threadsafe(
+                    socket_manager.broadcast({
+                        "type": "signal",
+                        "data": {
+                            "symbol": self.symbol,
+                            "signal": signal,
+                            "score": score,
+                            "price": current_price,
+                            "timestamp": time.time()
+                        }
+                    }, user_id=self.user_id),
+                    loop=asyncio.get_event_loop()
+                )
+                
                 # 4. Periodic subscription check
                 if self.sub_checker.should_check_now():
                     if not self.risk_mgr.check_subscription_active():
@@ -293,6 +310,21 @@ class TradingEngine:
         
         if success:
             self.position_mgr.update_state(position_start_time=time.time())
+            
+            # Emit Trade Event
+            asyncio.run_coroutine_threadsafe(
+                socket_manager.broadcast({
+                    "type": "trade",
+                    "data": {
+                        "symbol": self.symbol,
+                        "side": signal, # 'long' or 'short'
+                        "entry_price": entry_price,
+                        "amount": self.amount_usdt, # approx
+                        "timestamp": time.time()
+                    }
+                }, user_id=self.user_id),
+                loop=asyncio.get_event_loop()
+            )
     
     def _handle_open_position(self, position, signal, current_price):
         """Handle monitoring and potential exit of open position"""
@@ -304,6 +336,19 @@ class TradingEngine:
             success, pnl = self.order_exec.execute_exit_order(self.symbol, position, current_price, self.strategy_name)
             if success:
                 self.position_mgr.update_state(position_start_time=None)
+                # Emit Exit Event
+                asyncio.run_coroutine_threadsafe(
+                    socket_manager.broadcast({
+                        "type": "trade_closed",
+                        "data": {
+                            "symbol": self.symbol,
+                            "pnl": pnl, # approx
+                            "exit_price": current_price,
+                            "timestamp": time.time()
+                        }
+                    }, user_id=self.user_id),
+                    loop=asyncio.get_event_loop()
+                )
         else:
             # Monitor position
             unrealized_pnl, pnl_pct = self.position_mgr.calculate_unrealized_pnl(

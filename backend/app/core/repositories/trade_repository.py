@@ -45,7 +45,7 @@ class TradeRepository(BaseRepository):
         """Get recent trades for a user."""
         try:
             result = self.conn.execute(
-                "SELECT * FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?",
+                "SELECT id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?",
                 [user_id, limit]
             ).fetchall()
             
@@ -62,7 +62,7 @@ class TradeRepository(BaseRepository):
             user_id: Optional user_id to filter by
         """
         try:
-            query = "SELECT * FROM trades"
+            query = "SELECT id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp FROM trades"
             params = []
             
             if user_id is not None:

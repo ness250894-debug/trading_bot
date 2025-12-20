@@ -7,6 +7,7 @@ import asyncio
 import threading
 from .core import bot as trading_bot
 from .core.logging_utils import manager, AsyncWebSocketLogHandler
+from .core.socket_manager import socket_manager
 from .api import backtest, bot, trades, auth, api_keys, health, user, billing, exchanges
 from .core.rate_limit import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -92,6 +93,24 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+@app.websocket("/ws/dashboard/{user_id}")
+async def dashboard_websocket(websocket: WebSocket, user_id: int):
+    """
+    WebSocket for real-time dashboard updates (Bot Status, PnL).
+    Security: In production, validate JWT from query param `?token=...`.
+    For now, relying on path param, but this should be upgraded securely.
+    """
+    await socket_manager.connect(websocket, user_id)
+    try:
+        while True:
+            # Keep connection alive & handle incoming (if any)
+            # We might allow client to request immediate refresh?
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        socket_manager.disconnect(websocket, user_id)
 
 # API Routers
 app.include_router(backtest.router, prefix="/api")
