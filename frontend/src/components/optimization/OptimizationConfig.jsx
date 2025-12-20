@@ -11,7 +11,7 @@ export default function OptimizationConfig({
     presets, applyPreset,
     ranges, handleRangeChange,
     nTrials, setNTrials,
-    nTrials, setNTrials,
+
     leverage, setLeverage,
     runOptimization, isOptimizing, progress
 }) {

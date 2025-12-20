@@ -156,7 +156,6 @@ export default function Backtest() {
                 symbol: symbol,
                 timeframe: timeframe,
                 days: 5,
-                days: 5,
                 strategy: selectedStrategy.name,
                 leverage: leverage,
                 params: params
