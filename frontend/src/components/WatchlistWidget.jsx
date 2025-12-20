@@ -23,6 +23,7 @@ export default function WatchlistWidget() {
             setWatchlist(response.data.watchlist || []);
         } catch (error) {
             console.error('Failed to fetch watchlist:', error);
+            toast.error('Failed to load watchlist');
         } finally {
             setLoading(false);
         }
@@ -32,9 +33,18 @@ export default function WatchlistWidget() {
         e.preventDefault();
         if (!newSymbol) return;
 
+        const symbolToAdd = newSymbol.trim().toUpperCase();
+
+        // Check if already in watchlist
+        if (watchlist.some(item => item.symbol === symbolToAdd)) {
+            toast.error(`Symbol ${symbolToAdd} is already in your watchlist`);
+            setNewSymbol('');
+            return;
+        }
+
         setAdding(true);
         try {
-            await api.post('/watchlist', { symbol: newSymbol.toUpperCase() });
+            await api.post('/watchlist', { symbol: symbolToAdd });
             setNewSymbol('');
             fetchWatchlist();
             toast.success('Symbol added to watchlist');
