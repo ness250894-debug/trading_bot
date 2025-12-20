@@ -67,12 +67,11 @@ export default function BotCard({
                 <div>Amount: <span className="text-foreground font-mono">${bot.amount_usdt?.toFixed(0) || '-'}</span></div>
                 <div>TP/SL:
                     <span className="text-green-400 font-mono">
-                        {bot.take_profit_pct ? (bot.take_profit_pct * 100).toFixed(1) + '%' : '-'}
-                        {bot.tp_price ? ` ($${bot.tp_price.toFixed(2)})` : ''}
-                    </span> /{' '}
+                        {bot.take_profit_pct ? (bot.take_profit_pct * 100).toFixed(1) + '%' : '-'} / {bot.tp_price ? `${bot.tp_price.toFixed(2)} USDT` : '-'}
+                    </span>
+                    <span className="mx-2">|</span>
                     <span className="text-red-400 font-mono">
-                        {bot.stop_loss_pct ? (bot.stop_loss_pct * 100).toFixed(1) + '%' : '-'}
-                        {bot.sl_price ? ` ($${bot.sl_price.toFixed(2)})` : ''}
+                        {bot.stop_loss_pct ? (bot.stop_loss_pct * 100).toFixed(1) + '%' : '-'} / {bot.sl_price ? `${bot.sl_price.toFixed(2)} USDT` : '-'}
                     </span>
                 </div>
                 <div>Trades: <span className="text-foreground font-mono">{bot.active_trades || 0}</span></div>

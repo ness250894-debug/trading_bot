@@ -23,6 +23,7 @@ class ConfigUpdate(BaseModel):
     dry_run: bool
     take_profit_pct: float
     stop_loss_pct: float
+    leverage: float = 10.0
     parameters: Optional[Dict[str, Any]] = {}
     
     @validator('amount_usdt')
@@ -86,6 +87,7 @@ async def start_bot(request: Request, symbol: Optional[str] = None, config_id: O
             strategy_config['DRY_RUN'] = strategy_config['dry_run']
             strategy_config['TAKE_PROFIT_PCT'] = strategy_config['take_profit_pct']
             strategy_config['STOP_LOSS_PCT'] = strategy_config['stop_loss_pct']
+            strategy_config['LEVERAGE'] = strategy_config.get('leverage', 10.0)
             
         else:
             # Legacy fallback: Load user's strategy from old table or config.json
@@ -102,6 +104,7 @@ async def start_bot(request: Request, symbol: Optional[str] = None, config_id: O
                     "DRY_RUN": getattr(config, 'DRY_RUN', True),
                     "TAKE_PROFIT_PCT": config.TAKE_PROFIT_PCT,
                     "STOP_LOSS_PCT": config.STOP_LOSS_PCT,
+                    "LEVERAGE": getattr(config, 'LEVERAGE', 10.0),
                 }
             
         # Enforce Billing for Live Trading
@@ -224,7 +227,9 @@ async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(
                 "strategy": getattr(config, 'STRATEGY', 'mean_reversion'),
                 "dry_run": getattr(config, 'DRY_RUN', True),
                 "take_profit_pct": config.TAKE_PROFIT_PCT,
+                "take_profit_pct": config.TAKE_PROFIT_PCT,
                 "stop_loss_pct": config.STOP_LOSS_PCT,
+                "leverage": getattr(config, 'LEVERAGE', 10.0),
                 "parameters": getattr(config, 'STRATEGY_PARAMS', {})
             }
         else:
@@ -237,6 +242,7 @@ async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(
                 "dry_run": strategy_config.get('DRY_RUN', True),
                 "take_profit_pct": strategy_config.get('TAKE_PROFIT_PCT', 0.01),
                 "stop_loss_pct": strategy_config.get('STOP_LOSS_PCT', 0.005),
+                "leverage": strategy_config.get('LEVERAGE', 10.0),
                 "parameters": strategy_config.get('STRATEGY_PARAMS', {})
             }
         
@@ -314,7 +320,8 @@ async def update_config(request: Request, update: ConfigUpdate, current_user: di
             "STRATEGY_PARAMS": update.parameters,
             "DRY_RUN": update.dry_run,
             "TAKE_PROFIT_PCT": update.take_profit_pct,
-            "STOP_LOSS_PCT": update.stop_loss_pct
+            "STOP_LOSS_PCT": update.stop_loss_pct,
+            "LEVERAGE": update.leverage
         }
         
         # Enforce Free Plan Limits on Config Update
@@ -395,6 +402,7 @@ class BotConfigCreate(BaseModel):
     amount_usdt: float
     take_profit_pct: float
     stop_loss_pct: float
+    leverage: float = 10.0
     parameters: Optional[Dict[str, Any]] = {}
     dry_run: bool = True
     

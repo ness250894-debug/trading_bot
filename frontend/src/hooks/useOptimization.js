@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../components/ToastContext';
 
-export default function useOptimization(strategy, symbol, timeframe, ranges, nTrials) {
+export default function useOptimization(strategy, symbol, timeframe, ranges, nTrials, leverage) {
     const toast = useToast();
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(() => {
@@ -11,6 +11,12 @@ export default function useOptimization(strategy, symbol, timeframe, ranges, nTr
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [isOptimizing, setIsOptimizing] = useState(false);
     const [ws, setWs] = useState(null);
+
+    // Reset results when core params change
+    useEffect(() => {
+        setResults(null);
+        setProgress({ current: 0, total: 0 });
+    }, [strategy, symbol, timeframe, leverage]);
 
     // Save results to local storage
     useEffect(() => {
@@ -91,6 +97,7 @@ export default function useOptimization(strategy, symbol, timeframe, ranges, nTr
             timeframe: timeframe,
             days: 3,
             strategy: strategy,
+            leverage: leverage,
             param_ranges: param_ranges,
             n_trials: nTrials,
             token: localStorage.getItem('token')

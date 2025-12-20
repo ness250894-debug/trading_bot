@@ -24,6 +24,7 @@ export default function Optimization() {
     const [customSymbol, setCustomSymbol] = useState(false);
     const [timeframe, setTimeframe] = useState(() => localStorage.getItem('optimization_timeframe') || '1m');
     const [nTrials, setNTrials] = useState(50);
+    const [leverage, setLeverage] = useState(() => Number(localStorage.getItem('optimization_leverage')) || 10);
     // Initial Ranges State
     const [ranges, setRanges] = useState(() => {
         const saved = localStorage.getItem('optimization_ranges');
@@ -52,12 +53,13 @@ export default function Optimization() {
         isOptimizing,
         progress: optimizationProgress,
         runOptimization
-    } = useOptimization(strategy, symbol, timeframe, ranges, nTrials);
+    } = useOptimization(strategy, symbol, timeframe, ranges, nTrials, leverage);
 
     // Persistence Effects
     useEffect(() => { localStorage.setItem('optimization_strategy', strategy); }, [strategy]);
     useEffect(() => { localStorage.setItem('optimization_symbol', symbol); }, [symbol]);
     useEffect(() => { localStorage.setItem('optimization_timeframe', timeframe); }, [timeframe]);
+    useEffect(() => { localStorage.setItem('optimization_leverage', leverage); }, [leverage]);
     useEffect(() => { localStorage.setItem('optimization_ranges', JSON.stringify(ranges)); }, [ranges]);
 
     // Handlers
@@ -158,6 +160,8 @@ export default function Optimization() {
                     handleRangeChange={handleRangeChange}
                     nTrials={nTrials}
                     setNTrials={setNTrials}
+                    leverage={leverage}
+                    setLeverage={setLeverage}
                     runOptimization={runOptimization}
                     isOptimizing={isOptimizing}
                     progress={optimizationProgress}

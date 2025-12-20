@@ -3,7 +3,7 @@ import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
 import { Crown } from 'lucide-react';
 
-export default function useUltimateOptimization(ultimateSymbol, presets, strategyInfo, STRATEGY_PARAM_KEYS, subscription) {
+export default function useUltimateOptimization(ultimateSymbol, presets, strategyInfo, STRATEGY_PARAM_KEYS, subscription, leverage = 10) {
     const toast = useToast();
     const modal = useModal();
     const [isUltimateOptimizing, setIsUltimateOptimizing] = useState(false);
@@ -120,6 +120,7 @@ export default function useUltimateOptimization(ultimateSymbol, presets, strateg
                     timeframe: preset.timeframe || '1h',
                     days: 3,
                     param_ranges: taskRange,
+                    leverage: leverage,
                     n_trials: 30
                 });
             }

@@ -12,12 +12,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("VectorizedBacktester")
 
 # Improved VectorizedBacktester with proper tracking
+# Improved VectorizedBacktester with proper tracking
 class VectorizedBacktester:
-    def __init__(self, symbol, timeframe, strategy, days=5, data=None):
+    def __init__(self, symbol, timeframe, strategy, days=5, data=None, leverage=1.0):
         self.symbol = symbol
         self.timeframe = timeframe
         self.days = days
-        self.days = days
+        self.leverage = float(leverage)
         self.client = None
         if data is None:
             self.client = ExchangeClient(config.API_KEY, config.API_SECRET)
@@ -58,10 +59,6 @@ class VectorizedBacktester:
         self.df = self.strategy.populate_sell_trend(self.df)
         
         # 2. Prepare Numpy Arrays for Speed
-        # We drop NaNs to ensure alignment
-        # df_clean = self.df.dropna().reset_index(drop=True)
-        # Actually, let's keep NaNs but handle them, to preserve timestamps
-        
         opens = self.df['open'].to_numpy()
         highs = self.df['high'].to_numpy()
         lows = self.df['low'].to_numpy()
@@ -80,6 +77,10 @@ class VectorizedBacktester:
         entry_price = 0.0
         highest_price = 0.0 # For trailing stop
         
+        # Get TP/SL from strategy if available, else config
+        take_profit_pct = getattr(self.strategy, 'take_profit_pct', config.TAKE_PROFIT_PCT)
+        stop_loss_pct = getattr(self.strategy, 'stop_loss_pct', config.STOP_LOSS_PCT)
+        
         # 3. Vectorized Loop (Iterating index)
         # We start at i=1 because signals from i-1 execute at Open of i
         for i in range(1, n):
@@ -88,22 +89,27 @@ class VectorizedBacktester:
                 exit_reason = None
                 exit_price = 0.0
                 
+                # Liquidation Check (Approximation)
+                # Liq Price = Entry * (1 - 1/Leverage)
+                # If Margin Ratio is dangerous. 
+                liq_price = entry_price * (1 - (1.0 / self.leverage))
+                if lows[i] <= liq_price:
+                     exit_reason = 'Liquidation'
+                     exit_price = liq_price
+
                 # A. Signal Exit (from previous candle i-1)
-                if sell_signals[i-1] == 1:
+                elif sell_signals[i-1] == 1:
                     exit_reason = 'Signal'
                     exit_price = opens[i] # Execute at Open
                 
                 # B. Stop Loss / Take Profit (intra-candle check)
-                # We assume worst-case (hit SL first) or checked against High/Low
-                # Current Candle High/Low
-                elif lows[i] <= entry_price * (1 - config.STOP_LOSS_PCT):
+                elif lows[i] <= entry_price * (1 - stop_loss_pct):
                     exit_reason = 'Stop Loss'
-                    # Slippage simulation: realistic worst case execution
-                    exit_price = entry_price * (1 - config.STOP_LOSS_PCT)
+                    exit_price = entry_price * (1 - stop_loss_pct)
                 
-                elif highs[i] >= entry_price * (1 + config.TAKE_PROFIT_PCT):
+                elif highs[i] >= entry_price * (1 + take_profit_pct):
                     exit_reason = 'Take Profit'
-                    exit_price = entry_price * (1 + config.TAKE_PROFIT_PCT)
+                    exit_price = entry_price * (1 + take_profit_pct)
                 
                 # C. Trailing Stop
                 else:
@@ -120,26 +126,25 @@ class VectorizedBacktester:
 
                 # Execute Exit
                 if exit_reason:
-                    # Calculate PnL
-                    # Simulated Amount: 99% of balance
-                    # position_size = (balance * 0.99) / entry_price
-                    # We track balance continuously
-                    
-                    # Re-calculate position size based on balance at entry time?
-                    # Simplify: We held 'position_size' units
-                    
-                    value = self.position_size * exit_price
-                    fee = value * config.TAKER_FEE_PCT
-                    pnl = (exit_price - entry_price) * self.position_size
+                    # If liquidated, lose entire margin
+                    if exit_reason == 'Liquidation':
+                        pnl = - (self.balance * 0.99) # Lose the margin
+                        fee = 0 # Usually valid to assume lost margin covers fees or simplified
+                        exit_price = liq_price
+                    else:
+                        value = self.position_size * exit_price
+                        fee = value * config.TAKER_FEE_PCT
+                        pnl = (exit_price - entry_price) * self.position_size
                     
                     self.balance += float(pnl - fee)
                     
                     self.trades.append({
                         'pnl': float(pnl - fee),
                         'reason': str(exit_reason),
-                        'time': str(timestamps[i]), # Execution time as string
+                        'time': str(timestamps[i]),
                         'entry_price': float(entry_price),
-                        'exit_price': float(exit_price)
+                        'exit_price': float(exit_price),
+                        'leverage': self.leverage
                     })
                     
                     in_position = False
@@ -148,16 +153,25 @@ class VectorizedBacktester:
                     highest_price = 0.0
 
             # Check Entry (if not in position)
-            # Use 'elif' because we can't enter same candle we exited (simplification)
             elif not in_position:
                 if buy_signals[i-1] == 1:
                     # Execute BUY at Open of i
                     entry_price = opens[i]
-                    amount_usdt = self.balance * 0.99
-                    fee = amount_usdt * config.TAKER_FEE_PCT
                     
+                    # Margin Model: 
+                    # We invest 99% of available balance as Margin
+                    margin = self.balance * 0.99
+                    
+                    if margin <= 0: break # Bankrupt
+
+                    fee = (margin * self.leverage) * config.TAKER_FEE_PCT
+                    
+                    # Update Balance (deduct fee immediately? or from PnL? simpler to deduct fee from balance)
                     self.balance -= float(fee)
-                    self.position_size = amount_usdt / entry_price
+                    
+                    # Position Size (Total Value in Coins) = (Margin * Leverage) / Price
+                    self.position_size = (margin * self.leverage) / entry_price
+                    
                     highest_price = entry_price
                     in_position = True
 

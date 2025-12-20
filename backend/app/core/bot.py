@@ -100,6 +100,10 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     """
     logger.info(f"Starting bot instance for user {user_id} with strategy: {strategy_config.get('STRATEGY', 'unknown')}")
     
+    # --- Detailed Configuration Log ---
+    # Moved to after variable extraction to show EFFECTIVE values
+    # ----------------------------------
+    
     # Extract config values with defaults
     symbol = strategy_config.get('SYMBOL', 'BTC/USDT')
     timeframe = strategy_config.get('TIMEFRAME', '1m')
@@ -108,6 +112,43 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     strategy_params = strategy_config.get('STRATEGY_PARAMS', {})
     dry_run = strategy_config.get('DRY_RUN', True)
     exchange = strategy_config.get('EXCHANGE', 'bybit')
+    leverage = strategy_config.get('LEVERAGE', 10.0)
+    
+    # Strategy specific loop delays
+    STRATEGY_LOOP_DELAYS = {
+        'mean_reversion': 5, 
+        'momentum': 5, 
+        'sma_crossover': 30, 
+        'macd': 20,
+        'rsi': 10,
+        'bollinger_breakout': 5,
+        'dca_dip': 60,
+        'combined': 15
+    }
+    loop_delay = STRATEGY_LOOP_DELAYS.get(strategy_name, 30)
+    
+    # Extract TP/SL from strategy config (fallback to global config only if missing)
+    take_profit_pct = strategy_config.get('TAKE_PROFIT_PCT', getattr(config, 'TAKE_PROFIT_PCT', 0.01))
+    stop_loss_pct = strategy_config.get('STOP_LOSS_PCT', getattr(config, 'STOP_LOSS_PCT', 0.01))
+    
+    # --- Consolidated Effective Config Log ---
+    effective_config = {
+        "Symbol": symbol,
+        "Timeframe": timeframe,
+        "Strategy": strategy_name,
+        "Amount USDT": amount_usdt,
+        "Leverage": leverage,
+        "Exchange": exchange,
+        "Dry Run": dry_run,
+        "Take Profit": f"{take_profit_pct*100}%",
+        "Stop Loss": f"{stop_loss_pct*100}%",
+        "Strategy Params": strategy_params
+    }
+    
+    logger.info(f"📋 Effective Bot Configuration [User {user_id}]:")
+    for key, value in effective_config.items():
+        logger.info(f"   - {key}: {value}")
+    # -----------------------------------------
     
     # Load Persistent State
     position_start_time = strategy_config.get('position_start_time')
@@ -188,7 +229,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
         raise ConnectionError(f"Cannot connect to exchange: {e}")
     
     # Set Leverage
-    client.set_leverage(symbol, config.LEVERAGE)
+    client.set_leverage(symbol, leverage)
 
     # --- Startup State Reconciliation ---
     try:
@@ -312,7 +353,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 except Exception as e:
                     logger.error(f"User {user_id} OHLCV fetch failed after retries: {e}")
                     circuit_breaker.record_failure()
-                    time.sleep(config.LOOP_DELAY_SECONDS)
+                    time.sleep(loop_delay)
                     continue
 
                 # Get current price from latest candle for consistent PnL calculation
@@ -331,7 +372,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 except Exception as e:
                     logger.error(f"❌ User {user_id} position fetch failed after retries: {type(e).__name__}: {e}")
                     circuit_breaker.record_failure()
-                    time.sleep(config.LOOP_DELAY_SECONDS)
+                    time.sleep(loop_delay)
                     continue
 
                 # Generate signal
@@ -363,11 +404,16 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     if details_str:
                         log_msg += f" | {details_str}"
                     
+                    # Add current strategy params to log for full visibility
+                    if strategy_params:
+                        params_str = ", ".join([f"{k}={v}" for k, v in strategy_params.items()])
+                        log_msg += f" | Params: [{params_str}]"
+                    
                     logger.info(log_msg)
 
                 except Exception as e:
                     logger.error(f"❌ User {user_id} signal generation failed: {type(e).__name__}: {e}")
-                    time.sleep(config.LOOP_DELAY_SECONDS)
+                    time.sleep(loop_delay)
                     continue
             
                 # --- Periodic Subscription Check ---
@@ -421,7 +467,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                     # Check subscription before opening new position
                     if not db.is_subscription_active(user_id):
                         logger.warning(f"⚠️ User {user_id} subscription inactive - skipping new trade")
-                        time.sleep(config.LOOP_DELAY_SECONDS)
+                        time.sleep(loop_delay)
                         continue
 
                     # --- Risk Management Checks ---
@@ -451,7 +497,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                                     running_event.clear()
                                     break # Exit loop
                             
-                                time.sleep(config.LOOP_DELAY_SECONDS)
+                                time.sleep(loop_delay)
                                 continue # Skip trade
                     
                         # 2. Check Max Position Size
@@ -460,7 +506,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                             if amount_usdt > max_size:
                                 logger.warning(f"⛔ Max Position Size exceeded for user {user_id}. Amount: {amount_usdt}, Max: {max_size}")
                                 notifier.send_message(f"⚠️ Trade blocked: Amount ({amount_usdt}) exceeds limit ({max_size})")
-                                time.sleep(config.LOOP_DELAY_SECONDS)
+                                time.sleep(loop_delay)
                                 continue
 
                         # 3. Check Max Open Positions
@@ -487,7 +533,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                                 if open_positions >= max_pos:
                                     logger.warning(f"⛔ Max Open Positions reached for user {user_id}. Current: {open_positions}, Max: {max_pos}")
                                     notifier.send_message(f"⚠️ Trade blocked: Max open positions reached ({max_pos})")
-                                    time.sleep(config.LOOP_DELAY_SECONDS)
+                                    time.sleep(loop_delay)
                                     continue
                             except Exception as e:
                                 logger.error(f"Failed to check open positions: {e}")
@@ -501,9 +547,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                 
                     # --- TP/SL Logging ---
                     entry_price_log = current_price
-                    tp_log = f"{entry_price_log * (1 + config.TAKE_PROFIT_PCT):.2f}" if config.TAKE_PROFIT_PCT and side == 'buy' else f"{entry_price_log * (1 - config.TAKE_PROFIT_PCT):.2f}" if config.TAKE_PROFIT_PCT else "N/A"
-                    sl_log = f"{entry_price_log * (1 - config.STOP_LOSS_PCT):.2f}" if config.STOP_LOSS_PCT and side == 'buy' else f"{entry_price_log * (1 + config.STOP_LOSS_PCT):.2f}" if config.STOP_LOSS_PCT else "N/A"
-                    logger.info(f"📝 Order Params | TP: {tp_log} ({config.TAKE_PROFIT_PCT*100}%) | SL: {sl_log} ({config.STOP_LOSS_PCT*100}%)")
+                    tp_log = f"{entry_price_log * (1 + take_profit_pct):.2f}" if take_profit_pct and side == 'buy' else f"{entry_price_log * (1 - take_profit_pct):.2f}" if take_profit_pct else "N/A"
+                    sl_log = f"{entry_price_log * (1 - stop_loss_pct):.2f}" if stop_loss_pct and side == 'buy' else f"{entry_price_log * (1 + stop_loss_pct):.2f}" if stop_loss_pct else "N/A"
+                    logger.info(f"📝 Order Params | TP: {tp_log} ({take_profit_pct*100}%) | SL: {sl_log} ({stop_loss_pct*100}%)")
                     # ---------------------
 
                     logger.info(f"4. 🚀 [User {user_id}] Executing Order: {side.upper()} {amount:.6f} {symbol}")
@@ -513,8 +559,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                             order_type='market', 
                             side=side, 
                             amount=amount,
-                            take_profit_pct=config.TAKE_PROFIT_PCT,
-                            stop_loss_pct=config.STOP_LOSS_PCT
+                            amount=amount,
+                            take_profit_pct=take_profit_pct,
+                            stop_loss_pct=stop_loss_pct
                         )
                     
                         # Verify Fill
@@ -616,10 +663,10 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                         else:
                             pnl_pct = (entry_p - current_price) / entry_p
                         
-                        unrealized_pnl = pnl_pct * (amount_usdt if amount_usdt else (position_size * current_price / config.LEVERAGE))
+                        unrealized_pnl = pnl_pct * (amount_usdt if amount_usdt else (position_size * current_price / leverage))
                         
-                        tp_price = entry_p * (1 + config.TAKE_PROFIT_PCT) if config.TAKE_PROFIT_PCT and position_side == 'Buy' else entry_p * (1 - config.TAKE_PROFIT_PCT) if config.TAKE_PROFIT_PCT else 0
-                        sl_price = entry_p * (1 - config.STOP_LOSS_PCT) if config.STOP_LOSS_PCT and position_side == 'Buy' else entry_p * (1 + config.STOP_LOSS_PCT) if config.STOP_LOSS_PCT else 0
+                        tp_price = entry_p * (1 + take_profit_pct) if take_profit_pct and position_side == 'Buy' else entry_p * (1 - take_profit_pct) if take_profit_pct else 0
+                        sl_price = entry_p * (1 - stop_loss_pct) if stop_loss_pct and position_side == 'Buy' else entry_p * (1 + stop_loss_pct) if stop_loss_pct else 0
                         
                         tp_str = f"${tp_price:.2f}" if tp_price else "N/A"
                         sl_str = f"${sl_price:.2f}" if sl_price else "N/A"
@@ -845,7 +892,7 @@ def main(user_id: int = 0):
                             'type': 'OPEN',
                             'pnl': -fee,
                             'fee': fee,
-                            'leverage': config.LEVERAGE,
+                            'leverage': leverage,
                             'user_id': user_id
                         }
                         if user_id:
@@ -1056,7 +1103,7 @@ def main(user_id: int = 0):
                             'pnl': realized_pnl - fee, 
                             'strategy': strategy_name,
                             'fee': fee,
-                            'leverage': config.LEVERAGE
+                            'leverage': leverage
                         }
                         db.save_trade(trade_data, user_id=user_id)
                         
@@ -1132,7 +1179,7 @@ def main(user_id: int = 0):
                                 'pnl': -fee,
                                 'strategy': strategy_name,
                                 'fee': fee,
-                                'leverage': config.LEVERAGE
+                                'leverage': leverage
                             }
                             db.save_trade(trade_data, user_id=user_id)
                             
@@ -1175,7 +1222,7 @@ def main(user_id: int = 0):
                             'pnl': realized_pnl - fee, # Exchange PnL + Fee deduction
                             'strategy': strategy_name,
                             'fee': fee,
-                            'leverage': config.LEVERAGE
+                            'leverage': leverage
                         }
                         db.save_trade(trade_data, user_id=user_id)
                         
@@ -1250,7 +1297,7 @@ def main(user_id: int = 0):
                                 'pnl': -fee,
                                 'strategy': strategy_name,
                                 'fee': fee,
-                                'leverage': config.LEVERAGE
+                                'leverage': leverage
                             }
                             db.save_trade(trade_data, user_id=user_id)
                             

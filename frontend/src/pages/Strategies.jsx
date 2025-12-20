@@ -105,6 +105,7 @@ export default function Strategies() {
         amount_usdt: 100,
         take_profit_pct: 0.04,
         stop_loss_pct: 0.02,
+        leverage: 10,
         dry_run: isPracticeMode // Use the global setting here!
     };
 
@@ -298,6 +299,7 @@ export default function Strategies() {
                 dry_run: config.dry_run,
                 take_profit_pct: config.take_profit_pct,
                 stop_loss_pct: config.stop_loss_pct,
+                leverage: config.leverage,
                 parameters: config.parameters || {}
             };
 

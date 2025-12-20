@@ -5,7 +5,7 @@ import { formatLabel } from '../../lib/utils';
 export default function UltimateOptimization({
     ultimateSymbol, setUltimateSymbol, ultimateCustomSymbol, setUltimateCustomSymbol, POPULAR_SYMBOLS,
     isOptimizing, isUltimateOptimizing, runUltimateOptimization, clearUltimateResults, ultimateResults, progress, subscription,
-    applyToBacktest, symbol
+    applyToBacktest, symbol, leverage, setLeverage
 }) {
     return (
         <div className="glass rounded-2xl overflow-hidden flex flex-col border border-purple-500/20 shadow-lg shadow-purple-900/10 mb-8">
@@ -64,6 +64,21 @@ export default function UltimateOptimization({
                                 </div>
                             </div>
                         )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-purple-200">Leverage:</label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="1"
+                                max="125"
+                                value={leverage}
+                                onChange={(e) => setLeverage(Number(e.target.value))}
+                                className="bg-black/20 border border-purple-500/30 rounded-lg p-2 w-16 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm font-mono text-center"
+                            />
+                            <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">x</span>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">

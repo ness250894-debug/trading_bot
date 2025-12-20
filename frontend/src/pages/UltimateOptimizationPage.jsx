@@ -22,6 +22,7 @@ export default function UltimateOptimizationPage() {
     const [ultimateCustomSymbol, setUltimateCustomSymbol] = useState(false);
     const [subscription, setSubscription] = useState(null);
     const [symbol, setSymbol] = useState(() => localStorage.getItem('optimization_symbol') || 'BTC/USDT'); // Reuse symbol for consistency if needed, though ultimate has its own
+    const [leverage, setLeverage] = useState(() => Number(localStorage.getItem('ultimate_leverage')) || 10);
 
     // Fetch subscription
     useEffect(() => {
@@ -36,10 +37,11 @@ export default function UltimateOptimizationPage() {
         isUltimateOptimizing,
         runUltimateOptimization,
         progress: ultimateProgress
-    } = useUltimateOptimization(ultimateSymbol, presets, strategyInfo, STRATEGY_PARAM_KEYS, subscription);
+    } = useUltimateOptimization(ultimateSymbol, presets, strategyInfo, STRATEGY_PARAM_KEYS, subscription, leverage);
 
     // Persistence Effects
     useEffect(() => { localStorage.setItem('ultimate_optimization_symbol', ultimateSymbol); }, [ultimateSymbol]);
+    useEffect(() => { localStorage.setItem('ultimate_leverage', leverage); }, [leverage]);
 
     const applyToBacktest = (params, strategyOverride = null, timeframeOverride = null, symbolOverride = null) => {
         const suggestion = {
@@ -89,11 +91,9 @@ export default function UltimateOptimizationPage() {
                     progress={ultimateProgress}
                     subscription={subscription}
                     applyToBacktest={applyToBacktest}
-                    symbol={symbol} // Used for comparison or default? checking UltimateOptimization props usage. 
-                // It uses symbol and ultimateSymbol. passing symbol (Optimization page symbol) might be confusing if they differ.
-                // In Optimization.jsx, it passed 'symbol' from the main state.
-                // Inside UltimateOptimization, it compares symbol vs ultimateSymbol? 
-                // No, checking UltimateOptimization.jsx usage...
+                    symbol={symbol}
+                    leverage={leverage}
+                    setLeverage={setLeverage}
                 />
             </div>
         </PlanGate>

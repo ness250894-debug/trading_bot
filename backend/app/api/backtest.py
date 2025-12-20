@@ -25,6 +25,7 @@ class BacktestRequest(BaseModel):
     timeframe: str = "1m"
     days: int = 5
     strategy: str
+    leverage: float = 1.0
     params: Dict[str, Any] = {}
     
     @validator('days')
@@ -85,7 +86,7 @@ async def run_backtest(request: Request, backtest_data: BacktestRequest, current
              raise HTTPException(status_code=400, detail=f"Invalid parameters for {backtest_data.strategy}: {e}")
 
         # Run Backtest
-        bt = VectorizedBacktester(backtest_data.symbol, backtest_data.timeframe, strategy, days=backtest_data.days)
+        bt = VectorizedBacktester(backtest_data.symbol, backtest_data.timeframe, strategy, days=backtest_data.days, leverage=backtest_data.leverage)
         bt.fetch_data()
         
         if bt.df is None or bt.df.empty:
@@ -129,6 +130,7 @@ class OptimizeRequest(BaseModel):
     timeframe: str = "1m"
     days: int = 5
     strategy: str
+    leverage: float = 1.0
     param_ranges: Dict[str, List[Any]]
     n_trials: Optional[int] = 50
     
@@ -185,7 +187,7 @@ async def run_optimization(request: Request, optimize_data: OptimizeRequest, cur
         # Fetch Data Once
         # We use a dummy strategy instance just to fetch data using Backtester
         dummy_strategy = strategy_class()
-        bt = VectorizedBacktester(optimize_data.symbol, optimize_data.timeframe, dummy_strategy, days=optimize_data.days)
+        bt = VectorizedBacktester(optimize_data.symbol, optimize_data.timeframe, dummy_strategy, days=optimize_data.days, leverage=optimize_data.leverage)
         bt.fetch_data()
         
         if bt.df is None or bt.df.empty:
@@ -322,7 +324,8 @@ async def websocket_optimize(websocket: WebSocket):
 
                         # 2. Fetch Data
                         dummy_strategy = strategy_class()
-                        bt = VectorizedBacktester(req.symbol, req.timeframe, dummy_strategy, days=req.days)
+                        # Use default leverage 1.0 for ultimate optimization unless specified in task (OptimizeRequest has default 1.0)
+                        bt = VectorizedBacktester(req.symbol, req.timeframe, dummy_strategy, days=req.days, leverage=req.leverage)
                         bt.fetch_data()
                         
                         if bt.df is None or bt.df.empty:
@@ -401,7 +404,8 @@ async def websocket_optimize(websocket: WebSocket):
 
                 # Fetch Data Once
                 dummy_strategy = strategy_class()
-                bt = VectorizedBacktester(request.symbol, request.timeframe, dummy_strategy, days=request.days)
+                # Use request leverage
+                bt = VectorizedBacktester(request.symbol, request.timeframe, dummy_strategy, days=request.days, leverage=request.leverage)
                 bt.fetch_data()
                 
                 if bt.df is None or bt.df.empty:

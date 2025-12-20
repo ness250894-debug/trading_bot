@@ -11,6 +11,8 @@ export default function OptimizationConfig({
     presets, applyPreset,
     ranges, handleRangeChange,
     nTrials, setNTrials,
+    nTrials, setNTrials,
+    leverage, setLeverage,
     runOptimization, isOptimizing, progress
 }) {
     return (
@@ -78,6 +80,21 @@ export default function OptimizationConfig({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                 </svg>
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-foreground">Leverage:</label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="1"
+                                max="125"
+                                value={leverage}
+                                onChange={(e) => setLeverage(Number(e.target.value))}
+                                className="bg-black/20 border border-white/10 rounded-lg p-2 w-20 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm font-mono text-center"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">x</span>
                         </div>
                     </div>
 
