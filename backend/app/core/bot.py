@@ -564,6 +564,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                         ticker = client.fetch_ticker(symbol)
                         side = 'sell' if position_side == 'long' else 'buy'
                         try:
+                            logger.info(f"6. 📤 [User {user_id}] Closing Position: {side.upper()} {position_size} {symbol}")
                             client.create_order(symbol=symbol, order_type='market', side=side, amount=position_size)
                             logger.info(f"✓ User {user_id}: Closed position")
                         

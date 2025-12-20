@@ -14,12 +14,8 @@ db = DuckDBHandler()
 @limiter.limit("10/minute")
 async def get_trades(request: Request, limit: int = 50, current_user: dict = Depends(auth.get_current_user)):
     try:
-        df = db.get_trades(limit=limit, user_id=current_user['id'])
-        if df.empty:
-            return []
-        
-        # Convert to list of dicts
-        return df.to_dict(orient="records")
+        trades = db.get_trades(limit=limit, user_id=current_user['id'])
+        return trades
     except Exception as e:
         logger.error(f"Error fetching trades: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch trades")
