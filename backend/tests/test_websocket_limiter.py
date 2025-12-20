@@ -100,8 +100,7 @@ async def test_connection_rate_limit():
     """Test connection rate limiting"""
     limiter = WebSocketRateLimiter(
         max_connections_per_user=10,  # High limit to avoid concurrent limit
-        connection_rate_limit=3,       # Only 3 connections per hour
-        connection_rate_window=3600
+        connection_rate_limit=3        # Only 3 connections per hour
     )
     
     # First 3 connections should be allowed
