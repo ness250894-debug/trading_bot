@@ -311,7 +311,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     
     # Initialize subscription check counter
     subscription_check_counter = 0
-    SUBSCRIPTION_CHECK_INTERVAL = 10  # Check every 10 loops (~5 minutes with 30s delay)
+    # Target check every 5 minutes (300 seconds)
+    SUBSCRIPTION_CHECK_INTERVAL = max(1, int(300 / loop_delay))
+    logger.info(f"Subscription check interval: {SUBSCRIPTION_CHECK_INTERVAL} loops (~{SUBSCRIPTION_CHECK_INTERVAL * loop_delay}s)")
 
     # Smart Error Handling Initializers
     error_count = 0
@@ -689,7 +691,6 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
 
                         logger.info(f"5. 👁️ Monitoring | PnL: {pnl_pct*100:+.2f}% (${unrealized_pnl:+.2f}) | TP: {tp_str} | SL: {sl_str} | Dur: {duration_str}")
                         
-                        # Update Runtime State for API/UI
                         if runtime_state is not None:
                             runtime_state['pnl'] = unrealized_pnl
                             runtime_state['roi'] = pnl_pct * 100
@@ -698,7 +699,8 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                             runtime_state['sl_price'] = sl_price
                         # ---------------------------------------------------------
 
-                time.sleep(config.LOOP_DELAY_SECONDS)
+                logger.info(f"😴 Sleeping {loop_delay}s...")
+                time.sleep(loop_delay)
 
 
             except KeyboardInterrupt:
