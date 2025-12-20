@@ -41,12 +41,12 @@ class TradeRepository(BaseRepository):
             'strategy': 'manual'
         })
 
-    def get_trades(self, user_id, limit=50):
+    def get_trades(self, user_id, limit=50, offset=0):
         """Get recent trades for a user."""
         try:
             result = self.conn.execute(
-                "SELECT id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?",
-                [user_id, limit]
+                "SELECT id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+                [user_id, limit, offset]
             ).fetchall()
             
             return self.transform_trade_data(result)

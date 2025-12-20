@@ -139,8 +139,8 @@ class DuckDBHandler:
     def save_trade(self, user_id, symbol, side, amount, price, pnl=0):
         return self.trade_repo.save_trade(user_id, symbol, side, amount, price, pnl)
 
-    def get_trades(self, user_id, limit=50):
-        return self.trade_repo.get_trades(user_id, limit)
+    def get_trades(self, user_id, limit=50, offset=0):
+        return self.trade_repo.get_trades(user_id, limit, offset)
         
     def get_recent_trades(self, limit=10, user_id=None):
         return self.trade_repo.get_recent_trades(limit, user_id)
