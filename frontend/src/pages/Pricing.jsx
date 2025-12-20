@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api from '../lib/api';
+import secureStorage from '../lib/secureStorage';
 import { useStaticData } from '../lib/swr';
 import styles from './Pricing.module.css';
 import { CheckCircle, Zap, Shield, TrendingUp, Crown } from 'lucide-react';
@@ -27,7 +28,7 @@ export default function Pricing() {
 
     const fetchData = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = secureStorage.getToken();
             const promises = [api.get('/billing/plans')];
 
             if (token) {
@@ -106,7 +107,7 @@ export default function Pricing() {
     };
 
     const handleUpgrade = async (basePlanId) => {
-        const token = localStorage.getItem('token');
+        const token = secureStorage.getToken();
         if (!token) {
             openSignupModal();
             return;

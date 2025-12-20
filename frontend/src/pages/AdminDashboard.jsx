@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { Shield, Trash2, Edit, Check, X, Search, Users, CreditCard } from 'lucide-react';
-
+import secureStorage from '../lib/secureStorage';
 import { useModal } from '../components/Modal';
 import AdminPlans from '../components/AdminPlans';
-
 import { formatPlanName, formatLabel } from '../lib/utils';
 
 const AdminDashboard = () => {
@@ -29,7 +28,7 @@ const AdminDashboard = () => {
 
     const fetchCurrentUser = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = secureStorage.getToken();
             const response = await fetch('/api/auth/me', {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -46,7 +45,7 @@ const AdminDashboard = () => {
 
     const fetchUsers = async () => {
         try {
-            const token = localStorage.getItem('token');
+            const token = secureStorage.getToken();
 
             const response = await fetch('/api/admin/users', {
                 headers: {
@@ -74,7 +73,7 @@ const AdminDashboard = () => {
 
     const handleUpdateSubscription = async (userId, planId, status) => {
         try {
-            const token = localStorage.getItem('token');
+            const token = secureStorage.getToken();
             const response = await fetch(`/api/admin/users/${userId}/subscription`, {
                 method: 'PUT',
                 headers: {
@@ -105,7 +104,7 @@ const AdminDashboard = () => {
             type: 'danger',
             onConfirm: async () => {
                 try {
-                    const token = localStorage.getItem('token');
+                    const token = secureStorage.getToken();
                     const response = await fetch(`/api/admin/users/${userId}`, {
                         method: 'DELETE',
                         headers: {
@@ -133,7 +132,7 @@ const AdminDashboard = () => {
             type: 'warning',
             onConfirm: async () => {
                 try {
-                    const token = localStorage.getItem('token');
+                    const token = secureStorage.getToken();
                     const response = await fetch(`/api/admin/users/${userId}/make_admin`, {
                         method: 'POST',
                         headers: {
@@ -155,7 +154,7 @@ const AdminDashboard = () => {
 
     const handleUpdateNickname = async (userId, nickname) => {
         try {
-            const token = localStorage.getItem('token');
+            const token = secureStorage.getToken();
             const response = await fetch('/api/auth/update-profile', {
                 method: 'PUT',
                 headers: {

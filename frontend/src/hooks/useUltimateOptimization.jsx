@@ -2,20 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { useToast } from '../components/ToastContext';
 import { useModal } from '../components/Modal';
 import { Crown } from 'lucide-react';
+import secureStorage from '../lib/secureStorage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 export default function useUltimateOptimization(ultimateSymbol, presets, strategyInfo, STRATEGY_PARAM_KEYS, subscription, leverage = 10) {
     const toast = useToast();
     const modal = useModal();
     const [isUltimateOptimizing, setIsUltimateOptimizing] = useState(false);
     const [ultimateResults, setUltimateResults] = useState(() => {
-        const saved = localStorage.getItem('ultimate_optimization_results');
-        return saved ? JSON.parse(saved) : [];
+        const saved = secureStorage.getAppState(STORAGE_KEYS.ULTIMATE_RESULTS);
+        return saved || [];
     });
     const [progress, setProgress] = useState({ current: 0, total: 0 });
     const [ws, setWs] = useState(null);
 
     useEffect(() => {
-        localStorage.setItem('ultimate_optimization_results', JSON.stringify(ultimateResults));
+        secureStorage.setAppState(STORAGE_KEYS.ULTIMATE_RESULTS, ultimateResults);
     }, [ultimateResults]);
 
     useEffect(() => {
@@ -129,13 +131,13 @@ export default function useUltimateOptimization(ultimateSymbol, presets, strateg
         ws.send(JSON.stringify({
             type: "ultimate",
             tasks: tasks,
-            token: localStorage.getItem('token')
+            token: secureStorage.getToken()
         }));
     };
 
     const clearUltimateResults = () => {
         setUltimateResults([]);
-        localStorage.removeItem('ultimate_optimization_results');
+        secureStorage.clearAppState(STORAGE_KEYS.ULTIMATE_RESULTS);
     };
 
     return {
