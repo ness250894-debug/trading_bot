@@ -24,21 +24,21 @@ export default function BotRow({
 
     return (
         <tr className="hover:bg-white/5 transition-colors">
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 text-center">
                 <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={(e) => onSelect(uniqueId, e.target.checked)}
-                    className="w-4 h-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
+                    className="w-4 h-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer mx-auto"
                 />
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4">
                 <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${isRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
                     <span className="font-mono font-bold text-foreground">{bot.symbol}</span>
                 </div>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 text-center">
                 <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${bot.dry_run
                     ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
                     : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
@@ -46,38 +46,38 @@ export default function BotRow({
                     {bot.dry_run ? 'PRACTICE' : 'LIVE'}
                 </span>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4">
                 <span className="text-sm text-muted-foreground capitalize">
                     {(bot.strategy || 'Unknown').replace(/_/g, ' ')}
                 </span>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 text-center">
                 <span className="text-sm font-mono text-muted-foreground">
                     {bot.timeframe || '-'}
                 </span>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 text-right">
                 <span className="text-sm font-mono text-muted-foreground">
                     ${bot.amount_usdt?.toFixed(0) || '-'}
                 </span>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 text-center">
                 <span className="text-sm font-mono text-muted-foreground">
                     {bot.leverage || 10}x
                 </span>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4">
                 <span className="text-sm text-muted-foreground capitalize">
                     {bot.exchange || 'Bybit'}
                 </span>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4">
                 <div className="flex flex-col text-xs font-mono">
-                    <span className="text-green-400">TP: {bot.take_profit_pct ? (bot.take_profit_pct * 100).toFixed(1) + '%' : '-'} / {bot.tp_price ? `${bot.tp_price.toFixed(2)} USDT` : '-'}</span>
-                    <span className="text-red-400">SL: {bot.stop_loss_pct ? (bot.stop_loss_pct * 100).toFixed(1) + '%' : '-'} / {bot.sl_price ? `${bot.sl_price.toFixed(2)} USDT` : '-'}</span>
+                    <span className="text-green-400">TP: {bot.take_profit_pct ? (bot.take_profit_pct * 100).toFixed(1) + '%' : '-'} / {bot.tp_price ? `${bot.tp_price.toFixed(2)}` : '-'}</span>
+                    <span className="text-red-400">SL: {bot.stop_loss_pct ? (bot.stop_loss_pct * 100).toFixed(1) + '%' : '-'} / {bot.sl_price ? `${bot.sl_price.toFixed(2)}` : '-'}</span>
                 </div>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 text-center">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${isRunning
                     ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                     : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
@@ -85,12 +85,12 @@ export default function BotRow({
                     {isRunning ? 'Running' : 'Stopped'}
                 </span>
             </td>
-            <td className="px-6 py-4">
+            <td className="px-3 py-4 text-right">
                 <span className={`font-mono font-semibold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
                     {isPositive ? '+' : ''}{pnl.toFixed(2)} USDT
                 </span>
             </td>
-            <td className="px-6 py-4 text-right">
+            <td className="px-3 py-4 text-right">
                 <div className="flex items-center justify-end gap-2">
                     {/* Configure Button */}
                     <button

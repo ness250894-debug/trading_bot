@@ -286,25 +286,25 @@ export default function BotInstancesTable({
                         <table className="w-full">
                             <thead className="bg-white/5 sticky top-0 backdrop-blur-md z-10 border-b border-white/5">
                                 <tr>
-                                    <th className="px-6 py-4 text-left w-12">
+                                    <th className="px-3 py-4 text-center w-8">
                                         <input
                                             type="checkbox"
                                             checked={allSelected}
                                             onChange={(e) => handleSelectAll(e.target.checked)}
-                                            className="w-4 h-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
+                                            className="w-4 h-4 rounded border-white/20 bg-black/20 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer mx-auto"
                                         />
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Symbol</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Mode</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Strategy</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Timeframe</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Leverage</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Exchange</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">TP / SL</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Current PnL</th>
-                                    <th className="px-6 py-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                                    <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Symbol</th>
+                                    <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Mode</th>
+                                    <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Strategy</th>
+                                    <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Timeframe</th>
+                                    <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                                    <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Lev.</th>
+                                    <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Exchange</th>
+                                    <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">TP / SL</th>
+                                    <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                                    <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">PnL</th>
+                                    <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
