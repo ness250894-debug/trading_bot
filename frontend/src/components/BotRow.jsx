@@ -62,6 +62,11 @@ export default function BotRow({
                 </span>
             </td>
             <td className="px-6 py-4">
+                <span className="text-sm font-mono text-muted-foreground">
+                    {bot.leverage || 10}x
+                </span>
+            </td>
+            <td className="px-6 py-4">
                 <div className="flex flex-col text-xs font-mono">
                     <span className="text-green-400">TP: {bot.take_profit_pct ? (bot.take_profit_pct * 100).toFixed(1) + '%' : '-'} / {bot.tp_price ? `${bot.tp_price.toFixed(2)} USDT` : '-'}</span>
                     <span className="text-red-400">SL: {bot.stop_loss_pct ? (bot.stop_loss_pct * 100).toFixed(1) + '%' : '-'} / {bot.sl_price ? `${bot.sl_price.toFixed(2)} USDT` : '-'}</span>
