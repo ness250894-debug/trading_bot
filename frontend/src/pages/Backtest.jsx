@@ -4,7 +4,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Play, Loader2, Save, FolderOpen, Trash2, X } from 'lucide-react';
 import SliderInput from '../components/ui/SliderInput';
 import { useToast } from '../components/ToastContext';
-
+import { useAppState } from '../hooks/useAppState';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import secureStorage from '../lib/secureStorage';
 import PlanGate from '../components/PlanGate';
 import { formatLabel } from '../lib/utils';
 
@@ -28,18 +30,16 @@ export default function Backtest() {
     const [params, setParams] = useState(STRATEGIES[0].params);
     const [timeframe, setTimeframe] = useState('1m');
     const [leverage, setLeverage] = useState(1);
-    const [symbol, setSymbol] = useState(() => localStorage.getItem('backtest_symbol') || 'BTC/USDT');
+    const [symbol, setSymbol] = useAppState(STORAGE_KEYS.BACKTEST_SYMBOL, 'BTC/USDT');
     const [customSymbol, setCustomSymbol] = useState(false);
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(null);
 
     // Initial load from optimization suggestion
     useEffect(() => {
-        const suggestionStr = localStorage.getItem('backtest_params_suggestion');
-        if (suggestionStr) {
+        const suggestion = secureStorage.getAppState(STORAGE_KEYS.BACKTEST_PARAMS);
+        if (suggestion) {
             try {
-                const suggestion = JSON.parse(suggestionStr);
-
                 // Find matching strategy object
                 const matchedStrategy = STRATEGIES.find(s => s.name === suggestion.strategy);
                 if (matchedStrategy) {
@@ -65,17 +65,14 @@ export default function Backtest() {
                 }
 
                 // Clear to avoid reapplying on refresh
-                localStorage.removeItem('backtest_params_suggestion');
+                secureStorage.clearAppState(STORAGE_KEYS.BACKTEST_PARAMS);
             } catch (e) {
                 console.error("Failed to parse backtest suggestion", e);
             }
         }
     }, []);
 
-    // Persist symbol selection
-    useEffect(() => {
-        localStorage.setItem('backtest_symbol', symbol);
-    }, [symbol]);
+
 
     // Template state
     const [templates, setTemplates] = useState([]);
@@ -180,7 +177,7 @@ export default function Backtest() {
             symbol: symbol,
             params: { ...params, timeframe }, // Include timeframe in params for Strategy page to detect
         };
-        localStorage.setItem('suggested_strategy_params', JSON.stringify(suggestion));
+        secureStorage.setAppState(STORAGE_KEYS.SUGGESTED_STRATEGY_PARAMS, suggestion);
         window.location.href = '/strategies';
     };
 

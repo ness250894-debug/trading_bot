@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import PlanGate from '../components/PlanGate';
+import { useAppState } from '../hooks/useAppState';
+import { STORAGE_KEYS } from '../constants/storageKeys';
+import secureStorage from '../lib/secureStorage';
 
 // Hooks
 import useUltimateOptimization from '../hooks/useUltimateOptimization';
@@ -18,11 +21,11 @@ import {
 
 export default function UltimateOptimizationPage() {
     // Ultimate Optimization State
-    const [ultimateSymbol, setUltimateSymbol] = useState(() => localStorage.getItem('ultimate_optimization_symbol') || 'BTC/USDT');
+    const [ultimateSymbol, setUltimateSymbol] = useAppState(STORAGE_KEYS.ULTIMATE_SYMBOL, 'BTC/USDT');
     const [ultimateCustomSymbol, setUltimateCustomSymbol] = useState(false);
     const [subscription, setSubscription] = useState(null);
-    const [symbol, setSymbol] = useState(() => localStorage.getItem('optimization_symbol') || 'BTC/USDT'); // Reuse symbol for consistency if needed, though ultimate has its own
-    const [leverage, setLeverage] = useState(() => Number(localStorage.getItem('ultimate_leverage')) || 10);
+    const [symbol, setSymbol] = useAppState(STORAGE_KEYS.OPTIMIZATION_SYMBOL, 'BTC/USDT');
+    const [leverage, setLeverage] = useAppState(STORAGE_KEYS.ULTIMATE_LEVERAGE, 10);
 
     // Fetch subscription
     useEffect(() => {
@@ -39,10 +42,6 @@ export default function UltimateOptimizationPage() {
         progress: ultimateProgress
     } = useUltimateOptimization(ultimateSymbol, presets, strategyInfo, STRATEGY_PARAM_KEYS, subscription, leverage);
 
-    // Persistence Effects
-    useEffect(() => { localStorage.setItem('ultimate_optimization_symbol', ultimateSymbol); }, [ultimateSymbol]);
-    useEffect(() => { localStorage.setItem('ultimate_leverage', leverage); }, [leverage]);
-
     const applyToBacktest = (params, strategyOverride = null, timeframeOverride = null, symbolOverride = null) => {
         const suggestion = {
             strategy: strategyOverride, // Ultimate results always have a strategy override
@@ -51,7 +50,7 @@ export default function UltimateOptimizationPage() {
             leverage: leverage,
             params: params // Params is already the flat object passed from component
         };
-        localStorage.setItem('backtest_params_suggestion', JSON.stringify(suggestion));
+        secureStorage.setAppState(STORAGE_KEYS.BACKTEST_PARAMS, suggestion);
         window.location.href = '/backtest';
     };
 
