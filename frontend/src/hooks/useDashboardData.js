@@ -23,7 +23,7 @@ export const useDashboardData = () => {
             // Bot status includes PnL, so this updates it.
         }
         else if (message.type === 'signal') {
-            toast.info(`Signal: ${message.data.signal} @ $${message.data.price}`);
+            // toast.info(`Signal: ${message.data.signal} @ $${message.data.price}`);
         }
         else if (message.type === 'trade') {
             toast.success(`Trade Executed: ${message.data.side} ${message.data.symbol}`);

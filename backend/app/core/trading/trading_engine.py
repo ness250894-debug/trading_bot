@@ -242,8 +242,8 @@ class TradingEngine:
                 # 3. Generate signal
                 signal, score, details, log_msg = self.signal_gen.generate_and_parse_signal(df, self.strategy_params)
                 
-                # Emit Signal
-                if self.main_loop:
+                # Emit Signal (only if significant)
+                if self.main_loop and signal and signal.lower() not in ('hold', 'neutral', 'wait'):
                     asyncio.run_coroutine_threadsafe(
                         socket_manager.broadcast({
                             "type": "signal",
