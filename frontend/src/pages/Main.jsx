@@ -10,6 +10,7 @@ import PlanGate from '../components/PlanGate';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import SubscriptionCard from '../components/dashboard/SubscriptionCard';
 import NewsFeed from '../components/dashboard/NewsFeed';
+import TradingGoalsWidget from '../components/TradingGoalsWidget';
 
 import { useDashboardData } from '../hooks/useDashboardData';
 
@@ -132,6 +133,11 @@ export default function Main() {
                 <div className="h-[500px]">
                     <PriceAlertsWidget />
                 </div>
+            </div>
+
+            {/* Trading Goals */}
+            <div>
+                <TradingGoalsWidget />
             </div>
 
             {/* AI Sentiment & Analysis - Combined Widget */}

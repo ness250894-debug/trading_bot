@@ -165,7 +165,7 @@ class TradingEngine:
         self.market_data = MarketDataFetcher(self.client, self.symbol, self.timeframe)
         self.signal_gen = SignalGenerator(self.strategy, self.user_id)
         self.risk_mgr = RiskManager(self.db, self.notifier, self.user_id)
-        self.order_exec = OrderExecutor(self.client, self.db, self.notifier, self.user_id)
+        self.order_exec = OrderExecutor(self.client, self.db, self.notifier, self.user_id, is_mock=self.dry_run)
         self.position_mgr = PositionManager(self.user_id, self.db)
         self.sub_checker = SubscriptionChecker(self.db, self.notifier, self.user_id, self.loop_delay)
         self.circuit_breaker = CircuitBreaker(threshold=5, window=60, cooldown=300)
@@ -173,6 +173,11 @@ class TradingEngine:
         # Load persisted state and reconcile
         self.position_mgr.load_persisted_state(self.strategy_config)
         self.position_mgr.reconcile_on_startup(self.client, self.symbol)
+
+        # Initialize practice balance
+        if self.dry_run:
+            self.practice_balance = float(self.runtime_state.get('practice_balance', self.strategy_config.get('initial_balance', 1000.0)))
+            self.runtime_state['practice_balance'] = self.practice_balance
         
         logger.info(f"✓ User {self.user_id} bot initialized. Entering trading loop...")
     
@@ -348,11 +353,17 @@ class TradingEngine:
                                 "symbol": self.symbol,
                                 "pnl": pnl, # approx
                                 "exit_price": current_price,
-                                "timestamp": time.time()
+                                "timestamp": time.time(),
+                                "new_balance": self.practice_balance if self.dry_run else None
                             }
                         }, user_id=self.user_id),
                         loop=self.main_loop
                     )
+                
+                # Update practice balance if mock
+                if self.dry_run:
+                    self.practice_balance += pnl
+                    self.runtime_state['practice_balance'] = self.practice_balance
         else:
             # Monitor position
             unrealized_pnl, pnl_pct = self.position_mgr.calculate_unrealized_pnl(

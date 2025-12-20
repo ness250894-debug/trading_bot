@@ -7,9 +7,15 @@ class TradeRepository(BaseRepository):
     def log_trade(self, trade_data):
         """Log a trade execution."""
         try:
+            # Ensure table has is_mock column
+            try:
+                self.conn.execute("ALTER TABLE trades ADD COLUMN is_mock BOOLEAN DEFAULT FALSE")
+            except:
+                pass # Column likely exists
+
             query = """
-                INSERT INTO trades (id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp)
-                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO trades (id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp, is_mock)
+                VALUES (nextval('seq_trade_id'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             self.conn.execute(query, [
                 trade_data['user_id'],
@@ -20,7 +26,8 @@ class TradeRepository(BaseRepository):
                 trade_data['type'],
                 trade_data.get('pnl', 0.0),
                 trade_data.get('strategy', 'manual'),
-                datetime.now()
+                datetime.now(),
+                trade_data.get('is_mock', False)
             ])
             return True
         except Exception as e:
@@ -38,16 +45,24 @@ class TradeRepository(BaseRepository):
             'price': price,
             'pnl': pnl,
             'type': 'market', # Default for simplified save
-            'strategy': 'manual'
+            'strategy': 'manual',
+            'is_mock': True # Legacy save_trade is typically manual/practice
         })
 
-    def get_trades(self, user_id, limit=50, offset=0):
-        """Get recent trades for a user."""
+    def get_trades(self, user_id, limit=50, offset=0, is_mock=None):
+        """Get recent trades for a user, optionally filtered by mode."""
         try:
-            result = self.conn.execute(
-                "SELECT id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp FROM trades WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?",
-                [user_id, limit, offset]
-            ).fetchall()
+            sql = "SELECT id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp, is_mock FROM trades WHERE user_id = ?"
+            params = [user_id]
+
+            if is_mock is not None:
+                sql += " AND is_mock = ?"
+                params.append(is_mock)
+
+            sql += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+
+            result = self.conn.execute(sql, params).fetchall()
             
             return self.transform_trade_data(result)
         except Exception as e:

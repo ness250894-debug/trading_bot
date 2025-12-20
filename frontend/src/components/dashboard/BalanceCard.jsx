@@ -29,7 +29,8 @@ const BalanceCard = ({ status, onRefreshBalance, refreshing, trades, exchangeBal
 
     // Practice balance - either from status or default to initial_balance config
     const practiceBalance = status?.practice_balance || status?.config?.initial_balance || 1000;
-    const realBalance = status?.balance?.total || 0;
+    // For real balance, prefer the fetched API keys balance, fallback to bot status
+    const realBalance = exchangeBalances?.total_usdt ?? status?.balance?.total ?? 0;
 
     // Calculate Equity (Balance + Unrealized PnL)
     const unrealizedPnl = status?.total_unrealized_pnl || 0;

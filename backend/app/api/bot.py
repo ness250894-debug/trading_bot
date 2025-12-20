@@ -208,8 +208,8 @@ async def create_quick_scalp_bot_endpoint(request: Request, current_user: dict =
 # Keeping them here for now to avoid breaking routes, but they are just DB calls.
 
 @router.get("/trades")
-async def get_trades_endpoint(limit: int = 100, offset: int = 0, current_user: dict = Depends(auth.get_current_user)):
-    return {"trades": db.get_trades(current_user['id'], limit, offset)}
+async def get_trades_endpoint(limit: int = 100, offset: int = 0, is_mock: Optional[bool] = None, current_user: dict = Depends(auth.get_current_user)):
+    return {"trades": db.get_trades(current_user['id'], limit, offset, is_mock)}
 
 @router.get("/watchlist")
 async def get_watchlist_endpoint(current_user: dict = Depends(auth.get_current_user)):

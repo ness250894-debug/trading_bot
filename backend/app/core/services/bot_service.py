@@ -190,10 +190,24 @@ class BotService:
              else:
                  total_unrealized_pnl = bot_status.get('pnl', 0.0)
 
+        # Get Practice Balance from runtime state
+        practice_balance = None
+        if bot_status:
+             if isinstance(bot_status, dict) and 'is_running' not in bot_status:
+                 # Multi-instance: Pick the first one with a value
+                 for inst in bot_status.values():
+                     pb = inst.get('practice_balance')
+                     if pb is not None:
+                         practice_balance = pb
+                         break
+             else:
+                 practice_balance = bot_status.get('practice_balance')
+
         return {
             "status": "Active" if is_running else "Stopped",
             "is_running": is_running,
             "balance": balance_info,
+            "practice_balance": practice_balance,
             "total_pnl": total_pnl,
             "total_unrealized_pnl": total_unrealized_pnl,
             "active_trades": bot_status.get('active_trades', 0) if isinstance(bot_status, dict) else 0,

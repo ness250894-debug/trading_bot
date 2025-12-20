@@ -3,7 +3,6 @@ import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { Activity, DollarSign, TrendingUp, Clock, AlertCircle, PieChart as PieChartIcon, BarChart2 } from 'lucide-react';
 import TradeHistory from '../components/TradeHistory';
-import TradingGoalsWidget from '../components/TradingGoalsWidget';
 
 import { formatStrategyName } from '../lib/utils';
 import { ToastContext } from '../components/ToastContext';
@@ -65,6 +64,12 @@ export default function Dashboard() {
     const [error, setError] = useState(null);
 
     const [pollingInterval] = useState(30000); // 30 seconds polling interval
+    const [isPracticeMode, setIsPracticeMode] = useState(true);
+
+    useEffect(() => {
+        const savedMode = localStorage.getItem('globalPracticeMode');
+        setIsPracticeMode(savedMode === null ? true : savedMode === 'true');
+    }, []);
 
     // Initial Data Fetch
     useEffect(() => {
@@ -72,7 +77,7 @@ export default function Dashboard() {
             try {
                 const [statusRes, tradesRes] = await Promise.all([
                     api.get('/status'),
-                    api.get('/trades')
+                    api.get('/trades', { params: { is_mock: isPracticeMode } })
                 ]);
                 setStatus(statusRes.data);
                 setTrades(tradesRes.data.trades || []);
@@ -87,7 +92,7 @@ export default function Dashboard() {
         fetchData();
         const interval = setInterval(fetchData, pollingInterval);
         return () => clearInterval(interval);
-    }, [pollingInterval]);
+    }, [pollingInterval, isPracticeMode]);
 
     // Calculate PnL for Chart
     const pnlData = React.useMemo(() => {
@@ -167,7 +172,7 @@ export default function Dashboard() {
 
     const refreshTrades = async () => {
         try {
-            const tradesRes = await api.get('/trades');
+            const tradesRes = await api.get('/trades', { params: { is_mock: isPracticeMode } });
             setTrades(tradesRes.data.trades || []);
             const statusRes = await api.get('/status');
             setStatus(statusRes.data);
@@ -351,11 +356,6 @@ export default function Dashboard() {
                     </div>
                 </WidgetErrorBoundary>
             </div>
-
-            {/* Trading Goals Widget */}
-            <WidgetErrorBoundary>
-                <TradingGoalsWidget />
-            </WidgetErrorBoundary>
 
             {/* Trade History Section */}
             <div className="h-[500px] mt-8">

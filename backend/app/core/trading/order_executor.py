@@ -13,7 +13,7 @@ logger = logging.getLogger("TradingBot")
 class OrderExecutor:
     """Executes trading orders and logs trades"""
     
-    def __init__(self, client, db, notifier, user_id):
+    def __init__(self, client, db, notifier, user_id, is_mock=True):
         """
         Initialize order executor.
         
@@ -22,11 +22,13 @@ class OrderExecutor:
             db: Database handler instance
             notifier: Telegram notifier instance
             user_id: User ID
+            is_mock: Whether running in mock/paper mode
         """
         self.client = client
         self.db = db
         self.notifier = notifier
         self.user_id = user_id
+        self.is_mock = is_mock
         self.logger = logger
     
     def execute_entry_order(self, symbol, signal, amount_usdt, current_price,
@@ -90,7 +92,8 @@ class OrderExecutor:
                 'type': 'OPEN',
                 'pnl': 0.0,
                 'strategy': strategy_name,
-                'user_id': self.user_id
+                'user_id': self.user_id,
+                'is_mock': self.is_mock
             }
             self.db.log_trade(trade_data)
             
@@ -150,7 +153,8 @@ class OrderExecutor:
                 'type': 'CLOSE',
                 'pnl': pnl,
                 'strategy': strategy_name,
-                'user_id': self.user_id
+                'user_id': self.user_id,
+                'is_mock': self.is_mock
             }
             self.db.log_trade(trade_data)
             self.notifier.send_trade_alert(trade_data)
