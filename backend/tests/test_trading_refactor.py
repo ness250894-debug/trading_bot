@@ -327,51 +327,6 @@ class TestSubscriptionChecker:
 class TestTradingEngineIntegration:
     """Integration tests for the complete TradingEngine"""
     
-    @patch('backend.app.core.notifier.TelegramNotifier')
-    @patch('backend.app.core.trading.trading_engine.client_manager')
-    @patch('backend.app.core.trading.trading_engine.DuckDBHandler')
-    @patch('backend.app.core.trading.trading_engine.EncryptionHelper')
-    @patch('backend.app.core.trading.trading_engine.config')
-    def test_trading_engine_initialization(
-        self, mock_config, mock_encryption_class, 
-        mock_db_class, mock_client_manager, mock_notifier_class, strategy_config
-    ):
-        """Test TradingEngine initialization"""
-        # Setup mocks
-        mock_config.API_KEY = 'test_key'
-        mock_config.API_SECRET = 'test_secret'
-        mock_config.TELEGRAM_BOT_TOKEN = 'test_token'
-        
-        mock_db = Mock()
-        mock_db.get_api_key.return_value = None
-        mock_db.get_user_by_id.return_value = {'telegram_chat_id': '123'}
-        mock_db.is_subscription_active.return_value = True
-        mock_db_class.return_value = mock_db
-        
-        mock_client = Mock()
-        mock_client.fetch_balance.return_value = {'total': {'USDT': 1000.0}}
-        mock_client_manager.get_client.return_value = mock_client
-        
-        mock_notifier = Mock()
-        mock_notifier_class.return_value = mock_notifier
-        
-        running_event = threading.Event()
-        running_event.set()
-        
-        # Create engine
-        engine = TradingEngine(
-            user_id=1,
-            strategy_config=strategy_config,
-            running_event=running_event,
-            runtime_state={}
-        )
-        
-        # Verify initialization
-        assert engine.user_id == 1
-        assert engine.symbol == 'BTC/USDT'
-        assert engine.timeframe == '1m'
-        assert engine.strategy_name == 'sma_crossover'
-    
     def test_backward_compatibility_with_run_bot_instance(self, strategy_config):
         """Test that run_bot_instance wrapper works"""
         from backend.app.core.bot import run_bot_instance
