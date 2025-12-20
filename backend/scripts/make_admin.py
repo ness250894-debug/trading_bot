@@ -1,8 +1,10 @@
 import sys
 import os
 
-# Add current directory to path so we can import app
-sys.path.append(os.path.dirname(__file__))
+# Add parent directory to path so we can import app
+# current: backend/scripts
+# parent: backend
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app.core.database import DuckDBHandler
 from app.core.auth import get_password_hash

@@ -1,7 +1,9 @@
 """Quick script to make yourself admin"""
 import sys
 import os
-sys.path.append(os.path.dirname(__file__))
+
+# Add parent directory to path so we can import app
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from app.core.database import DuckDBHandler
 
