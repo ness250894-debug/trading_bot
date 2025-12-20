@@ -10,13 +10,18 @@ This test verifies the complete backend trading flow:
 6. Order Placement - places an order with TP/SL
 7. TP/SL Hit - simulates price movement that triggers TP/SL
 
+NOTE: These are integration tests that run the full trading flow.
+They are marked with @pytest.mark.integration and skipped in CI.
+Run manually or use: pytest -m integration
+
 Usage:
-    python -m pytest tests/test_full_trading_flow.py -v
+    python -m pytest tests/test_full_trading_flow.py -v -m integration
     
     Or run directly:
     python tests/test_full_trading_flow.py
 """
 
+import pytest
 import sys
 import os
 import time
@@ -155,6 +160,7 @@ class MockStrategyWithSignal:
         return df
 
 
+@pytest.mark.integration
 def test_step_1_optimization():
     """Test Step 1: Run optimization to find best strategy parameters."""
     logger.info("\n" + "="*60)
@@ -205,6 +211,7 @@ def test_step_1_optimization():
         return {'bb_period': 20, 'bb_std': 2.0, 'rsi_period': 14}  # Default
 
 
+@pytest.mark.integration
 def test_step_2_backtest(params):
     """Test Step 2: Run backtest with selected strategy parameters."""
     logger.info("\n" + "="*60)
@@ -247,6 +254,7 @@ def test_step_2_backtest(params):
     }
 
 
+@pytest.mark.integration
 def test_step_3_create_bot_config(params, backtest_result):
     """Test Step 3: Create a bot configuration with the strategy."""
     logger.info("\n" + "="*60)
@@ -300,6 +308,7 @@ def test_step_3_create_bot_config(params, backtest_result):
         return None
 
 
+@pytest.mark.integration
 def test_step_4_start_bot(config_id):
     """Test Step 4: Start the bot with the configuration."""
     logger.info("\n" + "="*60)
@@ -357,6 +366,7 @@ def test_step_4_start_bot(config_id):
         return False
 
 
+@pytest.mark.integration
 def test_step_5_signal_generation():
     """Test Step 5: Verify signal generation mechanism."""
     logger.info("\n" + "="*60)
@@ -398,6 +408,7 @@ def test_step_5_signal_generation():
     return result
 
 
+@pytest.mark.integration
 def test_step_6_order_placement():
     """Test Step 6: Verify order placement with TP/SL."""
     logger.info("\n" + "="*60)
@@ -446,6 +457,7 @@ def test_step_6_order_placement():
         return None, None
 
 
+@pytest.mark.integration
 def test_step_7_tp_sl_simulation(mock_exchange):
     """Test Step 7: Simulate TP/SL hit."""
     logger.info("\n" + "="*60)

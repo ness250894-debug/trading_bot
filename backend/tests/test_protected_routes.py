@@ -1,3 +1,4 @@
+import pytest
 import requests
 import sys
 
@@ -10,6 +11,7 @@ def get_auth_token(email, password):
         return response.json()["access_token"]
     return None
 
+@pytest.mark.integration
 def test_protected_route(route, method="GET", token=None):
     headers = {}
     if token:
