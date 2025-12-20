@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Play, Loader2, Save, FolderOpen, Trash2, X } from 'lucide-react';
+import SliderInput from '../components/ui/SliderInput';
 import { useToast } from '../components/ToastContext';
 
 import PlanGate from '../components/PlanGate';
@@ -296,14 +297,13 @@ export default function Backtest() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm text-muted-foreground mb-1">Leverage (x)</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="125"
+                                    <SliderInput
+                                        label="Leverage (x)"
                                         value={leverage}
-                                        onChange={(e) => setLeverage(Number(e.target.value))}
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-sm focus:border-primary/50 outline-none transition-all"
+                                        min={1}
+                                        max={125}
+                                        step={1}
+                                        onChange={setLeverage}
                                     />
                                 </div>
 

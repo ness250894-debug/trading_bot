@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { DEFAULT_EXCHANGES } from '../constants/exchanges';
 import { Save, RefreshCw, AlertTriangle, CheckCircle, TrendingUp, Zap, BarChart2, Activity, Globe, Plus } from 'lucide-react';
 import { useModal } from '../components/Modal';
+import SliderInput from '../components/ui/SliderInput';
 
 import { useToast } from '../components/ToastContext';
 
@@ -559,6 +560,17 @@ export default function Strategies() {
                                     />
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">%</span>
                                 </div>
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                                <SliderInput
+                                    label="Leverage (x)"
+                                    value={config.leverage || 10}
+                                    min={1}
+                                    max={125}
+                                    step={1}
+                                    onChange={(val) => handleChange('leverage', val)}
+                                    description="Multiplier for your trade size. Higher leverage increases both potential profit and risk."
+                                />
                             </div>
                         </div>
                     </div>

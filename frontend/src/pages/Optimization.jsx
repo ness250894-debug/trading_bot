@@ -30,6 +30,14 @@ export default function Optimization() {
         const saved = localStorage.getItem('optimization_ranges');
         if (saved) {
             const parsed = JSON.parse(saved);
+
+            if (!parsed || typeof parsed !== 'object') {
+                return {
+                    fast_period: { start: 5, end: 20, step: 5 },
+                    slow_period: { start: 30, end: 60, step: 10 }
+                };
+            }
+
             // Quick validation for legacy keys
             if (parsed.short_window || parsed.rsi_length) {
                 return {

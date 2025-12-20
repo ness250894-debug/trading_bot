@@ -1,5 +1,6 @@
 import React from 'react';
 import { Crown, Lock, Play } from 'lucide-react';
+import SliderInput from '../ui/SliderInput';
 import { formatLabel } from '../../lib/utils';
 
 export default function UltimateOptimization({
@@ -66,19 +67,15 @@ export default function UltimateOptimization({
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-purple-200">Leverage:</label>
-                        <div className="relative">
-                            <input
-                                type="number"
-                                min="1"
-                                max="125"
-                                value={leverage}
-                                onChange={(e) => setLeverage(Number(e.target.value))}
-                                className="bg-black/20 border border-purple-500/30 rounded-lg p-2 w-16 text-foreground focus:ring-2 focus:ring-purple-500/50 outline-none transition-all text-sm font-mono text-center"
-                            />
-                            <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">x</span>
-                        </div>
+                    <div className="flex-1 min-w-[140px] max-w-[200px]">
+                        <SliderInput
+                            label="Leverage (x)"
+                            value={leverage}
+                            min={1}
+                            max={125}
+                            step={1}
+                            onChange={setLeverage}
+                        />
                     </div>
 
                     <div className="flex items-center gap-2">

@@ -73,7 +73,7 @@ export default function OptimizationConfig({
                                 value={timeframe}
                                 onChange={(e) => setTimeframe(e.target.value)}
                             >
-                                {TIMEFRAME_OPTIONS.map(tf => <option key={tf} value={tf}>{tf}</option>)}
+                                {(TIMEFRAME_OPTIONS || []).map(tf => <option key={tf} value={tf}>{tf}</option>)}
                             </select>
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
                                 <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,19 +83,15 @@ export default function OptimizationConfig({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-foreground">Leverage:</label>
-                        <div className="relative">
-                            <input
-                                type="number"
-                                min="1"
-                                max="125"
-                                value={leverage}
-                                onChange={(e) => setLeverage(Number(e.target.value))}
-                                className="bg-black/20 border border-white/10 rounded-lg p-2 w-20 text-foreground focus:ring-2 focus:ring-primary/50 outline-none transition-all text-sm font-mono text-center"
-                            />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">x</span>
-                        </div>
+                    <div className="flex-1 min-w-[140px]">
+                        <SliderInput
+                            label="Leverage (x)"
+                            value={leverage}
+                            min={1}
+                            max={125}
+                            step={1}
+                            onChange={setLeverage}
+                        />
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -106,7 +102,7 @@ export default function OptimizationConfig({
                                 value={strategy}
                                 onChange={handleStrategyChange}
                             >
-                                {strategies.map(s => <option key={s} value={s}>{s}</option>)}
+                                {(strategies || []).map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
                     </div>
@@ -114,7 +110,7 @@ export default function OptimizationConfig({
             </div>
 
             {/* Presets */}
-            {presets[strategy] && presets[strategy].length > 0 && (
+            {presets && presets[strategy] && presets[strategy].length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6 p-3 bg-white/5 rounded-xl border border-white/10">
                     <span className="text-xs font-bold text-muted-foreground uppercase flex items-center mr-2">
                         <Sliders size={12} className="mr-1" /> Presets:
@@ -132,7 +128,7 @@ export default function OptimizationConfig({
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Object.entries(ranges).map(([param, range]) => {
+                {ranges && Object.entries(ranges).map(([param, range]) => {
                     const limits = paramLimits[param] || { min: 0, max: 100, step: 1 };
                     return (
                         <div key={param} className="p-3 bg-white/5 rounded-xl border border-white/5">

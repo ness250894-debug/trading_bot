@@ -119,14 +119,22 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
         'mean_reversion': 5, 
         'momentum': 5, 
         'sma_crossover': 30, 
-        'macd': 20,
+        'macd': 20, 
         'rsi': 10,
         'bollinger_breakout': 5,
         'dca_dip': 60,
         'combined': 15
     }
-    loop_delay = STRATEGY_LOOP_DELAYS.get(strategy_name, 30)
+    # Normalize to lowercase to ensure match
+    strategy_key = strategy_name.lower()
+    loop_delay = STRATEGY_LOOP_DELAYS.get(strategy_key, 30)
     
+    # Override based on timeframe for very short timeframes
+    if timeframe in ['1m']:
+        loop_delay = min(loop_delay, 5)  # Max 5s for 1m
+    elif timeframe in ['5m']:
+        loop_delay = min(loop_delay, 10) # Max 10s for 5m
+
     # Extract TP/SL from strategy config (fallback to global config only if missing)
     take_profit_pct = strategy_config.get('TAKE_PROFIT_PCT', getattr(config, 'TAKE_PROFIT_PCT', 0.01))
     stop_loss_pct = strategy_config.get('STOP_LOSS_PCT', getattr(config, 'STOP_LOSS_PCT', 0.01))
@@ -136,6 +144,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
         "Symbol": symbol,
         "Timeframe": timeframe,
         "Strategy": strategy_name,
+        "Loop Delay": f"{loop_delay}s",
         "Amount USDT": amount_usdt,
         "Leverage": leverage,
         "Exchange": exchange,
