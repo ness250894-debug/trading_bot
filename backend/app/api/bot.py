@@ -457,8 +457,8 @@ async def create_quick_scalp_bot(request: Request, current_user: dict = Depends(
             "strategy": "momentum",
             "timeframe": "1m",
             "amount_usdt": 100.0, # Safe default
-            "take_profit_pct": 5.0,
-            "stop_loss_pct": 5.0,
+            "take_profit_pct": 0.03,
+            "stop_loss_pct": 0.03,
             "dry_run": True,
             "parameters": {
                 "roc_period": 1,
