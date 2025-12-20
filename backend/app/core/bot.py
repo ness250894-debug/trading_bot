@@ -637,6 +637,8 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                             runtime_state['pnl'] = unrealized_pnl
                             runtime_state['roi'] = pnl_pct * 100
                             runtime_state['current_price'] = current_price
+                            runtime_state['tp_price'] = tp_price
+                            runtime_state['sl_price'] = sl_price
                         # ---------------------------------------------------------
 
                 time.sleep(config.LOOP_DELAY_SECONDS)

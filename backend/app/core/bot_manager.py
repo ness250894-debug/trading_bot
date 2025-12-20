@@ -67,6 +67,8 @@ class BotInstance:
             "pnl": self.runtime_state.get("pnl", 0.0),
             "roi": self.runtime_state.get("roi", 0.0),
             "current_price": self.runtime_state.get("current_price", 0.0),
+            "tp_price": self.runtime_state.get("tp_price", 0.0),
+            "sl_price": self.runtime_state.get("sl_price", 0.0),
             "logs": list(self.logs)
         }
 
