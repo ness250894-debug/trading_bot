@@ -9,9 +9,6 @@ const SliderInput = ({ label, value, min, max, step, onChange, description }) =>
                     {label}
                     {description && <Tooltip content={description} />}
                 </label>
-                <span className="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
-                    {value}
-                </span>
             </div>
             <div className="flex items-center gap-2">
                 <input
@@ -19,7 +16,7 @@ const SliderInput = ({ label, value, min, max, step, onChange, description }) =>
                     min={min}
                     max={max}
                     step={step}
-                    value={value}
+                    value={value || min}
                     onChange={(e) => onChange(Number(e.target.value))}
                     className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary hover:accent-primary/80 transition-all"
                 />
@@ -29,7 +26,11 @@ const SliderInput = ({ label, value, min, max, step, onChange, description }) =>
                     max={max}
                     step={step}
                     value={value}
-                    onChange={(e) => onChange(Number(e.target.value))}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') onChange('');
+                        else onChange(Number(val));
+                    }}
                     className="w-16 bg-black/20 border border-white/10 rounded-md px-2 py-1 text-xs text-right focus:ring-1 focus:ring-primary/50 outline-none transition-all"
                 />
             </div>
