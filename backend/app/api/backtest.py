@@ -242,27 +242,92 @@ async def run_optimization(request: Request, optimize_data: OptimizeRequest, cur
 
 @router.websocket("/ws/optimize")
 async def websocket_optimize(websocket: WebSocket):
+    import uuid
+    from ..core.websocket_limiter import ws_limiter
+    
+    connection_id = str(uuid.uuid4())
+    user_id = None
+    
     await websocket.accept()
     from ..core.job_manager import job_manager
     
-    # Subscribe to updates immediately
-    await job_manager.subscribe(websocket)
-    
     try:
+        # First message MUST be authentication before we can rate limit
+        # We accept the connection but enforce rate limiting after auth
+        initial_data = await websocket.receive_json()
+        
+        # Authenticate User
+        token = initial_data.get("token")
+        if not token:
+            await websocket.send_json({"error": "Authentication required. Please refresh the page."})
+            await websocket.close(code=1008)  # Policy violation
+            return
+        
+        current_user = await auth.get_current_user_from_token(token)
+        if not current_user:
+            await websocket.send_json({"error": "Invalid session. Please login again."})
+            await websocket.close(code=1008)
+            return
+        
+        user_id = current_user['id']
+        
+        # NEW: Check connection rate limit
+        allowed, reason = await ws_limiter.check_connection_allowed(user_id)
+        if not allowed:
+            await websocket.send_json({"error": f"Connection rate limit exceeded: {reason}"})
+            await websocket.close(code=1008)
+            return
+        
+        # Register this connection
+        await ws_limiter.track_connection(user_id, connection_id)
+        logger.info(f"User {user_id} WebSocket connected with rate limiting (connection: {connection_id})")
+        
+        # Subscribe to updates
+        await job_manager.subscribe(websocket)
+        
+        # Process the initial message if it's a command
+        if initial_data.get("type") or initial_data.get("strategy"):
+            # Check message rate limit for initial message
+            allowed, reason = await ws_limiter.check_message_allowed(user_id, connection_id)
+            if not allowed:
+                await websocket.send_json({"error": f"Rate limit exceeded: {reason}"})
+            else:
+                await ws_limiter.track_message(user_id, connection_id)
+                # Process the message (will be handled below in the while loop logic)
+                data = initial_data
+                # Set a flag to process initial_data
+                process_initial = True
+        else:
+            process_initial = False
+        
+        # Main message loop
         while True:
-            # Wait for commands
-            data = await websocket.receive_json()
-            
-            # Authenticate User
-            token = data.get("token")
-            if not token:
-                await websocket.send_json({"error": "Authentication required. Please refresh the page."})
-                continue
-            
-            current_user = await auth.get_current_user_from_token(token)
-            if not current_user:
-                await websocket.send_json({"error": "Invalid session. Please login again."})
-                continue
+            # Get next message (or use initial_data on first iteration)
+            if process_initial:
+                process_initial = False
+                # data is already set to initial_data
+            else:
+                data = await websocket.receive_json()
+                
+                # For subsequent messages, check authentication
+                token = data.get("token")
+                if not token:
+                    await websocket.send_json({"error": "Authentication required. Please refresh the page."})
+                    continue
+                
+                current_user = await auth.get_current_user_from_token(token)
+                if not current_user:
+                    await websocket.send_json({"error": "Invalid session. Please login again."})
+                    continue
+                
+                # NEW: Check message rate limit
+                allowed, reason = await ws_limiter.check_message_allowed(user_id, connection_id)
+                if not allowed:
+                    await websocket.send_json({"error": f"{reason}"})
+                    continue
+                
+                # Track this message
+                await ws_limiter.track_message(user_id, connection_id)
 
             if job_manager.status == "running":
                 await websocket.send_json({"error": "Optimization already running"})
@@ -455,4 +520,8 @@ async def websocket_optimize(websocket: WebSocket):
         logger.error(f"WebSocket error: {e}")
     finally:
         job_manager.unsubscribe(websocket)
+        # Clean up rate limiter tracking
+        if user_id and connection_id:
+            from ..core.websocket_limiter import ws_limiter
+            await ws_limiter.remove_connection(user_id, connection_id)
 
