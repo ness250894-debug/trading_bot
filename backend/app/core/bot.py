@@ -559,7 +559,7 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                             order_type='market', 
                             side=side, 
                             amount=amount,
-                            amount=amount,
+
                             take_profit_pct=take_profit_pct,
                             stop_loss_pct=stop_loss_pct
                         )
