@@ -119,6 +119,7 @@ export default function Optimization() {
             strategy: strategyOverride || strategy,
             timeframe: timeframeOverride || timeframe,
             symbol: symbolOverride || symbol,
+            leverage: leverage,
             params: params
         };
         localStorage.setItem('backtest_params_suggestion', JSON.stringify(suggestion));
@@ -180,6 +181,7 @@ export default function Optimization() {
                     results={results}
                     clearResults={clearResults}
                     symbol={symbol}
+                    leverage={leverage}
                     applyToBacktest={(params) => applyToBacktest(params)}
                 />
             </div>

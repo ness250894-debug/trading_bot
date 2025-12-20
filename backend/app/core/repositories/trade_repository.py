@@ -91,37 +91,6 @@ class TradeRepository(BaseRepository):
 
     def transform_trade_data(self, rows):
         """Transform raw DB rows into trade dictionaries."""
-        trades = []
-        for row in rows:
-            trades.append({
-                'id': row[0],
-                'user_id': row[8] if len(row) > 8 else None,
-                'symbol': row[2] if len(row) > 2 else row[1], # Handle variance in schema order if any
-                'side': row[3] if len(row) > 3 else row[2],
-                'price': row[4],
-                'amount': row[5],
-                'type': row[6],
-                'pnl': row[7],
-                'strategy': row[2] if isinstance(row[2], str) and row[2] not in ['buy','sell'] else 'unknown', # Schema dependent
-                'timestamp': row[1].isoformat() if isinstance(row[1], datetime) else str(row[1])
-            })
-            
-            # Correction: The schema in get_recent_trades is explicit:
-            # id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp
-            # But the create_tables schema is:
-            # id, timestamp, user_id, symbol, side, price, amount, type, pnl, strategy (based on standard evolution)
-            # Actually, looking at database.py create_tables for trades... wait, create_tables doesn't show trades table creation in the snippet I saw.
-            # I will trust the explicit columns map from `get_recent_trades` method in database.py
-            # But wait, `get_trades` uses `SELECT *`.
-            # Let's align with what `database.py` likely returns. 
-            # In `database.py` `get_recent_trades`: 
-            # Columns: id, user_id, symbol, side, price, amount, type, pnl, strategy, timestamp
-            # BUT `get_trades` implementation in original file wasn't shown fully.
-            # I'll stick to a safe dict transformation if positions are known, or cleaner dict-cursor if available.
-            # DuckDB fetchall returns tuples.
-            # I will use the columns list logic from `get_recent_trades` which I saw in the file view.
-            pass
-
         # Re-implementing transform for safety based on `get_recent_trades` columns
         columns = ['id', 'user_id', 'symbol', 'side', 'price', 'amount', 'type', 'pnl', 'strategy', 'timestamp']
         # Note: 'SELECT *' return order depends on table creation order.

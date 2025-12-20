@@ -48,6 +48,7 @@ export default function UltimateOptimizationPage() {
             strategy: strategyOverride, // Ultimate results always have a strategy override
             timeframe: timeframeOverride || '1h',
             symbol: symbolOverride || ultimateSymbol,
+            leverage: leverage,
             params: params // Params is already the flat object passed from component
         };
         localStorage.setItem('backtest_params_suggestion', JSON.stringify(suggestion));

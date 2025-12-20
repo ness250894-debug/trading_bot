@@ -666,15 +666,7 @@ async def get_trades(limit: int = 100, offset: int = 0, current_user: dict = Dep
         if not trades:
             return {"trades": []}
         
-        # Convert timestamps to string if needed
-        # Assuming repo returns list of dicts
-        for trade in trades:
-            if isinstance(trade.get('timestamp'), (datetime, pd.Timestamp)):
-                trade['timestamp'] = trade['timestamp'].isoformat()
-                
-                
-        return {"trades": trades}
-                
+        
         return {"trades": trades}
     except Exception as e:
         logger.error(f"Error fetching trades: {e}")

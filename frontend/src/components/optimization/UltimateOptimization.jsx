@@ -115,6 +115,7 @@ export default function UltimateOptimization({
                                 <th className="px-4 py-3 sm:px-6 sm:py-4">Strategy</th>
                                 <th className="px-4 py-3 sm:px-6 sm:py-4">Symbol</th>
                                 <th className="px-4 py-3 sm:px-6 sm:py-4">Rank</th>
+                                <th className="px-4 py-3 sm:px-6 sm:py-4">Lev</th>
                                 <th className="px-4 py-3 sm:px-6 sm:py-4">Parameters</th>
                                 <th className="px-4 py-3 sm:px-6 sm:py-4 text-right">Return</th>
                                 <th className="px-4 py-3 sm:px-6 sm:py-4 text-right">Win Rate</th>
@@ -144,13 +145,18 @@ export default function UltimateOptimization({
                                         <td className="px-4 py-3 sm:px-6 sm:py-4 font-mono text-muted-foreground">
                                             #{i + 1}
                                         </td>
+                                        <td className="px-4 py-3 sm:px-6 sm:py-4 font-mono text-muted-foreground text-xs">
+                                            {leverage}x
+                                        </td>
                                         <td className="px-4 py-3 sm:px-6 sm:py-4">
                                             <div className="flex flex-wrap gap-2">
-                                                {Object.entries(res.params).map(([k, v]) => (
-                                                    <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
-                                                        <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
-                                                    </span>
-                                                ))}
+                                                {Object.entries(res.params)
+                                                    .filter(([k]) => k !== 'leverage' && k !== 'symbol')
+                                                    .map(([k, v]) => (
+                                                        <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
+                                                            <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
+                                                        </span>
+                                                    ))}
                                             </div>
                                         </td>
                                         <td className={`px-4 py-3 sm:px-6 sm:py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -194,15 +200,17 @@ export default function UltimateOptimization({
                 ) : (
                     ultimateResults.sort((a, b) => b.return - a.return).map((res, i) => (
                         <div key={i} className="glass p-4 rounded-xl border border-white/5 space-y-3">
-                            {/* Header: Strategy & Rank */}
                             <div className="flex justify-between items-start">
                                 <div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded">#{i + 1}</span>
                                         <h4 className="font-semibold text-purple-200 capitalize">{res.strategy.replace(/_/g, ' ')}</h4>
                                     </div>
-                                    <div className="text-xs text-cyan-300 font-mono mt-1">
-                                        {res.params?.symbol || res.symbol || symbol}
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <div className="text-xs text-cyan-300 font-mono">
+                                            {res.params?.symbol || res.symbol || symbol}
+                                        </div>
+                                        <span className="text-xs text-muted-foreground bg-white/10 px-1.5 rounded">{leverage}x</span>
                                     </div>
                                 </div>
                                 <div className={`text-lg font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -226,11 +234,13 @@ export default function UltimateOptimization({
                             <div>
                                 <div className="text-xs text-muted-foreground mb-1.5">Parameters</div>
                                 <div className="flex flex-wrap gap-1.5">
-                                    {Object.entries(res.params).map(([k, v]) => (
-                                        <span key={k} className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-white/5 text-foreground border border-white/5">
-                                            <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
-                                        </span>
-                                    ))}
+                                    {Object.entries(res.params)
+                                        .filter(([k]) => k !== 'leverage' && k !== 'symbol')
+                                        .map(([k, v]) => (
+                                            <span key={k} className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-white/5 text-foreground border border-white/5">
+                                                <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
+                                            </span>
+                                        ))}
                                 </div>
                             </div>
 

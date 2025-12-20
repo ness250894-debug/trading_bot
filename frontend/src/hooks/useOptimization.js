@@ -14,7 +14,7 @@ export default function useOptimization(strategy, symbol, timeframe, ranges, nTr
 
     // Reset results when core params change
     useEffect(() => {
-        setResults(null);
+        setResults([]);
         setProgress({ current: 0, total: 0 });
     }, [strategy, symbol, timeframe, leverage]);
 

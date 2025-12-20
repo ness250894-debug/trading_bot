@@ -3,7 +3,7 @@ import { TrendingUp, ArrowUp, ArrowDown, ArrowUpDown, CheckCircle, Activity } fr
 import { formatLabel } from '../../lib/utils';
 
 export default function OptimizationResults({
-    results, clearResults, symbol, applyToBacktest
+    results, clearResults, symbol, applyToBacktest, leverage
 }) {
     const [sortConfig, setSortConfig] = useState({ key: 'return', direction: 'desc' });
 
@@ -16,7 +16,7 @@ export default function OptimizationResults({
         });
     };
 
-    const sortedResults = [...results].sort((a, b) => {
+    const sortedResults = [...(results || [])].sort((a, b) => {
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
 
@@ -54,6 +54,7 @@ export default function OptimizationResults({
                             <tr>
                                 <th className="px-6 py-4">Rank</th>
                                 <th className="px-6 py-4">Symbol</th>
+                                <th className="px-6 py-4">Lev</th>
                                 <th className="px-6 py-4">Parameters</th>
                                 <th
                                     className="px-6 py-4 text-right cursor-pointer hover:text-white transition-colors group select-none"
@@ -123,15 +124,19 @@ export default function OptimizationResults({
                                         <td className="px-6 py-4 font-mono text-cyan-300 text-xs">
                                             {symbol}
                                         </td>
+                                        <td className="px-6 py-4 font-mono text-muted-foreground text-xs">
+                                            {leverage}x
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-wrap gap-2">
-                                                {Object.entries(res.params).map(([k, v]) => (
-                                                    <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
-                                                        <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
-                                                    </span>
-                                                ))}
+                                                {Object.entries(res.params)
+                                                    .filter(([k]) => k !== 'leverage' && k !== 'symbol')
+                                                    .map(([k, v]) => (
+                                                        <span key={k} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-white/10 text-foreground border border-white/5">
+                                                            <span className="opacity-70 mr-1">{formatLabel(k)}:</span> <span className="font-bold">{v}</span>
+                                                        </span>
+                                                    ))}
                                             </div>
-
                                         </td>
                                         <td className={`px-6 py-4 text-right font-bold ${res.return >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                             {res.return > 0 ? '+' : ''}{res.return.toFixed(2)}%
@@ -167,6 +172,6 @@ export default function OptimizationResults({
                     </table>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

@@ -57,6 +57,10 @@ export default function Backtest() {
                         setSymbol(suggestion.symbol);
                     }
 
+                    if (suggestion.leverage) {
+                        setLeverage(suggestion.leverage);
+                    }
+
                     toast.success(`Applied optimized parameters for ${suggestion.strategy}`);
                 }
 
