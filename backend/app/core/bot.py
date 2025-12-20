@@ -506,8 +506,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
                                     running_event.clear()
                                     break # Exit loop
                             
+                                logger.info(f"😴 Sleeping {loop_delay}s...")
                                 time.sleep(loop_delay)
-                                continue # Skip trade
+                                continue
                     
                         # 2. Check Max Position Size
                         if risk_profile.get('max_position_size'):
