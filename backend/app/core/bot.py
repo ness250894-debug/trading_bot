@@ -30,7 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger("TradingBot")
 
 
-def run_bot_instance(user_id: int, strategy_config: dict, running_event: threading.Event, runtime_state: dict = None):
+def run_bot_instance(user_id: int, strategy_config: dict, running_event: threading.Event, runtime_state: dict = None, main_loop = None):
     """
     Run a bot instance for a specific user.
     
@@ -42,8 +42,9 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
         strategy_config: Dictionary containing strategy configuration
         running_event: Thread event to control pause/resume
         runtime_state: Dictionary to share runtime state (e.g. active_trades) with manager
+        main_loop: Asyncio loop from main thread (required for WebSocket broadcasting)
     """
-    engine = TradingEngine(user_id, strategy_config, running_event, runtime_state)
+    engine = TradingEngine(user_id, strategy_config, running_event, runtime_state, main_loop)
     engine.run()
 
 

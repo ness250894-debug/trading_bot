@@ -120,7 +120,7 @@ class BotManager:
             cls()
         return cls._instance
     
-    def start_bot(self, user_id: int, strategy_config: dict, config_id: int = None) -> bool:
+    def start_bot(self, user_id: int, strategy_config: dict, config_id: int = None, main_loop = None) -> bool:
         """
         Start a bot instance for a user and config.
         
@@ -128,6 +128,7 @@ class BotManager:
             user_id: User ID
             strategy_config: Strategy configuration dict
             config_id: Configuration ID. If None, assumes legacy single-bot mode (use 0)
+            main_loop: Main thread asyncio loop (optional, but needed for WebSocket events)
         
         Returns:
             True if successful
@@ -159,8 +160,8 @@ class BotManager:
                 try:
                     instance.started_at = datetime.now()
                     instance.running_event.set()
-                    # Pass runtime_state to the bot loop
-                    run_bot_instance(user_id, strategy_config, instance.running_event, instance.runtime_state)
+                    # Pass runtime_state and main_loop to the bot loop
+                    run_bot_instance(user_id, strategy_config, instance.running_event, instance.runtime_state, main_loop)
                 except Exception as e:
                     logger.error(f"Bot instance for user {user_id}, config {config_id} crashed: {e}")
                     import traceback

@@ -126,7 +126,12 @@ class BotService:
         is_admin = self.db.get_user_by_id(user_id).get('is_admin', False)
         strategy_config = self._enforce_subscription(user_id, strategy_config, is_admin)
 
-        success = bot_manager.start_bot(user_id, strategy_config, config_id=config_id)
+        try:
+            main_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            main_loop = None
+
+        success = bot_manager.start_bot(user_id, strategy_config, config_id=config_id, main_loop=main_loop)
         
         if success:
              # Broadcast update
