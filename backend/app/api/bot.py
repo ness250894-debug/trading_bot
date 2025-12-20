@@ -662,15 +662,18 @@ class TradeNoteCreate(BaseModel):
 async def get_trades(limit: int = 100, offset: int = 0, current_user: dict = Depends(auth.get_current_user)):
     """Get user's trade history with notes."""
     try:
-        trades_df = db.get_trades(current_user['id'], limit, offset)
-        if trades_df.empty:
+        trades = db.get_trades(current_user['id'], limit, offset)
+        if not trades:
             return {"trades": []}
         
-        # Convert timestamps to string
-        trades = trades_df.to_dict(orient='records')
+        # Convert timestamps to string if needed
+        # Assuming repo returns list of dicts
         for trade in trades:
             if isinstance(trade.get('timestamp'), (datetime, pd.Timestamp)):
                 trade['timestamp'] = trade['timestamp'].isoformat()
+                
+                
+        return {"trades": trades}
                 
         return {"trades": trades}
     except Exception as e:
