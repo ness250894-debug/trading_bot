@@ -43,9 +43,8 @@ class BacktestRequest(BaseModel):
         return v
 
 @router.post("/backtest")
-@limiter.limit("5/minute")
-@limiter.limit("5/minute")
-async def run_backtest(request: Request, backtest_data: BacktestRequest, current_user: dict = Depends(auth.get_current_user)):
+@limiter.limit("10/minute")
+async def run_backtest(request: Request, backtest_data: BacktestRequest, current_user: dict =Depends(auth.get_current_user)):
     try:
         # Enforce Free Plan Limits
         is_admin = current_user.get('is_admin', False)
@@ -149,7 +148,7 @@ class OptimizeRequest(BaseModel):
         return v
 
 @router.post("/optimize")
-@limiter.limit("2/minute")
+@limiter.limit("5/minute")
 async def run_optimization(request: Request, optimize_data: OptimizeRequest, current_user: dict = Depends(auth.get_current_user)):
     try:
         # Enforce Free Plan Limits

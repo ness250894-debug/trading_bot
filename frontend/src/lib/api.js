@@ -1,4 +1,5 @@
 import axios from 'axios';
+import secureStorage from './secureStorage';
 
 // Use environment variable or fallback to relative path for production
 const baseURL = import.meta.env.VITE_API_URL || '/api';
@@ -13,7 +14,7 @@ const api = axios.create({
 // Request interceptor to add token
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token = secureStorage.getToken();
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`;
         }
@@ -53,7 +54,7 @@ api.interceptors.response.use(
 
             if (!isAuthEndpoint && !originalRequest._retry) {
                 // Clear token and redirect to login for protected routes
-                localStorage.removeItem('token');
+                secureStorage.clearAll();
                 if (window.location.pathname !== '/signup' &&
                     window.location.pathname !== '/') {
                     window.location.href = '/';

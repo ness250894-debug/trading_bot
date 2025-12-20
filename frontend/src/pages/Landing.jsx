@@ -6,6 +6,7 @@ import {
     CheckCircle, Star, Award
 } from 'lucide-react';
 import Testimonials from '../components/Testimonials';
+import secureStorage from '../lib/secureStorage';
 
 
 export default function Landing() {
@@ -21,7 +22,7 @@ export default function Landing() {
 
     // Check if user is already logged in
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = secureStorage.getToken();
         if (token) {
             navigate('/main');
         }

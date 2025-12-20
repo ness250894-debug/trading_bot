@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../lib/api';
+import secureStorage from '../lib/secureStorage';
 import { Lock, Mail, AlertCircle, UserPlus, User, Eye, EyeOff, Check, X } from 'lucide-react';
 
 
@@ -34,7 +35,7 @@ export default function Signup() {
                 password
             });
 
-            localStorage.setItem('token', response.data.access_token);
+            secureStorage.setToken(response.data.access_token);
             navigate('/main');
         } catch (err) {
             setError(err.response?.data?.detail || 'Signup failed');

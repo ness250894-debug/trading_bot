@@ -6,6 +6,7 @@ import { ModalProvider } from './components/Modal';
 import PublicLayout from './components/PublicLayout';
 import HybridLayout from './components/HybridLayout';
 import { ConfigProvider } from './lib/ConfigContext';
+import secureStorage from './lib/secureStorage';
 
 
 // Lazy load pages for performance optimization
@@ -80,7 +81,7 @@ class ErrorBoundary extends React.Component {
 }
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
+  const token = secureStorage.getToken();
   if (!token) {
     return <Navigate to="/" replace />;
   }
