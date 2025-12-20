@@ -5,7 +5,7 @@ const SliderInput = ({ label, value, min, max, step, onChange, description }) =>
     return (
         <div className="mb-3 group">
             <div className="flex justify-between items-center mb-1">
-                <label className="text-xs font-medium text-foreground flex items-center gap-1 group-hover:text-primary transition-colors">
+                <label className="text-xs font-medium text-foreground flex items-center gap-1">
                     {label}
                     {description && <Tooltip content={description} />}
                 </label>
