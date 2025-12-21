@@ -79,10 +79,18 @@ export default function WatchlistWidget() {
         e.preventDefault();
         if (!symbol) return;
 
+        // Ensure symbol format (must contain /)
+        let symToSend = symbol.toUpperCase();
+        if (!symToSend.includes('/')) {
+            // Try to append USDT default if missing, or error?
+            // Safest for user experience: append /USDT if it looks like a coin
+            symToSend += '/USDT';
+        }
+
         setSubmitting(true);
         try {
             // No duplicate check here - allow backend to handle overwrite/bump for smart ordering
-            await api.post('/watchlist', { symbol: symbol.toUpperCase() });
+            await api.post('/watchlist', { symbol: symToSend });
             setSymbol('');
             // Immediate fetch to show update
             await fetchWatchlist();

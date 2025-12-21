@@ -28,10 +28,9 @@ class DashboardRepository(BaseRepository):
 
     @retry(max_attempts=3, delay=0.5, backoff=2)
     def add_to_watchlist(self, user_id, symbol, notes=None):
-        """Add symbol to watchlist."""
+        """Add symbol to watchlist (Upsert)."""
         try:
-            # Validate symbol against supported list
-            # We allow it if it exists in supported_symbols AND is active
+            # Validate symbol against supported list (optional but good practice)
             valid = self.conn.execute(
                 "SELECT 1 FROM supported_symbols WHERE symbol = ? AND is_active = TRUE",
                 [symbol]
@@ -40,44 +39,26 @@ class DashboardRepository(BaseRepository):
             if not valid:
                 return None, f"Symbol '{symbol}' is not supported or invalid."
             
-            # Upsert behavior: Update if exists, Insert if not
-            # This avoids Unique Constraint errors and bumps the timestamp
-            result = self.conn.execute(
-                "UPDATE watchlists SET added_at = ?, notes = ? WHERE user_id = ? AND symbol = ?",
-                [datetime.now(), notes, user_id, symbol]
-            )
-            # cursor.rowcount equivalent depends on the driver. DuckDB returns fetchall or None usually from execute?
-            # Actually self.conn.execute returns a cursor. We can check rows_affected if exposed?
-            # DuckDB python client 'execute' returns connection/cursor. 
+            # Robust Upsert using ON CONFLICT
+            # This handles both new inserts and updates to existing (or "phantom") rows atomically
+            query = """
+                INSERT INTO watchlists (id, user_id, symbol, notes, added_at)
+                VALUES (nextval('seq_watchlist_id'), ?, ?, ?, ?)
+                ON CONFLICT (user_id, symbol) DO UPDATE 
+                SET added_at = excluded.added_at, 
+                    notes = COALESCE(excluded.notes, watchlists.notes)
+            """
+            self.conn.execute(query, [user_id, symbol, notes, datetime.now()])
             
-            # Alternative: simpler logic with check first
-            existing = self.conn.execute(
+            # Get the ID (either new or existing)
+            result = self.conn.execute(
                 "SELECT id FROM watchlists WHERE user_id = ? AND symbol = ?",
                 [user_id, symbol]
             ).fetchone()
-
-            if existing:
-                self.conn.execute(
-                    "UPDATE watchlists SET added_at = ?, notes = ? WHERE id = ?",
-                    [datetime.now(), notes, existing[0]]
-                )
-                return existing[0], None
-            else:
-                query = """
-                    INSERT INTO watchlists
-                    (id, user_id, symbol, notes, added_at)
-                    VALUES (nextval('seq_watchlist_id'), ?, ?, ?, ?)
-                """
-                self.conn.execute(query, [user_id, symbol, notes, datetime.now()])
-                
-                # Get the created watchlist item ID
-                result = self.conn.execute(
-                    "SELECT id FROM watchlists WHERE user_id = ? AND symbol = ?",
-                    [user_id, symbol]
-                ).fetchone()
-                
-                val = result[0] if result else None
-                return val, None
+            
+            val = result[0] if result else None
+            return val, None
+            
         except Exception as e:
             self.logger.error(f"Error adding to watchlist: {e}")
             return None, str(e)
