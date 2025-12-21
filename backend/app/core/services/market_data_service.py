@@ -30,9 +30,10 @@ class MarketDataService:
             
             # Filter for valid pairs (e.g., USDT pairs, active)
             # Bybit/CCXT returns a dict of market objects
+            # User requested to remove :USDT (Swap) duplicates to keep the list clean (Spot preference for UI)
             symbols = []
             for symbol, market in markets.items():
-                if market.get('active', True) and '/USDT' in symbol:
+                if market.get('active', True) and '/USDT' in symbol and not symbol.endswith(':USDT'):
                     symbols.append(symbol)
             
             logger.info(f"Found {len(symbols)} active USDT pairs.")
