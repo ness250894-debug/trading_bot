@@ -77,6 +77,7 @@ class DashboardRepository(BaseRepository):
                 ).fetchone()
                 
                 val = result[0] if result else None
+                return val, None
         except Exception as e:
             self.logger.error(f"Error adding to watchlist: {e}")
             return None, str(e)

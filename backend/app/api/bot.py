@@ -268,17 +268,21 @@ async def get_trades_endpoint(limit: int = 100, offset: int = 0, is_mock: Option
 
 @router.get("/watchlist")
 async def get_watchlist_endpoint(current_user: dict = Depends(auth.get_current_user)):
-    return {"watchlist": db.get_watchlist(current_user['id'])}
+    user_id = int(current_user['id'])
+    return {"watchlist": db.get_watchlist(user_id)}
 
 @router.post("/watchlist")
 async def add_watchlist(data: WatchlistAdd, current_user: dict = Depends(auth.get_current_user)):
-    success, error = db.add_to_watchlist(current_user['id'], data.symbol, data.notes)
+    user_id = int(current_user['id'])
+    success, error = db.add_to_watchlist(user_id, data.symbol, data.notes)
     if success:
         return {"status": "success"}
     raise HTTPException(status_code=400, detail=f"Failed: {error}")
 
 @router.delete("/watchlist/remove")
 async def remove_watchlist(symbol: str, current_user: dict = Depends(auth.get_current_user)):
-    if db.remove_from_watchlist(current_user['id'], symbol):
+    user_id = int(current_user['id'])
+    if db.remove_from_watchlist(user_id, symbol):
         return {"status": "success"}
     raise HTTPException(status_code=500)
+
