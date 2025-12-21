@@ -6,7 +6,7 @@ import os
 import logging
 import requests
 from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import google.generativeai as genai
 from .config import GEMINI_API_KEY, CRYPTOPANIC_API_KEY
 from .news_service import news_service
