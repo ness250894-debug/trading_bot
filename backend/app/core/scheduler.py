@@ -31,6 +31,7 @@ class BackgroundScheduler:
             'hour': hour,
             'minute': minute
         })
+        headers = {}
         logger.info(f"Scheduled {func.__name__} to run daily at {hour:02d}:{minute:02d}")
         
     async def _run_task(self, task):
@@ -48,9 +49,27 @@ class BackgroundScheduler:
             logger.info(f"Completed task: {func.__name__}")
         except Exception as e:
             logger.error(f"Error running task {task['func'].__name__}: {e}")
-    
+            
+    def schedule_interval(self, func: Callable, seconds: int):
+        """
+        Schedule a function to run periodically.
+        
+        Args:
+            func: Function to run
+            seconds: Interval in seconds
+        """
+        self.tasks.append({
+            'func': func,
+            'interval': 'periodic',
+            'seconds': seconds
+        })
+        logger.info(f"Scheduled {func.__name__} to run every {seconds} seconds")
+
     async def _calculate_delay_until_next_run(self, task):
         """Calculate seconds until next run time."""
+        if task['interval'] == 'periodic':
+            return task['seconds']
+            
         now = datetime.now()
         target_hour = task['hour']
         target_minute = task['minute']

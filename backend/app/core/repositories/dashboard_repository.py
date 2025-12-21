@@ -40,32 +40,46 @@ class DashboardRepository(BaseRepository):
             if not valid:
                 return None, f"Symbol '{symbol}' is not supported or invalid."
             
-            # Remove existing entry if any (Overwrite behavior)
-            self.conn.execute(
-                "DELETE FROM watchlists WHERE user_id = ? AND symbol = ?",
-                [user_id, symbol]
-            )
-            
-            query = """
-                INSERT INTO watchlists
-                (id, user_id, symbol, notes, added_at)
-                VALUES (nextval('seq_watchlist_id'), ?, ?, ?, ?)
-            """
-            self.conn.execute(query, [user_id, symbol, notes, datetime.now()])
-            
-            # Get the created watchlist item ID
+            # Upsert behavior: Update if exists, Insert if not
+            # This avoids Unique Constraint errors and bumps the timestamp
             result = self.conn.execute(
+                "UPDATE watchlists SET added_at = ?, notes = ? WHERE user_id = ? AND symbol = ?",
+                [datetime.now(), notes, user_id, symbol]
+            )
+            # cursor.rowcount equivalent depends on the driver. DuckDB returns fetchall or None usually from execute?
+            # Actually self.conn.execute returns a cursor. We can check rows_affected if exposed?
+            # DuckDB python client 'execute' returns connection/cursor. 
+            
+            # Alternative: simpler logic with check first
+            existing = self.conn.execute(
                 "SELECT id FROM watchlists WHERE user_id = ? AND symbol = ?",
                 [user_id, symbol]
             ).fetchone()
-            
-            val = result[0] if result else None
-            return val, None
+
+            if existing:
+                self.conn.execute(
+                    "UPDATE watchlists SET added_at = ?, notes = ? WHERE id = ?",
+                    [datetime.now(), notes, existing[0]]
+                )
+                return existing[0], None
+            else:
+                query = """
+                    INSERT INTO watchlists
+                    (id, user_id, symbol, notes, added_at)
+                    VALUES (nextval('seq_watchlist_id'), ?, ?, ?, ?)
+                """
+                self.conn.execute(query, [user_id, symbol, notes, datetime.now()])
+                
+                # Get the created watchlist item ID
+                result = self.conn.execute(
+                    "SELECT id FROM watchlists WHERE user_id = ? AND symbol = ?",
+                    [user_id, symbol]
+                ).fetchone()
+                
+                val = result[0] if result else None
         except Exception as e:
             self.logger.error(f"Error adding to watchlist: {e}")
             return None, str(e)
-
-
     @retry(max_attempts=3, delay=0.5, backoff=2)
     def remove_from_watchlist(self, user_id, symbol):
         """Remove symbol from watchlist."""
@@ -107,6 +121,31 @@ class DashboardRepository(BaseRepository):
             return alerts
         except Exception as e:
             self.logger.error(f"Error fetching alerts: {e}")
+            return []
+
+    def get_all_active_alerts(self):
+        """Get all active price alerts for monitoring."""
+        try:
+            rows = self.conn.execute(
+                """
+                SELECT id, user_id, symbol, condition, price_target 
+                FROM price_alerts 
+                WHERE is_active = TRUE
+                """
+            ).fetchall()
+            
+            alerts = []
+            for row in rows:
+                alerts.append({
+                    'id': row[0],
+                    'user_id': row[1],
+                    'symbol': row[2],
+                    'condition': row[3],
+                    'price_target': row[4]
+                })
+            return alerts
+        except Exception as e:
+            self.logger.error(f"Error fetching active alerts: {e}")
             return []
 
     @retry(max_attempts=3, delay=0.5, backoff=2)
@@ -154,6 +193,19 @@ class DashboardRepository(BaseRepository):
             return None, str(e)
 
 
+
+    @retry(max_attempts=3, delay=0.5, backoff=2)
+    def trigger_alert(self, alert_id):
+        """Mark alert as triggered."""
+        try:
+            self.conn.execute(
+                "UPDATE price_alerts SET is_active = FALSE, triggered_at = ? WHERE id = ?",
+                [datetime.now(), alert_id]
+            )
+            return True
+        except Exception as e:
+            self.logger.error(f"Error triggering alert {alert_id}: {e}")
+            return False
 
     @retry(max_attempts=3, delay=0.5, backoff=2)
     def delete_alert(self, user_id, alert_id):

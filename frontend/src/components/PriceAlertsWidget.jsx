@@ -19,11 +19,36 @@ export default function PriceAlertsWidget() {
     const toast = useToast();
 
     const [availableSymbols, setAvailableSymbols] = useState([]);
+    const [prices, setPrices] = useState({});
 
     useEffect(() => {
         fetchAlerts();
         fetchSupportedSymbols();
+
+        const interval = setInterval(fetchAlerts, 15000); // 15s polling for alert status
+        return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (alerts.length === 0) return;
+
+        const fetchPrices = async () => {
+            try {
+                const symbols = [...new Set(alerts.map(a => a.symbol))].join(',');
+                const res = await api.get('/exchanges/tickers', { params: { symbols } });
+                if (res.data.tickers) {
+                    setPrices(res.data.tickers);
+                }
+            } catch (err) {
+                console.error("Failed to fetch prices", err);
+            }
+        };
+
+        fetchPrices();
+        const interval = setInterval(fetchPrices, 10000); // 10s polling
+        return () => clearInterval(interval);
+    }, [alerts]);
+
 
     const fetchSupportedSymbols = async () => {
         try {
@@ -152,6 +177,11 @@ export default function PriceAlertsWidget() {
                                     <div className="font-bold text-sm">{alert.symbol}</div>
                                     <div className="text-xs text-muted-foreground">
                                         Target: <span className="text-foreground font-medium">${alert.price_target}</span>
+                                        {prices[alert.symbol] && (
+                                            <span className="ml-2 opacity-70">
+                                                (Curr: ${prices[alert.symbol].price})
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

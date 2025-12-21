@@ -222,6 +222,10 @@ async def startup_event():
     # Run initial sync in background
     asyncio.create_task(market_data_service.sync_supported_symbols())
     
+    # Schedule Price Alert Checker (Every 60s)
+    from .core.services.price_alert_service import price_alert_service
+    scheduler.schedule_interval(price_alert_service.check_alerts, seconds=60)
+    
     # Start scheduler in background
     asyncio.create_task(scheduler.start())
     logger.info("✓ Automated daily backups and symbol sync scheduled")
