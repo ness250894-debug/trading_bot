@@ -27,12 +27,36 @@ except ImportError:
         return decorator
 
 class DuckDBHandler:
-    def __init__(self, db_file="data/trading_bot.duckdb"):
-        self.db_file = db_file
+    def __init__(self, db_file=None):
+        if db_file:
+            self.db_file = db_file
+        else:
+            # ROBUST PATH CALCULATION
+            # This file is in backend/app/core/database.py
+            # We want to reach data/trading_bot.duckdb in the project root
+            
+            current_dir = os.path.dirname(os.path.abspath(__file__)) # .../backend/app/core
+            backend_dir = os.path.dirname(os.path.dirname(current_dir)) # .../backend
+            project_root = os.path.dirname(backend_dir) # .../trading_bot
+            
+            # Check if we are incorrectly in 'backend/backend' or something, 
+            # but usually project root has 'data' folder.
+            
+            # Env var override (optional)
+            env_path = os.getenv("DB_PATH")
+            if env_path:
+                self.db_file = env_path
+            else:
+                 self.db_file = os.path.join(project_root, "data", "trading_bot.duckdb")
+
         # Ensure directory exists
-        os.makedirs(os.path.dirname(db_file), exist_ok=True)
+        if self.db_file and os.path.dirname(self.db_file):
+            os.makedirs(os.path.dirname(self.db_file), exist_ok=True)
+            
         # Use read-write mode explicitly to avoid conflicts
-        self.conn = duckdb.connect(db_file, read_only=False)
+        abs_path = os.path.abspath(self.db_file)
+        print(f"DEBUG: DuckDBHandler using database at: {abs_path}")
+        self.conn = duckdb.connect(self.db_file, read_only=False)
         
         # Initialize Repositories
         self.user_repo = UserRepository(self.conn)

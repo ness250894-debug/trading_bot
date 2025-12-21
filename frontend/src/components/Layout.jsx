@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import UserDropdown from './UserDropdown';
 import ExchangeLinks from './ExchangeLinks';
 import Disclaimer from './Disclaimer';
+import secureStorage from '../lib/secureStorage';
 
 export default function Layout({ children }) {
     const [isAdmin, setIsAdmin] = React.useState(false);
@@ -15,7 +16,7 @@ export default function Layout({ children }) {
     React.useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                const token = localStorage.getItem('token');
+                const token = secureStorage.getToken();
                 if (!token) return;
 
                 const response = await fetch('/api/auth/me', {
@@ -58,7 +59,7 @@ export default function Layout({ children }) {
     }
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
+        secureStorage.clearToken();
         window.location.href = '/';
     };
 
@@ -69,6 +70,8 @@ export default function Layout({ children }) {
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/20 rounded-full blur-[120px]" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-900/20 rounded-full blur-[120px]" />
             </div>
+
+
 
             {/* Mobile Menu Overlay */}
             <AnimatePresence>
