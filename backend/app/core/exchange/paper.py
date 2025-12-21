@@ -127,6 +127,9 @@ class PaperExchange(BaseExchangeClient):
 
             logger.info(f"PAPER ORDER: {side.upper()} {amount} {symbol} @ {current_price:.2f} | Fee: {fee:.4f} | Bal: {self.paper_balance:.2f}")
             
+            # Use the calculated pnl ('pnl' variable) if it exists (for close trades), else 0
+            pnl_value = locals().get('pnl', 0.0)
+
             # Return fake order ID
             import uuid
             order_id = str(uuid.uuid4())
@@ -158,6 +161,7 @@ class PaperExchange(BaseExchangeClient):
                 'amount': amount,
                 'cost': value,
                 'fee': fee,
+                'pnl': pnl_value, 
                 'timestamp': int(time.time() * 1000),
                 'info': {'paper': True}
             }

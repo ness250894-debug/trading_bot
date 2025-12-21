@@ -13,6 +13,7 @@ from ..encryption import EncryptionHelper
 from ..client_manager import client_manager
 from ..socket_manager import socket_manager
 import asyncio
+import time
 
 logger = logging.getLogger("Core.BotService")
 
@@ -140,8 +141,28 @@ class BotService:
         return success
 
     def stop_bot(self, user_id: int, config_id: Optional[int] = None, symbol: Optional[str] = None) -> bool:
-        """Stop a bot instance."""
+        """Stop a bot instance and close any open positions."""
+        
+        # 1. Attempt to close position if config exists
+        if config_id:
+            try:
+                config_data = self.db.get_bot_config(user_id, config_id)
+                if config_data:
+                     closed = self._ensure_position_closed(user_id, config_data)
+                     if not closed:
+                         raise HTTPException(status_code=500, detail="Failed to close open position after multiple retries. Bot NOT stopped.")
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"Error checking/closing position for config {config_id}: {e}")
+                # If we can't even check, it's safer not to stop? Or force stop?
+                # User requirement: "NEEDS to close position no matter what"
+                # If we error here, we assume we failed to close.
+                raise HTTPException(status_code=500, detail=f"Error checking position: {str(e)}. Bot NOT stopped.")
+
+        # 2. Stop the bot logic
         success = bot_manager.stop_bot(user_id, config_id=config_id, symbol=symbol)
+        
         if success:
              # Broadcast update
              asyncio.create_task(self.broadcast_status_update(user_id))
@@ -360,8 +381,11 @@ class BotService:
         except Exception as e:
             logger.error(f"WS Broadcast failed: {e}")
 
-    def _close_position_safely(self, user_id: int, config_data: Dict[str, Any]):
-        """Attempt to close position on exchange."""
+    def _ensure_position_closed(self, user_id: int, config_data: Dict[str, Any], max_retries=5) -> bool:
+        """
+        Ensure position is closed with retries.
+        Returns True if closed (or was empty), False if failed to close.
+        """
         try:
             exchange_name = config_data.get('exchange', 'bybit')
             symbol = config_data['symbol']
@@ -387,22 +411,42 @@ class BotService:
                     exchange=exchange_name
                 )
                 
+                for attempt in range(max_retries):
+                    try:
+                        position = client.fetch_position(symbol)
+                        size = float(position.get('size', 0.0))
+                        
+                        if size == 0:
+                            logger.info(f"Position for {symbol} is closed.")
+                            return True
+                            
+                        logger.info(f"Attempt {attempt+1}/{max_retries}: Closing position for {symbol} (Size: {size})")
+                        side = position.get('side', '').lower()
+                        close_side = 'sell' if side == 'buy' else 'buy'
+                        
+                        client.create_order(
+                            symbol=symbol,
+                            order_type='market',
+                            side=close_side,
+                            amount=size
+                        )
+                        
+                        # Wait for fill
+                        time.sleep(2)
+                        
+                    except Exception as e:
+                        logger.error(f"Error checking/closing position (Attempt {attempt+1}): {e}")
+                        time.sleep(2)
+                
+                # Final check
                 position = client.fetch_position(symbol)
                 size = float(position.get('size', 0.0))
+                return size == 0
                 
-                if size > 0:
-                    logger.info(f"Closing position for {symbol} (Size: {size})")
-                    side = position.get('side', '').lower()
-                    close_side = 'sell' if side == 'buy' else 'buy'
-                    
-                    client.create_order(
-                        symbol=symbol,
-                        order_type='market',
-                        side=close_side,
-                        amount=size
-                    )
+            return False # No keys = failure to ensure check
+            
         except Exception as e:
-            logger.error(f"Failed to close position for {config_data.get('symbol')}: {e}")
-            # Non-blocking error
+            logger.error(f"Failed to ensure position closed for {config_data.get('symbol')}: {e}")
+            return False
 
 bot_service = BotService()

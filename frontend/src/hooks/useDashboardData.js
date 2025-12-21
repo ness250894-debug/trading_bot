@@ -243,7 +243,7 @@ export const useDashboardData = () => {
     const handleBulkStart = async (bots) => {
         try {
             // bots: array of {symbol, config_id}
-            await api.post('/bot/bulk/start', { bots });
+            await api.post('/bulk/start', { bots });
             toast.success(`Started ${bots.length} bots`);
             const res = await api.get('/status');
             setBotStatus(res.data);
@@ -254,7 +254,7 @@ export const useDashboardData = () => {
 
     const handleBulkStop = async (bots) => {
         try {
-            await api.post('/bot/bulk/stop', { bots });
+            await api.post('/bulk/stop', { bots });
             toast.success(`Stopped ${bots.length} bots`);
             const res = await api.get('/status');
             setBotStatus(res.data);
@@ -265,7 +265,7 @@ export const useDashboardData = () => {
 
     const handleBulkRemove = async (configIds) => {
         try {
-            await api.post('/bot/bulk/delete', { config_ids: configIds });
+            await api.post('/bulk/delete', { config_ids: configIds });
             setBotConfigs(prev => prev.filter(c => !configIds.includes(c.id)));
             const res = await api.get('/status');
             setBotStatus(res.data);

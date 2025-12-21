@@ -348,7 +348,7 @@ class TradingEngine:
         
         # Check for exit signal
         if (position_side == 'long' and signal == 'short') or (position_side == 'short' and signal == 'long'):
-            success, pnl = self.order_exec.execute_exit_order(self.symbol, position, current_price, self.strategy_name)
+            success, pnl = self.order_exec.execute_exit_order(self.symbol, position, current_price, self.strategy_name, leverage=self.leverage)
             if success:
                 self.position_mgr.update_state(position_start_time=None)
                 # Emit Exit Event
@@ -388,12 +388,12 @@ class TradingEngine:
             sl_str = f"${sl_price:.2f}" if sl_price else "N/A"
             
             # Calculate duration
-            duration_str = "?"
+            duration_str = ""
             if self.position_mgr.position_start_time:
                 dur = (time.time() - self.position_mgr.position_start_time) / 60
-                duration_str = f"{dur:.1f}m"
+                duration_str = f" | Dur: {dur:.1f}m"
             
-            logger.info(f"5. 👁️ Monitoring | PnL: {pnl_pct*100:+.2f}% (${unrealized_pnl:+.2f}) | TP: {tp_str} | SL: {sl_str} | Dur: {duration_str}")
+            logger.info(f"5. 👁️ Monitoring | PnL: {pnl_pct*100:+.2f}% (${unrealized_pnl:+.2f}) | TP: {tp_str} | SL: {sl_str}{duration_str}")
             
             # Update runtime state
             if self.runtime_state is not None:

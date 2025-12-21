@@ -92,6 +92,7 @@ class OrderExecutor:
                 'amount': amount,
                 'type': 'OPEN',
                 'pnl': 0.0,
+                'leverage': leverage,
                 'strategy': strategy_name,
                 'user_id': self.user_id,
                 'is_mock': self.is_mock
@@ -113,7 +114,7 @@ class OrderExecutor:
             self.logger.debug(f"   Stack: {traceback.format_exc()}")
             return False, None
     
-    def execute_exit_order(self, symbol, position, current_price, strategy_name):
+    def execute_exit_order(self, symbol, position, current_price, strategy_name, leverage=1.0):
         """
         Execute market exit order and log trade.
         
@@ -122,6 +123,7 @@ class OrderExecutor:
             position: Current position dict
             current_price: Current market price
             strategy_name: Name of the strategy
+            leverage: Leverage used
             
         Returns:
             Tuple of (success: bool, pnl: float or None)
@@ -130,6 +132,7 @@ class OrderExecutor:
             position_side = position.get('side')
             position_size = position.get('size', 0.0)
             side = 'sell' if position_side == 'long' else 'buy'
+            entry_price = float(position.get('entry_price', 0) or 0)
             
             self.logger.info(f"6. 📤 [User {self.user_id}] Closing Position: {side.upper()} {position_size} {symbol}")
             self.client.create_order(symbol=symbol, order_type='market', side=side, amount=position_size)
@@ -145,6 +148,15 @@ class OrderExecutor:
                     pnl = last_trade.get('pnl')
                 self.logger.info(f"Trade Info: {last_trade}")
             
+            # Calculate PnL % (ROE)
+            # ROE = (PnL / Initial Margin) * 100
+            # Initial Margin = (Entry Price * Size) / Leverage
+            pnl_pct = 0.0
+            if entry_price > 0 and position_size > 0:
+                initial_margin = (entry_price * position_size) / leverage
+                if initial_margin > 0:
+                    pnl_pct = (pnl / initial_margin) * 100
+            
             # Log trade to database
             trade_data = {
                 'symbol': symbol,
@@ -153,9 +165,12 @@ class OrderExecutor:
                 'amount': position_size,
                 'type': 'CLOSE',
                 'pnl': pnl,
+                'pnl_pct': pnl_pct,
+                'leverage': leverage,
                 'strategy': strategy_name,
                 'user_id': self.user_id,
-                'is_mock': self.is_mock
+                'is_mock': self.is_mock,
+                'entry_price': entry_price
             }
             self.db.log_trade(trade_data)
             self.notifier.send_trade_alert(trade_data)
