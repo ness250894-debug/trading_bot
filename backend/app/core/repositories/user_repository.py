@@ -240,13 +240,25 @@ class UserRepository(BaseRepository):
                 )
             else:
                 self.conn.execute(
-                    """INSERT INTO api_keys (user_id, exchange, api_key_encrypted, api_secret_encrypted, created_at, updated_at) 
-                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    """INSERT INTO api_keys (id, user_id, exchange, api_key_encrypted, api_secret_encrypted, created_at, updated_at) 
+                       VALUES (nextval('seq_api_key_id'), ?, ?, ?, ?, ?, ?)""",
                     [user_id, exchange, api_key_encrypted, api_secret_encrypted, datetime.now(), datetime.now()]
                 )
             return True
         except Exception as e:
             self.logger.error(f"Error saving API key: {e}")
+            return False
+
+    def delete_api_key(self, user_id, exchange):
+        """Delete API keys."""
+        try:
+            self.conn.execute(
+                "DELETE FROM api_keys WHERE user_id = ? AND exchange = ?",
+                [user_id, exchange]
+            )
+            return True
+        except Exception as e:
+            self.logger.error(f"Error deleting API key: {e}")
             return False
 
     def get_risk_profile(self, user_id):

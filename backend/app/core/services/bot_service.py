@@ -127,11 +127,24 @@ class BotService:
         # Enforce Limits
         is_admin = self.db.get_user_by_id(user_id).get('is_admin', False)
         strategy_config = self._enforce_subscription(user_id, strategy_config, is_admin)
+        
+        is_dry_run = strategy_config.get('DRY_RUN', True)
 
         try:
             main_loop = asyncio.get_running_loop()
         except RuntimeError:
             main_loop = None
+            exchange_name = strategy_config.get('exchange', 'bybit')
+            api_key_data = self.db.get_api_key(user_id, exchange_name)
+            
+            has_keys = False
+            if api_key_data:
+                has_keys = True
+            elif exchange_name == 'bybit' and config.API_KEY and config.API_SECRET:
+                has_keys = True
+                
+            if not has_keys:
+                 raise HTTPException(status_code=400, detail=f"Live trading requires API keys for {exchange_name}. Please configure them in Settings.")
 
         success = bot_manager.start_bot(user_id, strategy_config, config_id=config_id, main_loop=main_loop)
         
@@ -392,6 +405,7 @@ class BotService:
         try:
             exchange_name = config_data.get('exchange', 'bybit')
             symbol = config_data['symbol']
+            is_dry_run = config_data.get('dry_run', True)
             
             # Get Keys
             api_key_data = self.db.get_api_key(user_id, exchange_name)
@@ -405,12 +419,19 @@ class BotService:
                 api_key = config.API_KEY
                 api_secret = config.API_SECRET
 
+            if not api_key:
+                if is_dry_run:
+                    logger.warning(f"No API keys found for Dry Run close of {symbol}. Assuming safe to close/delete.")
+                    return True
+                else:
+                    return False # Live trading requires keys to ensure closure
+
             if api_key and api_secret:
                 client = client_manager.get_client(
                     user_id=user_id,
                     api_key=api_key,
                     api_secret=api_secret,
-                    dry_run=config_data.get('dry_run', True),
+                    dry_run=is_dry_run,
                     exchange=exchange_name
                 )
                 

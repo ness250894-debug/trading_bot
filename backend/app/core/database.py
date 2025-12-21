@@ -112,6 +112,9 @@ class DuckDBHandler:
     def save_api_key(self, user_id, exchange, api_key_encrypted, api_secret_encrypted):
         return self.user_repo.save_api_key(user_id, exchange, api_key_encrypted, api_secret_encrypted)
 
+    def delete_api_key(self, user_id, exchange):
+        return self.user_repo.delete_api_key(user_id, exchange)
+
     def get_risk_profile(self, user_id):
         return self.user_repo.get_risk_profile(user_id)
 
