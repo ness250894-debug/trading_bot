@@ -100,7 +100,11 @@ if os.path.exists(config_path):
         if 'TAKE_PROFIT_PCT' in dynamic_config: TAKE_PROFIT_PCT = dynamic_config['TAKE_PROFIT_PCT']
         if 'STOP_LOSS_PCT' in dynamic_config: STOP_LOSS_PCT = dynamic_config['STOP_LOSS_PCT']
         
-        # Log successful load (using print as logger might not be configured yet)
-        print(f"Loaded dynamic config from {config_path}")
+        # Log successful load
+        logger.info(f"Loaded dynamic config from {config_path}")
     except Exception as e:
-        print(f"Failed to load config.json: {e}")
+        logger.error(f"Failed to load config.json: {e}")
+
+# Database Path Configuration
+# .../backend/app/core/config.py -> .../backend/app/core -> .../backend/app -> .../backend -> .../trading_bot
+DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "data", "trading_bot.duckdb"))

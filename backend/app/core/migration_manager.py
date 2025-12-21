@@ -62,8 +62,12 @@ class MigrationManager:
 
 # Helper to run migrations from CLI if needed
 if __name__ == "__main__":
-    db_path = "data/trading_bot.duckdb"
-    conn = duckdb.connect(db_path)
+    from app.core.database import DuckDBHandler
+    from app.core import config
+    
+    db = DuckDBHandler(config.DB_PATH)
+    conn = db.conn
     mgr = MigrationManager(conn)
     mgr.run_migrations()
-    conn.close()
+    # DuckDBHandler manages connection
+
