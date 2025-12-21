@@ -436,6 +436,25 @@ class BotService:
                         # Wait for fill
                         time.sleep(2)
                         
+                        # Handle PnL Update for Dry Run
+                        if config_data.get('dry_run', True):
+                            try:
+                                # Fetch the last trade to get realized PnL
+                                trades = client.fetch_my_trades(symbol, limit=1)
+                                if trades:
+                                    last_trade = trades[0]
+                                    # For Paper Exchange, we customized it to include 'pnl'
+                                    pnl = last_trade.get('pnl', 0.0)
+                                    if pnl != 0:
+                                        user = self.db.get_user_by_id(user_id)
+                                        current_balance = user.get('practice_balance', 1000.0)
+                                        new_balance = current_balance + pnl
+                                        self.db.update_practice_balance(user_id, new_balance)
+                                        logger.info(f"Updated practice balance for User {user_id}: {current_balance} -> {new_balance} (PnL: {pnl})")
+                            except Exception as e:
+                                logger.error(f"Failed to update practice balance: {e}")
+                        
+                        
                     except Exception as e:
                         logger.error(f"Error checking/closing position (Attempt {attempt+1}): {e}")
                         time.sleep(2)
