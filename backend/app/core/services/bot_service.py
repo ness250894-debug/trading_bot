@@ -51,7 +51,7 @@ class BotService:
             if not is_valid_pro:
                 raise HTTPException(
                     status_code=403, 
-                    detail="Live trading requires an active Pro subscription. Please upgrade your plan."
+                    detail="Live trading requires an active paid subscription (Basic, Pro, or Elite)."
                 )
 
         # 2. Free Plan Limits
