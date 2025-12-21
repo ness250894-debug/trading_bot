@@ -31,3 +31,19 @@ class BaseRepository:
         except Exception as e:
             self.logger.error(f"Database error executing query: {query} with params {params}. Error: {e}")
             raise e
+
+    def log_audit(self, user_id, action, resource_type, resource_id=None, details=None, ip_address=None):
+        """Log an audit event."""
+        try:
+            from datetime import datetime
+            self.conn.execute(
+                """
+                INSERT INTO audit_log (id, user_id, action, resource_type, resource_id, details, ip_address, created_at)
+                VALUES (nextval('seq_audit_id'), ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [user_id, action, resource_type, resource_id, details, ip_address, datetime.now()]
+            )
+            return True
+        except Exception as e:
+            self.logger.error(f"Error logging audit event: {e}")
+            return False

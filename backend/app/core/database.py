@@ -115,6 +115,9 @@ class DuckDBHandler:
     def delete_api_key(self, user_id, exchange):
         return self.user_repo.delete_api_key(user_id, exchange)
 
+    def log_audit(self, user_id, action, resource_type, resource_id=None, details=None, ip_address=None):
+        return self.user_repo.log_audit(user_id, action, resource_type, resource_id, details, ip_address)
+
     def get_risk_profile(self, user_id):
         return self.user_repo.get_risk_profile(user_id)
 

@@ -144,7 +144,9 @@ class BotService:
                 has_keys = True
                 
             if not has_keys:
-                 raise HTTPException(status_code=400, detail=f"Live trading requires API keys for {exchange_name}. Please configure them in Settings.")
+                 # Signal Only Mode support: Don't raise error, just proceed. 
+                 # TradingEngine will detect missing keys and enter Signal Only mode.
+                 logger.warning(f"Starting Live bot for {exchange_name} without API keys. Bot will run in SIGNAL ONLY mode.")
 
         success = bot_manager.start_bot(user_id, strategy_config, config_id=config_id, main_loop=main_loop)
         

@@ -129,12 +129,18 @@ class TradingEngine:
         else:
             raise ValueError(f"Missing API credentials for user {self.user_id} on {self.exchange}")
         
+        # Signal Only Mode detection
+        self.signal_only = False
+        
         if not api_key or not api_secret:
             if self.dry_run:
                 logger.warning(f"⚠️ No API keys found for user {self.user_id}. Proceeding in DRY RUN mode.")
                 api_key, api_secret = "dummy_key", "dummy_secret"
             else:
-                raise ValueError(f"Missing API credentials for user {self.user_id}")
+                logger.warning(f"⚠️ No API keys found for user {self.user_id}. Proceeding in SIGNAL ONLY mode (No execution).")
+                self.signal_only = True
+                # Use dummy keys for public data access
+                api_key, api_secret = "signal_only_key", "signal_only_secret"
         
         # Initialize exchange client
         self.client = client_manager.get_client(
@@ -316,6 +322,13 @@ class TradingEngine:
             return
         
         # Execute entry order
+        if self.signal_only:
+            logger.info(f"🔔 SIGNAL ONLY: Would have entered {signal.upper()} on {self.symbol} at {current_price}")
+            # Simulate success for notification/logging purposes, but don't create position state?
+            # Better to just notify and return, so we don't track a fake position in live mode
+            self.notifier.send_message(f"🔔 *SIGNAL ONLY*: {signal.upper()} opportunity on {self.symbol} at ${current_price}")
+            return
+
         success, entry_price = self.order_exec.execute_entry_order(
             self.symbol, signal, self.amount_usdt, current_price,
             self.strategy_name, self.take_profit_pct, self.stop_loss_pct,
