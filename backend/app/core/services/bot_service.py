@@ -44,7 +44,8 @@ class BotService:
             is_valid_pro = False
             if subscription and subscription['status'] == 'active':
                 if subscription['expires_at'] and subscription['expires_at'] > datetime.now():
-                    if subscription['plan_id'].startswith('pro'):
+                    # Allow any paid plan (Pro, Elite, etc.) - basically anything not free
+                    if not subscription['plan_id'].startswith('free'):
                         is_valid_pro = True
             
             if not is_valid_pro:

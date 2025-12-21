@@ -8,6 +8,8 @@ import UserDropdown from './UserDropdown';
 import { TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import secureStorage from '../lib/secureStorage';
+
 /**
  * HybridLayout - Layout that works for both authenticated and non-authenticated users
  * Shows UserDropdown if logged in, otherwise shows login/signup buttons
@@ -23,7 +25,7 @@ export default function HybridLayout() {
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                const token = localStorage.getItem('token');
+                const token = secureStorage.getToken();
                 if (!token) {
                     setLoading(false);
                     return;
@@ -62,7 +64,7 @@ export default function HybridLayout() {
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
+        secureStorage.clearToken();
         setCurrentUser(null);
         navigate('/');
     };

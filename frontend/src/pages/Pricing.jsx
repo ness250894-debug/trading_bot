@@ -47,6 +47,7 @@ export default function Pricing() {
                 setCurrentPlan(String(statusRes.value.data.plan));
             }
         } catch (error) {
+            console.error('Error fetching pricing data:', error);
             // Silent fail - will show default plans
             setMessage({ type: 'error', text: 'Failed to load pricing plans.' });
         } finally {
