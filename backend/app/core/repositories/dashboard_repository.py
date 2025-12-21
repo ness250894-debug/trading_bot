@@ -39,7 +39,13 @@ class DashboardRepository(BaseRepository):
             
             if not valid:
                 return None, f"Symbol '{symbol}' is not supported or invalid."
-                
+            
+            # Remove existing entry if any (Overwrite behavior)
+            self.conn.execute(
+                "DELETE FROM watchlists WHERE user_id = ? AND symbol = ?",
+                [user_id, symbol]
+            )
+            
             query = """
                 INSERT INTO watchlists
                 (id, user_id, symbol, notes, added_at)
@@ -56,9 +62,6 @@ class DashboardRepository(BaseRepository):
             val = result[0] if result else None
             return val, None
         except Exception as e:
-            # Check for duplicate manually if needed, or rely on internal error string
-            if "constraint" in str(e).lower() or "unique" in str(e).lower():
-                 return None, "Symbol is already in watchlist"
             self.logger.error(f"Error adding to watchlist: {e}")
             return None, str(e)
 
@@ -118,6 +121,19 @@ class DashboardRepository(BaseRepository):
             
             if not valid:
                 return None, f"Symbol '{symbol}' is not supported."
+            
+            # Check for existing identical alert (Same Symbol, Condition, AND Price)
+            # If exists, delete it (overwrite behavior) to bump it or update hidden fields if any
+            self.conn.execute(
+                """
+                DELETE FROM price_alerts 
+                WHERE user_id = ? 
+                AND symbol = ? 
+                AND condition = ? 
+                AND price_target = ?
+                """,
+                [user_id, symbol, condition, price_target]
+            )
                 
             query = """
                 INSERT INTO price_alerts
@@ -136,6 +152,7 @@ class DashboardRepository(BaseRepository):
         except Exception as e:
             self.logger.error(f"Error creating alert: {e}")
             return None, str(e)
+
 
 
     @retry(max_attempts=3, delay=0.5, backoff=2)
