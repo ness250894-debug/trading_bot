@@ -362,7 +362,9 @@ class BotService:
         symbol = existing['symbol']
         
         # 1. Close Open Positions
-        self._close_position_safely(user_id, existing)
+        closed = self._ensure_position_closed(user_id, existing)
+        if not closed:
+            raise HTTPException(status_code=500, detail="Failed to close open position. Config NOT deleted.")
         
         # 2. Stop Bot if running
         self.stop_bot(user_id, config_id=config_id, symbol=symbol)
