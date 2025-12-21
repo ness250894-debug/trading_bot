@@ -88,3 +88,63 @@ class SystemRepository(BaseRepository):
         except Exception as e:
             self.logger.error(f"Error fetching popular symbols: {e}")
             return []
+
+    def get_all_supported_symbols(self, exchange='bybit'):
+        """Get all supported symbols representing valid pairs."""
+        try:
+            rows = self.conn.execute(
+                "SELECT symbol FROM supported_symbols WHERE is_active = TRUE AND exchange = ? ORDER BY symbol ASC",
+                [exchange]
+            ).fetchall()
+            return [row[0] for row in rows]
+        except Exception as e:
+            self.logger.error(f"Error fetching supported symbols: {e}")
+            return []
+
+    def update_supported_symbols(self, symbols, exchange='bybit'):
+        """
+        Sync supported symbols. 
+        Marks missing ones as inactive. 
+        Adds new ones.
+        """
+        try:
+            from datetime import datetime
+            now = datetime.now()
+            
+            # 1. Get existing
+            existing_rows = self.conn.execute(
+                "SELECT symbol FROM supported_symbols WHERE exchange = ?",
+                [exchange]
+            ).fetchall()
+            existing_set = set(row[0] for row in existing_rows)
+            new_set = set(symbols)
+            
+            # 2. Add New
+            to_add = new_set - existing_set
+            for symbol in to_add:
+                self.conn.execute(
+                    "INSERT INTO supported_symbols (id, symbol, exchange, is_active, last_seen_at) VALUES (nextval('seq_supported_symbol_id'), ?, ?, TRUE, ?)",
+                    [symbol, exchange, now]
+                )
+                
+            # 3. Update Existing (mark active and touch timestamp)
+            # Use chunks if list is huge, but for ~1000 symbols it's fine to iterate
+            for symbol in new_set:
+                self.conn.execute(
+                    "UPDATE supported_symbols SET is_active = TRUE, last_seen_at = ? WHERE symbol = ? AND exchange = ?",
+                    [now, symbol, exchange]
+                )
+                
+            # 4. Mark removed as inactive
+            to_deactivate = existing_set - new_set
+            for symbol in to_deactivate:
+                self.conn.execute(
+                    "UPDATE supported_symbols SET is_active = FALSE WHERE symbol = ? AND exchange = ?",
+                    [symbol, exchange]
+                )
+                
+            return len(to_add), len(to_deactivate)
+        except Exception as e:
+            self.logger.error(f"Error updating supported symbols: {e}")
+            return 0, 0
+

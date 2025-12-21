@@ -215,9 +215,16 @@ async def startup_event():
     # Schedule daily backup at 2:00 AM
     scheduler.schedule_daily(create_backup, hour=2, minute=0)
     
+    # Schedule daily symbol sync at 00:00 AM
+    from .core.services.market_data_service import market_data_service
+    scheduler.schedule_daily(market_data_service.sync_supported_symbols, hour=0, minute=0)
+    
+    # Run initial sync in background
+    asyncio.create_task(market_data_service.sync_supported_symbols())
+    
     # Start scheduler in background
     asyncio.create_task(scheduler.start())
-    logger.info("✓ Automated daily backups scheduled for 2:00 AM")
+    logger.info("✓ Automated daily backups and symbol sync scheduled")
     
     # 3. Bot no longer starts automatically
     # Users must explicitly start their bot via /api/start endpoint

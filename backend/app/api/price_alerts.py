@@ -43,15 +43,15 @@ async def get_alerts(request: Request, active_only: bool = True, current_user: d
 async def create_alert(request: Request, alert: PriceAlertCreate, current_user: dict = Depends(auth.get_current_user)):
     """Create a new price alert."""
     try:
-        alert_id = db.create_alert(
+        alert_id, error = db.create_alert(
             user_id=current_user['id'],
             symbol=alert.symbol,
             condition=alert.condition,
             price_target=alert.price_target
         )
         
-        if not alert_id:
-            raise HTTPException(status_code=500, detail="Failed to create alert")
+        if error:
+            raise ValueError(error)
             
         return {"status": "success", "alert_id": alert_id}
     except ValueError as e:
@@ -59,6 +59,7 @@ async def create_alert(request: Request, alert: PriceAlertCreate, current_user: 
     except Exception as e:
         logger.error(f"Error creating alert: {e}")
         raise HTTPException(status_code=500, detail="Failed to create alert")
+
 
 @router.delete("/alerts/{alert_id}")
 @limiter.limit("30/minute")

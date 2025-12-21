@@ -272,9 +272,10 @@ async def get_watchlist_endpoint(current_user: dict = Depends(auth.get_current_u
 
 @router.post("/watchlist")
 async def add_watchlist(data: WatchlistAdd, current_user: dict = Depends(auth.get_current_user)):
-    if db.add_to_watchlist(current_user['id'], data.symbol, data.notes):
+    success, error = db.add_to_watchlist(current_user['id'], data.symbol, data.notes)
+    if success:
         return {"status": "success"}
-    raise HTTPException(status_code=400, detail="Failed")
+    raise HTTPException(status_code=400, detail=f"Failed: {error}")
 
 @router.delete("/watchlist/remove")
 async def remove_watchlist(symbol: str, current_user: dict = Depends(auth.get_current_user)):

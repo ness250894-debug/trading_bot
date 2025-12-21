@@ -30,6 +30,16 @@ class DashboardRepository(BaseRepository):
     def add_to_watchlist(self, user_id, symbol, notes=None):
         """Add symbol to watchlist."""
         try:
+            # Validate symbol against supported list
+            # We allow it if it exists in supported_symbols AND is active
+            valid = self.conn.execute(
+                "SELECT 1 FROM supported_symbols WHERE symbol = ? AND is_active = TRUE",
+                [symbol]
+            ).fetchone()
+            
+            if not valid:
+                return None, f"Symbol '{symbol}' is not supported or invalid."
+                
             query = """
                 INSERT INTO watchlists
                 (id, user_id, symbol, notes, added_at)
@@ -43,10 +53,15 @@ class DashboardRepository(BaseRepository):
                 [user_id, symbol]
             ).fetchone()
             
-            return result[0] if result else None
+            val = result[0] if result else None
+            return val, None
         except Exception as e:
+            # Check for duplicate manually if needed, or rely on internal error string
+            if "constraint" in str(e).lower() or "unique" in str(e).lower():
+                 return None, "Symbol is already in watchlist"
             self.logger.error(f"Error adding to watchlist: {e}")
-            return None
+            return None, str(e)
+
 
     @retry(max_attempts=3, delay=0.5, backoff=2)
     def remove_from_watchlist(self, user_id, symbol):
@@ -95,6 +110,15 @@ class DashboardRepository(BaseRepository):
     def create_alert(self, user_id, symbol, condition, price_target):
         """Create a price alert."""
         try:
+            # Validate symbol
+            valid = self.conn.execute(
+                "SELECT 1 FROM supported_symbols WHERE symbol = ? AND is_active = TRUE",
+                [symbol]
+            ).fetchone()
+            
+            if not valid:
+                return None, f"Symbol '{symbol}' is not supported."
+                
             query = """
                 INSERT INTO price_alerts
                 (id, user_id, symbol, condition, price_target, is_active, created_at)
@@ -107,10 +131,12 @@ class DashboardRepository(BaseRepository):
                 "SELECT CURRVAL('seq_alert_id')"
             ).fetchone()
             
-            return result[0] if result else None
+            val = result[0] if result else None
+            return val, None
         except Exception as e:
             self.logger.error(f"Error creating alert: {e}")
-            return None
+            return None, str(e)
+
 
     @retry(max_attempts=3, delay=0.5, backoff=2)
     def delete_alert(self, user_id, alert_id):

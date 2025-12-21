@@ -5,9 +5,52 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Dict
 from ..core.exchange.exchange_factory import ExchangeFactory
 from ..core.database import DuckDBHandler
+from ..core import config
+from ..core.exchange import ExchangeClient
 
 router = APIRouter()
 db = DuckDBHandler()
+
+
+@router.get("/exchanges/tickers")
+async def get_tickers(symbols: str):
+    """Fetch current prices for symbols."""
+    try:
+        symbol_list = [s.strip() for s in symbols.split(',') if s.strip()]
+        if not symbol_list:
+            return {"tickers": {}}
+
+        # Default to Bybit via ExchangeClient
+        client = ExchangeClient(config.API_KEY, config.API_SECRET)
+        
+        results = {}
+        for symbol in symbol_list:
+            try:
+                ticker = client.fetch_ticker(symbol)
+                if ticker:
+                    results[symbol] = {
+                        'price': ticker.get('last'),
+                        'change_24h': ticker.get('percentage'),
+                        'volume': ticker.get('baseVolume')
+                    }
+            except Exception:
+                 # Log or ignore invalid symbols
+                 continue
+                
+        return {"tickers": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.get("/exchanges/all-symbols")
+async def get_all_symbols():
+    """Get all supported symbols from cache."""
+    try:
+        symbols = db.system_repo.get_all_supported_symbols()
+        return {"symbols": symbols, "count": len(symbols)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/exchanges", tags=["exchanges"])

@@ -13,9 +13,49 @@ export default function WatchlistWidget() {
     const [adding, setAdding] = useState(false);
     const toast = useToast();
 
+    const [prices, setPrices] = useState({});
+    const [availableSymbols, setAvailableSymbols] = useState([]); // Dynamic list
+
     useEffect(() => {
         fetchWatchlist();
+        fetchSupportedSymbols();
     }, []);
+
+    const fetchSupportedSymbols = async () => {
+        try {
+            const res = await api.get('/exchanges/all-symbols');
+            if (res.data.symbols && res.data.symbols.length > 0) {
+                setAvailableSymbols(res.data.symbols);
+            } else {
+                // Fallback to popular if empty (e.g., first run before sync)
+                setAvailableSymbols(POPULAR_SYMBOLS);
+            }
+        } catch (err) {
+            console.error("Failed to fetch symbols", err);
+            setAvailableSymbols(POPULAR_SYMBOLS);
+        }
+    };
+
+
+    useEffect(() => {
+        if (watchlist.length === 0) return;
+
+        const fetchPrices = async () => {
+            try {
+                const symbols = watchlist.map(w => w.symbol).join(',');
+                const res = await api.get('/exchanges/tickers', { params: { symbols } });
+                if (res.data.tickers) {
+                    setPrices(res.data.tickers);
+                }
+            } catch (err) {
+                console.error("Failed to fetch prices", err);
+            }
+        };
+
+        fetchPrices();
+        const interval = setInterval(fetchPrices, 10000); // 10s polling
+        return () => clearInterval(interval);
+    }, [watchlist]);
 
     const fetchWatchlist = async () => {
         try {
@@ -28,6 +68,8 @@ export default function WatchlistWidget() {
             setLoading(false);
         }
     };
+
+
 
     const handleAddSymbol = async (e) => {
         e.preventDefault();
@@ -81,7 +123,7 @@ export default function WatchlistWidget() {
 
             <form onSubmit={handleAddSymbol} className="flex gap-2 mb-4">
                 <Combobox
-                    options={POPULAR_SYMBOLS}
+                    options={availableSymbols}
                     value={newSymbol}
                     onChange={setNewSymbol}
                     placeholder="Symbol (e.g. BTC/USDT)"
@@ -107,8 +149,13 @@ export default function WatchlistWidget() {
                             <div>
                                 <div className="font-bold text-sm">{item.symbol}</div>
                                 <div className="text-xs text-muted-foreground">
-                                    {/* Real price data would go here */}
-                                    <span className="text-muted-foreground text-[10px]">-</span>
+                                    {prices[item.symbol] ? (
+                                        <span className={prices[item.symbol].change_24h >= 0 ? "text-green-500" : "text-red-500"}>
+                                            ${prices[item.symbol].price} ({prices[item.symbol].change_24h?.toFixed(2)}%)
+                                        </span>
+                                    ) : (
+                                        <span className="text-muted-foreground text-[10px]">-</span>
+                                    )}
                                 </div>
                             </div>
                             <button

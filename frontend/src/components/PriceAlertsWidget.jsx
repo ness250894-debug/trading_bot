@@ -18,9 +18,27 @@ export default function PriceAlertsWidget() {
 
     const toast = useToast();
 
+    const [availableSymbols, setAvailableSymbols] = useState([]);
+
     useEffect(() => {
         fetchAlerts();
+        fetchSupportedSymbols();
     }, []);
+
+    const fetchSupportedSymbols = async () => {
+        try {
+            const res = await api.get('/exchanges/all-symbols');
+            if (res.data.symbols && res.data.symbols.length > 0) {
+                setAvailableSymbols(res.data.symbols);
+            } else {
+                setAvailableSymbols(POPULAR_SYMBOLS);
+            }
+        } catch (err) {
+            console.error("Failed to fetch symbols", err);
+            setAvailableSymbols(POPULAR_SYMBOLS);
+        }
+    };
+
 
     const fetchAlerts = async () => {
         try {
@@ -86,7 +104,7 @@ export default function PriceAlertsWidget() {
             <form onSubmit={handleAddAlert} className="space-y-2 mb-4">
                 <div className="flex gap-2">
                     <Combobox
-                        options={POPULAR_SYMBOLS}
+                        options={availableSymbols}
                         value={symbol}
                         onChange={setSymbol}
                         placeholder="Symbol"
