@@ -263,6 +263,18 @@ export const useDashboardData = () => {
         }
     };
 
+    const handleClosePosition = async (configId) => {
+        try {
+            await api.post(`/bot-configs/${configId}/close-position`);
+            toast.success('Position closed');
+            const res = await api.get('/status');
+            setBotStatus(res.data);
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.detail || 'Failed to close position');
+        }
+    };
+
     const handleBulkRemove = async (configIds) => {
         try {
             await api.post('/bulk/delete', { config_ids: configIds });
@@ -354,6 +366,7 @@ export const useDashboardData = () => {
         handleQuickScalp,
         handleStartBot,
         handleStopBot,
+        handleClosePosition,
         fetchNews
     };
 };

@@ -245,6 +245,16 @@ async def delete_bot_config_endpoint(request: Request, config_id: int, current_u
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/bot-configs/{config_id}/close-position")
+async def close_bot_position_endpoint(request: Request, config_id: int, current_user: dict = Depends(auth.get_current_user)):
+    """Close bot position manually without stopping."""
+    try:
+        if bot_service.close_bot_position(current_user['id'], config_id):
+            return {"status": "success", "message": "Position closed"}
+        raise HTTPException(status_code=500, detail="Failed to close position")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/quick-scalping")
 async def create_quick_scalp_bot_endpoint(request: Request, current_user: dict = Depends(auth.get_current_user)):
     return bot_service.create_quick_scalp_bot(current_user['id'], current_user.get('is_admin', False))

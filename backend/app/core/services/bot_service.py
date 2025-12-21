@@ -470,4 +470,24 @@ class BotService:
             logger.error(f"Failed to ensure position closed for {config_data.get('symbol')}: {e}")
             return False
 
+    def close_bot_position(self, user_id: int, config_id: int) -> bool:
+        """Close any open position for a bot without stopping it."""
+        try:
+            config_data = self.db.get_bot_config(user_id, config_id)
+            if not config_data:
+                raise HTTPException(status_code=404, detail="Bot config not found")
+                
+            # Use the safe close method
+            closed = self._ensure_position_closed(user_id, config_data)
+            
+            if not closed:
+                raise HTTPException(status_code=500, detail="Failed to close position after multiple retries.")
+                
+            return True
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error closing position for config {config_id}: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
 bot_service = BotService()

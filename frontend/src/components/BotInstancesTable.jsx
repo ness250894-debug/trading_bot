@@ -20,7 +20,8 @@ export default function BotInstancesTable({
     loading,
     subscription,
     startingBots,
-    onQuickScalp
+    onQuickScalp,
+    onClosePosition
 }) {
     const navigate = useNavigate();
     const modal = useModal();
@@ -327,6 +328,7 @@ export default function BotInstancesTable({
                                         onStart={onStart}
                                         onStop={onStop}
                                         onRemove={onRemoveBot}
+                                        onClosePosition={onClosePosition}
                                     />
                                 ))}
                             </tbody>
@@ -356,6 +358,7 @@ export default function BotInstancesTable({
                                 onStart={onStart}
                                 onStop={onStop}
                                 onRemove={onRemoveBot}
+                                onClosePosition={onClosePosition}
                             />
                         ))}
                     </div>

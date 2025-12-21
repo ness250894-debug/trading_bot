@@ -41,6 +41,7 @@ export default function Main() {
         handleQuickScalp,
         handleStartBot,
         handleStopBot,
+        handleClosePosition,
         fetchNews
     } = useDashboardData();
 
@@ -94,6 +95,7 @@ export default function Main() {
                     startingBots={startingBots}
                     isBotRunning={isBotRunning}
                     onQuickScalp={handleQuickScalp}
+                    onClosePosition={handleClosePosition}
                 />
             </div>
 

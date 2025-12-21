@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Square, Play, RefreshCw, Trash2 } from 'lucide-react';
+import { Settings, Square, Play, RefreshCw, Trash2, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 /**
@@ -12,7 +12,8 @@ export default function BotRow({
     onSelect,
     onStart,
     onStop,
-    onRemove
+    onRemove,
+    onClosePosition
 }) {
     const navigate = useNavigate();
     const isRunning = bot.is_running || false;
@@ -101,34 +102,44 @@ export default function BotRow({
                         <Settings size={14} />
                     </button>
 
+                    {/* Start/Stop Button (Icon Only) */}
                     {isRunning ? (
                         <button
                             onClick={() => onStop(bot.symbol, bot.config_id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors text-sm font-medium border border-red-500/20"
+                            className="p-1.5 hover:bg-red-500/10 rounded text-red-500 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20"
+                            title="Stop Bot"
                         >
                             <Square size={14} fill="currentColor" />
-                            Stop
                         </button>
                     ) : (
                         <button
                             onClick={() => onStart(bot.symbol, bot.config_id)}
                             disabled={isStarting}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors text-sm font-medium border border-primary/20 disabled:opacity-50"
+                            className="p-1.5 hover:bg-green-500/10 rounded text-green-500 hover:text-green-400 transition-all border border-transparent hover:border-green-500/20 disabled:opacity-50"
+                            title={isStarting ? 'Starting...' : 'Start Bot'}
                         >
                             {isStarting ? (
                                 <RefreshCw size={14} className="animate-spin" />
                             ) : (
                                 <Play size={14} fill="currentColor" />
                             )}
-                            {isStarting ? 'Starting...' : 'Start'}
                         </button>
                     )}
+
+                    {/* Close Position Button (New) */}
+                    <button
+                        onClick={() => onClosePosition(bot.config_id)}
+                        className="p-1.5 hover:bg-orange-500/10 rounded text-orange-500 hover:text-orange-400 transition-all border border-transparent hover:border-orange-500/20"
+                        title="Close Position (Market)"
+                    >
+                        <XCircle size={14} />
+                    </button>
 
                     {/* Delete Button */}
                     <button
                         onClick={() => onRemove(bot.symbol, bot.config_id)}
-                        className="p-1.5 hover:bg-red-500/10 rounded text-red-400 transition-all"
-                        title="Delete bot"
+                        className="p-1.5 hover:bg-red-500/10 rounded text-red-500 hover:text-red-400 transition-all border border-transparent hover:border-red-500/20"
+                        title="Delete Bot"
                     >
                         <Trash2 size={14} />
                     </button>
