@@ -57,7 +57,7 @@ async def run_backtest(request: Request, backtest_data: BacktestRequest, current
                 is_free_plan = False
             
             if is_free_plan:
-                 raise HTTPException(status_code=403, detail="Backtesting is not available on the Free plan. Please upgrade.")
+                 raise HTTPException(status_code=403, detail="Backtesting is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
 
         # Initialize Strategy
         strategy_class = None
@@ -162,7 +162,7 @@ async def run_optimization(request: Request, optimize_data: OptimizeRequest, cur
                 is_free_plan = False
             
             if is_free_plan:
-                 raise HTTPException(status_code=403, detail="Optimization is not available on the Free plan. Please upgrade.")
+                 raise HTTPException(status_code=403, detail="Optimization is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
 
         # Initialize Strategy Class
         strategy_class = None
@@ -355,7 +355,7 @@ async def websocket_optimize(websocket: WebSocket):
                         is_free_plan = False
                     
                     if is_free_plan:
-                         await websocket.send_json({"error": "Ultimate Optimization is not available on the Free plan."})
+                         await websocket.send_json({"error": "Ultimate Optimization is available on any paid plan (Basic, Pro, Elite)."})
                          continue
 
                 for task_data in tasks_data:

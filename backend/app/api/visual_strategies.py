@@ -184,7 +184,7 @@ async def create_strategy(
             is_free_plan = False
             
         if is_free_plan:
-             raise HTTPException(status_code=403, detail="Visual Strategy Builder is not available on the Free plan. Please upgrade.")
+             raise HTTPException(status_code=403, detail="Visual Strategy Builder is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
 
         # Validate strategy first
         executor = JSONStrategyExecutor(strategy.json_config)
@@ -378,7 +378,7 @@ async def delete_strategy(
             is_free_plan = False
             
         if is_free_plan:
-             raise HTTPException(status_code=403, detail="Visual Strategy Builder is not available on the Free plan. Please upgrade.")
+             raise HTTPException(status_code=403, detail="Visual Strategy Builder is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
 
         
         result = db.conn.execute("""

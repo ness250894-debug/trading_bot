@@ -43,7 +43,7 @@ async def get_sentiment_analysis(
                 is_free_plan = False
             
             if is_free_plan:
-                 raise HTTPException(status_code=403, detail="AI Sentiment is not available on the Free plan. Please upgrade.")
+                 raise HTTPException(status_code=403, detail="AI Sentiment is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
 
         # Normalize symbol (remove common suffixes)
         symbol = symbol.upper().replace('USDT', '').replace('USD', '').replace('/','')
@@ -85,7 +85,7 @@ async def get_advanced_sentiment(
                 is_free_plan = False
             
             if is_free_plan:
-                 raise HTTPException(status_code=403, detail="Advanced Sentiment is not available on the Free plan.")
+                 raise HTTPException(status_code=403, detail="Advanced Sentiment is available on any paid plan (Basic, Pro, Elite).")
 
         symbol = symbol.upper().replace('USDT', '').replace('USD', '').replace('/','')
         
@@ -202,7 +202,7 @@ async def manual_sentiment_analysis(
                 is_free_plan = False
             
             if is_free_plan:
-                 raise HTTPException(status_code=403, detail="AI Sentiment is not available on the Free plan. Please upgrade.")
+                 raise HTTPException(status_code=403, detail="AI Sentiment is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
 
         symbol = data.get('symbol', 'CRYPTO')
         texts = data.get('texts', [])

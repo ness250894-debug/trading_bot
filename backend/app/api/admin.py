@@ -32,6 +32,15 @@ async def update_user_subscription(
     current_user: dict = Depends(auth.get_current_admin_user)
 ):
     """Update user subscription (Admin only)."""
+    # Verify plan exists first
+    plan = db.get_plan(update.plan_id)
+    if not plan and not update.plan_id.startswith('free'):
+        # Allow 'free' as a special case if needed, or check if 'free' is in plans table. 
+        # Usually 'free' might be hardcoded or seeded. 
+        # If the user says "only those plans that are available(were created by me on Plans tab)", 
+        # then we should strict check against db.get_plan().
+        raise HTTPException(status_code=400, detail=f"Invalid plan ID: {update.plan_id}")
+
     success = db.update_user_subscription(int(user_id), update.plan_id, update.status)
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update subscription")
