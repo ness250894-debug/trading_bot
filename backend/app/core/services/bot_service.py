@@ -190,7 +190,7 @@ class BotService:
              else:
                  total_unrealized_pnl = bot_status.get('pnl', 0.0)
 
-        # Get Practice Balance from runtime state
+        # Get Practice Balance from runtime state or DB
         practice_balance = None
         if bot_status:
              if isinstance(bot_status, dict) and 'is_running' not in bot_status:
@@ -202,6 +202,14 @@ class BotService:
                          break
              else:
                  practice_balance = bot_status.get('practice_balance')
+        
+        # If not in runtime (bot stopped), fetch from DB
+        if practice_balance is None:
+             user = self.db.get_user_by_id(user_id)
+             if user:
+                 practice_balance = user.get('practice_balance', 1000.0)
+             else:
+                 practice_balance = 1000.0
 
         return {
             "status": "Active" if is_running else "Stopped",
@@ -214,6 +222,79 @@ class BotService:
             "instances": bot_status if isinstance(bot_status, dict) else {},
             "config": strategy_config 
         }
+
+    def reset_practice_balance(self, user_id: int) -> float:
+        """Reset practice balance to default."""
+        # 1. Update DB
+        self.db.update_practice_balance(user_id, 1000.0)
+        
+        # 2. Update Runtime State (if bot running)
+        bot_manager.update_runtime_state(user_id, {'practice_balance': 1000.0})
+        
+        # 3. Broadcast
+        asyncio.create_task(self.broadcast_status_update(user_id))
+        
+        return 1000.0
+
+    def start_bots_bulk(self, user_id: int, bots: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Start multiple bots."""
+        results = {"successful": [], "failed": []}
+        
+        for bot in bots:
+            symbol = bot.get('symbol')
+            config_id = bot.get('config_id')
+            identifier = config_id if config_id else symbol
+            
+            try:
+                if self.start_bot(user_id, config_id=config_id, symbol=symbol):
+                    results['successful'].append(identifier)
+                else:
+                    results['failed'].append({"id": identifier, "error": "Unknown error"})
+            except Exception as e:
+                logger.error(f"Bulk start failed for {identifier}: {e}")
+                results['failed'].append({"id": identifier, "error": str(e)})
+        
+        return results
+
+    def stop_bots_bulk(self, user_id: int, bots: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Stop multiple bots."""
+        results = {"successful": [], "failed": []}
+        
+        for bot in bots:
+            symbol = bot.get('symbol')
+            config_id = bot.get('config_id')
+            identifier = config_id if config_id else symbol
+            
+            try:
+                if self.stop_bot(user_id, config_id=config_id, symbol=symbol):
+                    results['successful'].append(identifier)
+                else:
+                    # Stopping a stopped bot is a success, technically
+                    results['successful'].append(identifier)
+            except Exception as e:
+                logger.error(f"Bulk stop failed for {identifier}: {e}")
+                results['failed'].append({"id": identifier, "error": str(e)})
+                
+        return results
+        
+    def delete_bots_bulk(self, user_id: int, config_ids: List[int]) -> Dict[str, Any]:
+        """Delete multiple bot configurations."""
+        results = {"successful": [], "failed": []}
+        
+        for config_id in config_ids:
+            try:
+                if self.delete_bot_config(user_id, config_id):
+                    results['successful'].append(config_id)
+                else:
+                    results['failed'].append({"id": config_id, "error": "Delete failed"})
+            except Exception as e:
+                logger.error(f"Bulk delete failed for {config_id}: {e}")
+                results['failed'].append({"id": config_id, "error": str(e)})
+                
+        # Broadcast one update at the end
+        asyncio.create_task(self.broadcast_status_update(user_id))
+        
+        return results
 
     def create_quick_scalp_bot(self, user_id: int, is_admin: bool = False) -> Dict[str, Any]:
         """Create a default scalping bot."""

@@ -170,7 +170,8 @@ class PaperExchange(BaseExchangeClient):
             return None
 
     def set_leverage(self, symbol, leverage):
-        """Virtual leverage setting (just logs for now)."""
+        """Virtual leverage setting."""
+        self.leverage = leverage
         logger.info(f"PAPER: Set leverage {leverage}x for {symbol}")
         return True
 

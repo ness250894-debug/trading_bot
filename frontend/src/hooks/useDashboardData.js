@@ -175,7 +175,8 @@ export const useDashboardData = () => {
             if (refreshingBalance) return;
             setRefreshingBalance(true);
             try {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Call real API
+                await api.post('/balance/reset');
                 toast.success('Practice balance has been reset to $1,000!');
                 const statusRes = await api.get('/status');
                 setBotStatus(statusRes.data);
@@ -239,16 +240,36 @@ export const useDashboardData = () => {
         }
     };
 
-    const handleBulkRemove = async (symbols) => {
+    const handleBulkStart = async (bots) => {
         try {
-            const configsToDelete = botConfigs.filter(c => symbols.includes(c.symbol));
-            for (const config of configsToDelete) {
-                await api.delete(`/bot-configs/${config.id}`);
-            }
-            setBotConfigs(prev => prev.filter(c => !symbols.includes(c.symbol)));
+            // bots: array of {symbol, config_id}
+            await api.post('/bot/bulk/start', { bots });
+            toast.success(`Started ${bots.length} bots`);
             const res = await api.get('/status');
             setBotStatus(res.data);
-            toast.success(`Removed ${symbols.length} bot configurations`);
+        } catch (err) {
+            toast.error('Failed to start some bots');
+        }
+    };
+
+    const handleBulkStop = async (bots) => {
+        try {
+            await api.post('/bot/bulk/stop', { bots });
+            toast.success(`Stopped ${bots.length} bots`);
+            const res = await api.get('/status');
+            setBotStatus(res.data);
+        } catch (err) {
+            toast.error('Failed to stop some bots');
+        }
+    };
+
+    const handleBulkRemove = async (configIds) => {
+        try {
+            await api.post('/bot/bulk/delete', { config_ids: configIds });
+            setBotConfigs(prev => prev.filter(c => !configIds.includes(c.id)));
+            const res = await api.get('/status');
+            setBotStatus(res.data);
+            toast.success(`Removed ${configIds.length} bot configurations`);
         } catch (err) {
             toast.error('Failed to remove some bot configurations');
         }
@@ -328,6 +349,8 @@ export const useDashboardData = () => {
         isBotRunning,
         handleRemoveBot,
         handleBulkRemove,
+        handleBulkStart,
+        handleBulkStop,
         handleQuickScalp,
         handleStartBot,
         handleStopBot,

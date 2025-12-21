@@ -17,8 +17,8 @@ logger = logging.getLogger("SentimentAnalyzer")
 class SentimentAnalyzer:
     """Analyzes market sentiment using AI and news sources."""
     
-    # Rate limiting: 40 minutes between API calls (~36 calls/day max)
-    MIN_API_INTERVAL_MINUTES = 40
+    # Rate limiting: 50 calls per day (UTC reset)
+    MAX_DAILY_CALLS = 50
     
     def __init__(self):
         """Initialize sentiment analyzer with Gemini API."""
@@ -39,10 +39,11 @@ class SentimentAnalyzer:
 
         # Cache for sentiment results (avoid re-analyzing same data)
         self.cache = {}
-        self.cache_duration = timedelta(minutes=self.MIN_API_INTERVAL_MINUTES)
+        self.cache_duration = timedelta(hours=1) # Cache for 1 hour
         
         # Rate limiting state
-        self.last_api_call = None
+        self.daily_requests = 0
+        self.last_reset_date = datetime.now(timezone.utc).date()
         self._load_rate_limit_state()
     
     def _load_rate_limit_state(self):
@@ -53,10 +54,22 @@ class SentimentAnalyzer:
             if os.path.exists(state_file):
                 with open(state_file, 'r') as f:
                     data = json.load(f)
-                    last_call_str = data.get('last_api_call')
-                    if last_call_str:
-                        self.last_api_call = datetime.fromisoformat(last_call_str)
-                        logger.debug(f"Loaded last API call time: {self.last_api_call}")
+                    saved_date_str = data.get('last_reset_date')
+                    
+                    if saved_date_str:
+                        saved_date = datetime.fromisoformat(saved_date_str).date()
+                        current_date = datetime.now(timezone.utc).date()
+                        
+                        if saved_date == current_date:
+                            self.daily_requests = data.get('daily_requests', 0)
+                            self.last_reset_date = saved_date
+                        else:
+                            # New day, reset counter
+                            self.daily_requests = 0
+                            self.last_reset_date = current_date
+                            self._save_rate_limit_state() # Save reset immediately
+                    
+                    logger.debug(f"Loaded rate limit state: {self.daily_requests}/{self.MAX_DAILY_CALLS} used today")
         except Exception as e:
             logger.warning(f"Could not load rate limit state: {e}")
     
@@ -66,7 +79,8 @@ class SentimentAnalyzer:
         state_file = os.path.join(os.path.dirname(__file__), '.gemini_rate_limit.json')
         try:
             data = {
-                'last_api_call': self.last_api_call.isoformat() if self.last_api_call else None
+                'daily_requests': self.daily_requests,
+                'last_reset_date': self.last_reset_date.isoformat()
             }
             with open(state_file, 'w') as f:
                 json.dump(data, f)
@@ -75,26 +89,26 @@ class SentimentAnalyzer:
     
     def _can_call_api(self) -> tuple:
         """
-        Check if we can make a Gemini API call based on rate limiting.
+        Check if we can make a Gemini API call based on daily rate limiting.
         
         Returns:
-            Tuple of (can_call: bool, wait_minutes: int)
+            Tuple of (can_call: bool, message: str)
         """
-        if self.last_api_call is None:
-            return True, 0
+        # Check for day reset
+        current_date = datetime.now(timezone.utc).date()
+        if current_date > self.last_reset_date:
+            self.daily_requests = 0
+            self.last_reset_date = current_date
+            self._save_rate_limit_state()
+            
+        if self.daily_requests >= self.MAX_DAILY_CALLS:
+            return False, f"Daily limit reached ({self.daily_requests}/{self.MAX_DAILY_CALLS})"
         
-        time_since_last_call = datetime.now() - self.last_api_call
-        minutes_since_last_call = time_since_last_call.total_seconds() / 60
-        
-        if minutes_since_last_call >= self.MIN_API_INTERVAL_MINUTES:
-            return True, 0
-        
-        wait_minutes = int(self.MIN_API_INTERVAL_MINUTES - minutes_since_last_call)
-        return False, wait_minutes
+        return True, "OK"
     
     def _record_api_call(self):
         """Record that an API call was made."""
-        self.last_api_call = datetime.now()
+        self.daily_requests += 1
         self._save_rate_limit_state()
     
     def fetch_cryptopanic_news(self, symbol: str, limit: int = 10) -> List[Dict[str, Any]]:
@@ -208,17 +222,18 @@ class SentimentAnalyzer:
             }
         
         # Check rate limiting
-        can_call, wait_minutes = self._can_call_api()
+        # Check rate limiting
+        can_call, message = self._can_call_api()
         if not can_call:
-            logger.debug(f"Rate limited: Next Gemini API call available in {wait_minutes} minutes")
+            logger.debug(f"Rate limited: {message}")
             # Return neutral analysis silently - no visible message to users
             return {
                 'sentiment': 'neutral',
                 'score': 50,
                 'confidence': 50,
-                'summary': 'Market sentiment is currently neutral with mixed signals.',
+                'summary': message,
                 'signal_strength': 'moderate',
-                'topics': ['Market Analysis', 'Price Action', 'Trend Monitoring']
+                'topics': ['Market Analysis', 'Daily Limit Reached']
             }
         
         try:
@@ -316,35 +331,72 @@ Output ONLY valid JSON.
         
         logger.info(f"Analyzing sentiment for {symbol}")
         
-        # Gather news from multiple sources
-        news_items = []
+        # Combine all news items with timestamps
+        all_candidates = []
         
-        # CryptoPanic news
-        cryptopanic_news = self.fetch_cryptopanic_news(symbol)
-        news_items.extend([item['title'] for item in cryptopanic_news])
-        
-        # Reddit posts
-        reddit_posts = self.fetch_reddit_sentiment(symbol)
-        news_items.extend(reddit_posts)
-        
-        # Aggregated News (CryptoCompare, CoinDesk, etc.)
+        # 1. CryptoPanic
+        for item in cryptopanic_news:
+            # Parse timestamp if possible, else use current time
+            ts = datetime.now().timestamp()
+            try:
+                if item.get('published'):
+                    # CryptoPanic format usually ISO
+                    ts = datetime.fromisoformat(item['published'].replace('Z', '+00:00')).timestamp()
+            except:
+                pass
+            
+            all_candidates.append({
+                'title': item.get('title'),
+                'source': item.get('source', 'CryptoPanic'),
+                'timestamp': ts,
+                'summary': '',
+                'url': item.get('url', '')
+            })
+            
+        # 2. Reddit
+        for title in reddit_posts:
+            all_candidates.append({
+                'title': title,
+                'source': 'Reddit',
+                'timestamp': datetime.now().timestamp(), # Approximate
+                'summary': '',
+                'url': ''
+            })
+            
+        # 3. Aggregated News (Service)
         try:
             aggregated_news = news_service.get_aggregated_news(symbols=symbol, limit=20)
-            news_items.extend([f"{item['title']} : {item['summary']}" for item in aggregated_news])
-            
-            # Add to display news (convert to CryptoPanic format for compatibility)
             for item in aggregated_news:
-                cryptopanic_news.append({
-                    'title': item['title'],
-                    'published': item.get('time', 'Recently'),
-                    'source': item.get('source', 'Unknown'),
+                all_candidates.append({
+                    'title': item.get('title'),
+                    'source': item.get('source', 'NewsAPI'),
+                    'timestamp': item.get('timestamp', datetime.now().timestamp()),
+                    'summary': item.get('summary', ''),
                     'url': item.get('url', '')
                 })
-                
         except Exception as e:
             logger.error(f"Error fetching aggregated news: {e}")
+
+        # Unique by title
+        unique_candidates = []
+        seen = set()
+        for item in all_candidates:
+            if item['title'] not in seen:
+                seen.add(item['title'])
+                unique_candidates.append(item)
+                
+        # Sort by timestamp descending
+        unique_candidates.sort(key=lambda x: x.get('timestamp', 0), reverse=True)
         
-        if not news_items:
+        # Prepare for Gemini
+        news_items_text = []
+        for item in unique_candidates[:20]:
+            text = item['title']
+            if item['summary']:
+                text += f": {item['summary']}"
+            news_items_text.append(text)
+            
+        if not news_items_text:
             return {
                 'symbol': symbol,
                 'sentiment': 'neutral',
@@ -356,9 +408,21 @@ Output ONLY valid JSON.
             }
         
         # Analyze with Gemini
-        analysis = self.analyze_with_gemini(symbol, news_items)
+        analysis = self.analyze_with_gemini(symbol, news_items_text)
         
-        # Build complete result
+        # Identify sources used
+        used_sources = sorted(list(set(item['source'] for item in unique_candidates[:20])))
+        
+        # Display News (CryptoPanic format)
+        display_news = []
+        for item in unique_candidates[:10]:
+            display_news.append({
+                'title': item['title'],
+                'published': datetime.fromtimestamp(item['timestamp']).strftime('%Y-%m-%d %H:%M'),
+                'source': item['source'],
+                'url': item['url']
+            })
+
         # Build complete result
         result = {
             'symbol': symbol,
@@ -368,9 +432,8 @@ Output ONLY valid JSON.
             'summary': analysis['summary'],
             'signal_strength': analysis.get('signal_strength', 'moderate'),
             'topics': analysis.get('topics', []),
-            'news_count': len(news_items),
-            'sources': ['CryptoPanic', 'Reddit', 'CryptoCompare', 'CoinDesk', 'Other'],
-            'recent_news': cryptopanic_news[:10],  # Top 10 news items
+            'news_count': len(unique_candidates),
+            'recent_news': display_news,
             'analyzed_at': datetime.now().isoformat()
         }
         

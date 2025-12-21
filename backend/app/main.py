@@ -151,6 +151,10 @@ app.include_router(news.router, prefix="/api")
 from .api import trading_goals
 app.include_router(trading_goals.router, prefix="/api")
 
+# Price Alerts
+from .api import price_alerts
+app.include_router(price_alerts.router, prefix="/api")
+
 # Serve Static Files (Frontend)
 import os
 from fastapi.staticfiles import StaticFiles

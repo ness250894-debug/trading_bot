@@ -36,6 +36,8 @@ export default function Main() {
         isBotRunning,
         handleRemoveBot,
         handleBulkRemove,
+        handleBulkStart,
+        handleBulkStop,
         handleQuickScalp,
         handleStartBot,
         handleStopBot,
@@ -84,6 +86,8 @@ export default function Main() {
                     onBulkRemove={handleBulkRemove}
                     onStart={handleStartBot}
                     onStop={handleStopBot}
+                    onBulkStart={handleBulkStart}
+                    onBulkStop={handleBulkStop}
                     onStopAll={() => handleStartStop()}
                     loading={loading}
                     subscription={subscription}

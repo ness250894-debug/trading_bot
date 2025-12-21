@@ -73,6 +73,9 @@ class DuckDBHandler:
     def set_admin_status(self, user_id, is_admin):
         return self.user_repo.set_admin_status(user_id, is_admin)
 
+    def update_practice_balance(self, user_id, new_balance):
+        return self.user_repo.update_practice_balance(user_id, new_balance)
+
     def delete_user(self, user_id):
         return self.user_repo.delete_user(user_id)
 

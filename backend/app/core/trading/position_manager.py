@@ -124,7 +124,7 @@ class PositionManager:
             pnl_pct = (entry_price - current_price) / entry_price
         
         position_size = position.get('size', 0.0)
-        unrealized_pnl = pnl_pct * (amount_usdt if amount_usdt else (position_size * current_price / leverage))
+        unrealized_pnl = pnl_pct * (amount_usdt * leverage if amount_usdt else (position_size * current_price))
         
         return unrealized_pnl, pnl_pct
     

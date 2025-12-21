@@ -15,6 +15,8 @@ export default function BotInstancesTable({
     onBulkRemove,
     onStart,
     onStop,
+    onBulkStart,
+    onBulkStop,
     loading,
     subscription,
     startingBots,
@@ -154,44 +156,51 @@ export default function BotInstancesTable({
     };
 
     const handleStartSelected = async () => {
+        const botsToStart = [];
         for (const id of selectedBots) {
             const bot = allBots.find(b => (b.config_id || b.symbol) === id);
             if (bot) {
-                await onStart(bot.symbol, bot.config_id);
+                botsToStart.push({
+                    symbol: bot.symbol,
+                    config_id: bot.config_id
+                });
             }
+        }
+        if (botsToStart.length > 0) {
+            await onBulkStart(botsToStart);
         }
     };
 
     const handleStopSelected = async () => {
+        const botsToStop = [];
         for (const id of selectedBots) {
             const bot = allBots.find(b => (b.config_id || b.symbol) === id);
             if (bot) {
-                await onStop(bot.symbol, bot.config_id);
+                botsToStop.push({
+                    symbol: bot.symbol,
+                    config_id: bot.config_id
+                });
             }
+        }
+        if (botsToStop.length > 0) {
+            await onBulkStop(botsToStop);
         }
     };
 
     const handleBulkDelete = async () => {
         if (onBulkRemove) {
-            // We need to pass symbols for bulk remove? Or IDs?
-            // The API expects IDs for configs.
-            // But handleBulkRemove in Main.jsx currently expects symbols.
-            // I should update Main.jsx handleBulkRemove to accept IDs too, or just loop here.
-
-            // Actually, let's just use onRemoveBot for each selected item for now to be safe,
-            // or update Main.jsx. 
-            // Main.jsx handleBulkRemove: const configsToDelete = botConfigs.filter(c => symbols.includes(c.symbol));
-            // It filters by symbol. This is bad for multiple bots.
-
-            // Let's assume we can't easily bulk remove by ID with current Main.jsx without changing it.
-            // But wait, I can just call onRemoveBot for each.
+            const configIds = [];
             for (const id of selectedBots) {
                 const bot = allBots.find(b => (b.config_id || b.symbol) === id);
-                if (bot) {
-                    await onRemoveBot(bot.symbol, bot.config_id);
+                if (bot && bot.config_id) {
+                    configIds.push(bot.config_id);
                 }
             }
-            setSelectedBots(new Set());
+
+            if (configIds.length > 0) {
+                await onBulkRemove(configIds);
+                setSelectedBots(new Set());
+            }
         }
     };
 

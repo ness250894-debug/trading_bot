@@ -22,7 +22,8 @@ class UserRepository(BaseRepository):
                 'telegram_bot_token': result[4] if len(result) > 4 else None,
                 'telegram_chat_id': result[5] if len(result) > 5 else None,
                 'is_admin': result[6] if len(result) > 6 else False,
-                'created_at': result[7] if len(result) > 7 else None
+                'created_at': result[7] if len(result) > 7 else None,
+                'practice_balance': result[8] if len(result) > 8 else 1000.0
             }
         except Exception as e:
             self.logger.error(f"Error fetching user: {e}")
@@ -47,7 +48,8 @@ class UserRepository(BaseRepository):
                 'telegram_bot_token': result[4] if len(result) > 4 else None,
                 'telegram_chat_id': result[5] if len(result) > 5 else None,
                 'is_admin': result[6] if len(result) > 6 else False,
-                'created_at': result[7] if len(result) > 7 else None
+                'created_at': result[7] if len(result) > 7 else None,
+                'practice_balance': result[8] if len(result) > 8 else 1000.0
             }
         except Exception as e:
             self.logger.error(f"Error fetching user by ID: {e}")
@@ -111,6 +113,18 @@ class UserRepository(BaseRepository):
             return True
         except Exception as e:
             self.logger.error(f"Error updating Telegram settings: {e}")
+            return False
+
+    def update_practice_balance(self, user_id, new_balance):
+        """Update user's practice balance."""
+        try:
+            self.conn.execute(
+                "UPDATE users SET practice_balance = ? WHERE id = ?",
+                [new_balance, user_id]
+            )
+            return True
+        except Exception as e:
+            self.logger.error(f"Error updating practice balance: {e}")
             return False
 
     def set_admin_status(self, user_id, is_admin):

@@ -176,7 +176,13 @@ class TradingEngine:
 
         # Initialize practice balance
         if self.dry_run:
-            self.practice_balance = float(self.runtime_state.get('practice_balance', self.strategy_config.get('initial_balance', 1000.0)))
+            if self.db:
+                user = self.db.get_user_by_id(self.user_id)
+                db_balance = user.get('practice_balance', 1000.0) if user else 1000.0
+                self.practice_balance = float(self.runtime_state.get('practice_balance', db_balance))
+            else:
+                 self.practice_balance = float(self.runtime_state.get('practice_balance', self.strategy_config.get('initial_balance', 1000.0)))
+            
             self.runtime_state['practice_balance'] = self.practice_balance
         
         logger.info(f"✓ User {self.user_id} bot initialized. Entering trading loop...")
@@ -312,7 +318,8 @@ class TradingEngine:
         # Execute entry order
         success, entry_price = self.order_exec.execute_entry_order(
             self.symbol, signal, self.amount_usdt, current_price,
-            self.strategy_name, self.take_profit_pct, self.stop_loss_pct
+            self.strategy_name, self.take_profit_pct, self.stop_loss_pct,
+            leverage=self.leverage
         )
         
         if success:
@@ -363,6 +370,8 @@ class TradingEngine:
                 # Update practice balance if mock
                 if self.dry_run:
                     self.practice_balance += pnl
+                    if self.db:
+                        self.db.update_practice_balance(self.user_id, self.practice_balance)
                     self.runtime_state['practice_balance'] = self.practice_balance
         else:
             # Monitor position

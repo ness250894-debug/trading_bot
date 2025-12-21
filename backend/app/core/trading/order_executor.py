@@ -32,7 +32,7 @@ class OrderExecutor:
         self.logger = logger
     
     def execute_entry_order(self, symbol, signal, amount_usdt, current_price,
-                           strategy_name, take_profit_pct, stop_loss_pct):
+                           strategy_name, take_profit_pct, stop_loss_pct, leverage=1.0):
         """
         Execute market entry order with TP/SL.
         
@@ -44,6 +44,7 @@ class OrderExecutor:
             strategy_name: Name of the strategy
             take_profit_pct: Take profit percentage
             stop_loss_pct: Stop loss percentage
+            leverage: Leverage multiplier
             
         Returns:
             Tuple of (success: bool, entry_price: float or None)
@@ -52,7 +53,7 @@ class OrderExecutor:
             # Calculate order parameters
             ticker = self.client.fetch_ticker(symbol)
             current_price = ticker['last']
-            amount = amount_usdt / current_price
+            amount = (amount_usdt * leverage) / current_price
             side = 'buy' if signal == 'long' else 'sell'
             
             # Log TP/SL parameters

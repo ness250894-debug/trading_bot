@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, validator
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import logging
 
 from ..core import auth
@@ -72,12 +72,24 @@ class WatchlistAdd(BaseModel):
         return v
 
 
+class BulkActionRequest(BaseModel):
+    bots: List[Dict[str, Any]] # List of {symbol: str, config_id: Optional[int]}
+
+class BulkDeleteRequest(BaseModel):
+    config_ids: List[int]
+
 # --- Endpoints ---
 
 @router.get("/balance")
 async def get_balance(current_user: dict = Depends(auth.get_current_user)):
     """Get exchange balance."""
     return bot_service.get_exchange_balance()
+
+@router.post("/balance/reset")
+async def reset_balance(current_user: dict = Depends(auth.get_current_user)):
+    """Reset practice balance."""
+    new_balance = bot_service.reset_practice_balance(current_user['id'])
+    return {"status": "success", "balance": new_balance}
 
 @router.post("/start")
 @limiter.limit("5/minute")
@@ -104,6 +116,39 @@ async def stop_bot(request: Request, symbol: Optional[str] = None, config_id: Op
     except Exception as e:
         logger.error(f"Error stopping bot: {e}")
         raise HTTPException(status_code=500, detail="Failed to stop bot")
+
+@router.post("/bulk/start")
+@limiter.limit("5/minute")
+async def start_bots_bulk(request: Request, action: BulkActionRequest, current_user: dict = Depends(auth.get_current_user)):
+    """Start multiple bot instances."""
+    try:
+        results = bot_service.start_bots_bulk(current_user['id'], action.bots)
+        return {"status": "success", "results": results}
+    except Exception as e:
+        logger.error(f"Error bulk starting bots: {e}")
+        raise HTTPException(status_code=500, detail="Failed to bulk start bots")
+
+@router.post("/bulk/stop")
+@limiter.limit("5/minute")
+async def stop_bots_bulk(request: Request, action: BulkActionRequest, current_user: dict = Depends(auth.get_current_user)):
+    """Stop multiple bot instances."""
+    try:
+        results = bot_service.stop_bots_bulk(current_user['id'], action.bots)
+        return {"status": "success", "results": results}
+    except Exception as e:
+        logger.error(f"Error bulk stopping bots: {e}")
+        raise HTTPException(status_code=500, detail="Failed to bulk stop bots")
+
+@router.post("/bulk/delete")
+@limiter.limit("5/minute")
+async def delete_bots_bulk(request: Request, action: BulkDeleteRequest, current_user: dict = Depends(auth.get_current_user)):
+    """Delete multiple bot instances."""
+    try:
+        results = bot_service.delete_bots_bulk(current_user['id'], action.config_ids)
+        return {"status": "success", "results": results}
+    except Exception as e:
+        logger.error(f"Error bulk deleting bots: {e}")
+        raise HTTPException(status_code=500, detail="Failed to bulk delete bots")
 
 @router.get("/status")
 async def get_status(symbol: Optional[str] = None, current_user: dict = Depends(auth.get_current_user)):
