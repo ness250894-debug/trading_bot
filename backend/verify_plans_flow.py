@@ -55,7 +55,13 @@ def verify_flow():
         
         # Check Features
         features = db.get_user_features(user_id)
-        print(f"  > Features Enabled: {features}")
+        # Simulate what /billing/status would return
+        billing_response = {
+            'plan': plan_id,
+            'status': 'active',
+            'features': features
+        }
+        print(f"  > /billing/status Response: {json.dumps(billing_response)}")
         
         all_passed = True
         for ef in expected_features:

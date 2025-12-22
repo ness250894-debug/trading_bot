@@ -248,7 +248,8 @@ async def get_billing_status(request: Request, current_user: dict = Depends(auth
         return {
             'plan': subscription['plan_id'],
             'status': subscription['status'],
-            'expires_at': subscription['expires_at']
+            'expires_at': subscription['expires_at'],
+            'features': db.get_user_features(current_user['id']) # Added features for Frontend Gating
         }
         
     except Exception as e:
