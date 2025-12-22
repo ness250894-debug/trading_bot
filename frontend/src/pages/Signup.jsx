@@ -41,9 +41,27 @@ export default function Signup() {
             });
 
             secureStorage.setToken(response.data.access_token);
-            // Force a hard reload to ensure all auth state is correctly initialized
-            // and headers are set for all subsequent requests
-            window.location.href = '/main';
+
+            // Verify the token works before redirecting
+            // This prevents race conditions where the DB hasn't fully committed the new user
+            let verified = false;
+            for (let i = 0; i < 3; i++) {
+                try {
+                    await api.get('/auth/me');
+                    verified = true;
+                    break;
+                } catch (e) {
+                    // Wait 500ms and retry
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
+
+            if (verified) {
+                // Force a hard reload to ensure all auth state is correctly initialized
+                window.location.href = '/main';
+            } else {
+                throw new Error("Account created but failed to verify login. Please log in manually.");
+            }
         } catch (err) {
             // Handle validation errors
             if (err instanceof z.ZodError) {
