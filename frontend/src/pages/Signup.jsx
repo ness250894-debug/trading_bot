@@ -41,7 +41,9 @@ export default function Signup() {
             });
 
             secureStorage.setToken(response.data.access_token);
-            navigate('/main');
+            // Force a hard reload to ensure all auth state is correctly initialized
+            // and headers are set for all subsequent requests
+            window.location.href = '/main';
         } catch (err) {
             // Handle validation errors
             if (err instanceof z.ZodError) {
