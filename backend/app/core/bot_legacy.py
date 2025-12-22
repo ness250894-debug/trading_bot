@@ -180,11 +180,11 @@ def run_bot_instance(user_id: int, strategy_config: dict, running_event: threadi
     logger.info(f"Loading exchange: {exchange} for user {user_id}")
     
     # Load API keys for this user from database
-    from .database import DuckDBHandler
+
     from .encryption import EncryptionHelper
     from .client_manager import client_manager
     
-    db = DuckDBHandler()
+    from .database import db
     encryption = EncryptionHelper()
     
     # Try to get user's API keys for the selected exchange
@@ -789,8 +789,8 @@ def main(user_id: int = 0):
         trend_filter = None
 
     # Initialize Database for Trade Logging
-    from .database import DuckDBHandler
-    db = DuckDBHandler()
+
+    from .database import db
 
     # Initialize Scanner
     scanner = None

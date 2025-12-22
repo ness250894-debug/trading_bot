@@ -8,7 +8,7 @@ from ..core.rate_limit import limiter
 
 router = APIRouter()
 logger = logging.getLogger("API.Trades")
-db = DuckDBHandler()
+from ..core.database import db
 
 @router.get("/trades")
 @limiter.limit("10/minute")

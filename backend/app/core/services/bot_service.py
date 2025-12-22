@@ -4,7 +4,7 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from fastapi import HTTPException
 
-from ..database import DuckDBHandler
+from ..database import db
 from ..bot_manager import bot_manager
 from .. import config
 from ..exchange import ExchangeClient
@@ -19,7 +19,7 @@ logger = logging.getLogger("Core.BotService")
 
 class BotService:
     def __init__(self):
-        self.db = DuckDBHandler()
+        self.db = db
         self.encryption = EncryptionHelper()
 
     def get_exchange_balance(self, dry_run: bool = False) -> Dict[str, Any]:

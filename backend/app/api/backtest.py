@@ -5,7 +5,8 @@ from typing import Dict, Any, List, Optional
 import pandas as pd
 import logging
 import asyncio
-from ..core.vectorized_backtest import VectorizedBacktester
+from ..core.backtesting.backtest_engine import BacktestEngine
+from ..core.database import db
 from ..core.hyperopt import Hyperopt
 from ..core.strategies.mean_reversion import MeanReversion
 from ..core.strategies.sma_crossover import SMACrossover
@@ -48,8 +49,8 @@ async def run_backtest(request: Request, backtest_data: BacktestRequest, current
     try:
         # Enforce Free Plan Limits
         if not current_user.get('is_admin', False):
-            from ..core.database import DuckDBHandler
-            db = DuckDBHandler()
+
+
             
             # Feature Validations
             features = db.get_user_features(current_user['id'])
@@ -151,7 +152,7 @@ async def run_optimization(request: Request, optimize_data: OptimizeRequest, cur
         # Enforce Free Plan Limits
         if not current_user.get('is_admin', False):
             from ..core.database import DuckDBHandler
-            db = DuckDBHandler()
+
             
             features = db.get_user_features(current_user['id'])
             # Check for either standard or ultimate optimization
@@ -196,7 +197,7 @@ async def run_optimization(request: Request, optimize_data: OptimizeRequest, cur
         
         # Save Successful Runs to DB
         from ..core.database import DuckDBHandler
-        db = DuckDBHandler()
+
         
         saved_count = 0
         results_list = results_df.to_dict(orient="records")
@@ -342,7 +343,7 @@ async def websocket_optimize(websocket: WebSocket):
                 is_admin = current_user.get('is_admin', False)
                 if not is_admin:
                     from ..core.database import DuckDBHandler
-                    db = DuckDBHandler()
+
                     
                     features = db.get_user_features(current_user['id'])
                     if "optimization_ultimate" not in features:
@@ -363,7 +364,7 @@ async def websocket_optimize(websocket: WebSocket):
                     current_global_trial = 0
                     
                     from ..core.database import DuckDBHandler
-                    db = DuckDBHandler()
+
                     
                     for req in tasks:
                         # 1. Initialize Strategy
@@ -475,7 +476,7 @@ async def websocket_optimize(websocket: WebSocket):
                     
                     # Save Successful Runs to DB
                     from ..core.database import DuckDBHandler
-                    db = DuckDBHandler()
+
                     
                     saved_count = 0
                     results_list = results_df.to_dict(orient="records")

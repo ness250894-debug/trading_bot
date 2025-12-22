@@ -9,6 +9,7 @@ import json
 from datetime import datetime, timezone
 
 from ..core.strategies.json_strategy import JSONStrategyExecutor
+from ..core.database import db
 from ..core.strategies.indicators import IndicatorLibrary
 from ..core.strategies.conditions import ConditionEvaluator
 from ..core.auth import get_current_user
@@ -119,9 +120,9 @@ async def list_strategies(
         List of strategies
     """
     try:
-        from ..core.database import DuckDBHandler
+
         
-        db = DuckDBHandler()
+
         
         # Query visual strategies for user
         result = db.conn.execute("""
@@ -169,8 +170,8 @@ async def create_strategy(
     try:
         # Enforce Features
         # Assuming I can fetch subscription by user_id.
-        from ..core.database import DuckDBHandler
-        db = DuckDBHandler()
+
+
         
         # Check features
         # Need to re-fetch user for admin check just in case, but Depends already provides user_id?
@@ -191,8 +192,8 @@ async def create_strategy(
         # Validate strategy first
         executor = JSONStrategyExecutor(strategy.json_config)
         
-        from ..core.database import DuckDBHandler
-        db = DuckDBHandler()
+
+
         
         # Insert into database
         now = datetime.now(timezone.utc).isoformat()
@@ -246,8 +247,7 @@ async def get_strategy(
         Strategy data
     """
     try:
-        from ..core.database import DuckDBHandler
-        db = DuckDBHandler()
+
         
         result = db.conn.execute("""
             SELECT id, user_id, name, description, json_config,
@@ -294,8 +294,7 @@ async def update_strategy(
         Updated strategy
     """
     try:
-        from ..core.database import DuckDBHandler
-        db = DuckDBHandler()
+
         
         # Check if strategy exists
         existing = db.conn.execute("""
@@ -366,8 +365,7 @@ async def delete_strategy(
         Success message
     """
     try:
-        from ..core.database import DuckDBHandler
-        db = DuckDBHandler()
+
         
         # Enforce Features
         user = db.get_user_by_id(user_id)

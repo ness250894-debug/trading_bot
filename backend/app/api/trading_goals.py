@@ -9,7 +9,7 @@ from ..core.rate_limit import limiter
 
 router = APIRouter()
 logger = logging.getLogger("API.TradingGoals")
-db = DuckDBHandler()
+from ..core.database import db
 
 class TradingGoalCreate(BaseModel):
     title: str

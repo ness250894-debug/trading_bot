@@ -2,15 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from ..core import auth
-from ..core.database import DuckDBHandler
-from pydantic import BaseModel
-from ..core.rate_limit import limiter
-from ..core.email_service import EmailService
-
-email_service = EmailService()
-
-router = APIRouter(prefix="/auth", tags=["auth"])
-db = DuckDBHandler()
+from ..core.database import db
 
 from pydantic import BaseModel, EmailStr, validator, Field
 from typing import Optional

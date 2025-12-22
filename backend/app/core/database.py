@@ -294,3 +294,6 @@ class DuckDBHandler:
 
     def consume_reset_token(self, token):
         return self.auth_repo.consume_reset_token(token)
+
+# Global database instance
+db = DuckDBHandler()

@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 import json
 from datetime import datetime, timezone
 
-from ..core.database import DuckDBHandler
+from ..core.database import db
 from ..core.auth import get_current_user
 from ..core.rate_limit import limiter
 
@@ -44,7 +44,7 @@ async def get_marketplace_strategies(
         List of public strategies with performance stats
     """
     try:
-        db = DuckDBHandler()
+
         
         # Enforce Free Plan Limits
         # Enforce Feature Access
@@ -124,7 +124,7 @@ async def get_marketplace_strategy_detail(request: Request, strategy_id: int, us
         Detailed strategy information
     """
     try:
-        db = DuckDBHandler()
+
         
         result = db.conn.execute("""
             SELECT 
@@ -189,7 +189,7 @@ async def publish_strategy(
         Published strategy info
     """
     try:
-        db = DuckDBHandler()
+
         
         # Get strategy details
         strategy = db.get_user_strategy(user_id)
@@ -271,7 +271,7 @@ async def clone_strategy(
         Cloned strategy info
     """
     try:
-        db = DuckDBHandler()
+
         
         # Get public strategy
         pub_strategy = db.conn.execute("""
@@ -330,7 +330,7 @@ async def get_leaderboard(
         Ranked list of strategies
     """
     try:
-        db = DuckDBHandler()
+
         
         # Time filter based on period
         time_filter = {
@@ -393,7 +393,7 @@ async def get_my_published_strategies(request: Request, user_id: int = Depends(g
         List of user's published strategies
     """
     try:
-        db = DuckDBHandler()
+
         
         result = db.conn.execute("""
             SELECT 

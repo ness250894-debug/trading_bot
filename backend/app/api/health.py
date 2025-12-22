@@ -23,13 +23,13 @@ async def health_check():
     Returns 200 if healthy, 503 if any component is unhealthy.
     """
     try:
-        from ..core.database import DuckDBHandler
+
         
         # Check database connectivity
         db_healthy = True
         db_error = None
         try:
-            db = DuckDBHandler()
+
             result = db.conn.execute("SELECT 1").fetchone()
             db_healthy = result[0] == 1
         except Exception as e:
@@ -102,8 +102,7 @@ async def detailed_health_check():
     
     # Check database
     try:
-        from ..core.database import DuckDBHandler
-        db = DuckDBHandler()
+
         db.conn.execute("SELECT 1").fetchone()
         health_status["components"]["database"] = {
             "status": "healthy",

@@ -82,8 +82,7 @@ def main(user_id: int = 0):
         trend_filter = None
 
     # Initialize Database for Trade Logging
-    from .database import DuckDBHandler
-    db = DuckDBHandler()
+    from .database import db
 
     # Initialize Scanner
     scanner = None

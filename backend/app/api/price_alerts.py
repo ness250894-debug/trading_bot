@@ -8,7 +8,7 @@ from ..core.rate_limit import limiter
 
 router = APIRouter()
 logger = logging.getLogger("API.PriceAlerts")
-db = DuckDBHandler()
+from ..core.database import db
 
 class PriceAlertCreate(BaseModel):
     symbol: str

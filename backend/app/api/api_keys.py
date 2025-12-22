@@ -9,7 +9,7 @@ from ..core.rate_limiter import rate_limiter
 
 router = APIRouter()
 logger = logging.getLogger("API.ApiKeys")
-db = DuckDBHandler()
+from ..core.database import db
 
 # Initialize encryptor once at module level
 try:

@@ -12,7 +12,7 @@ from ..core.rate_limit import limiter
 
 router = APIRouter()
 logger = logging.getLogger("API.Billing")
-db = DuckDBHandler()
+from ..core.database import db
 
 # Coinbase Commerce API Configuration
 COINBASE_API_URL = "https://api.commerce.coinbase.com"

@@ -107,13 +107,13 @@ class TradingEngine:
     
     def _initialize_components(self):
         """Initialize all trading components"""
-        from ..database import DuckDBHandler
+        from ..database import db
         from ..encryption import EncryptionHelper
         from ..client_manager import client_manager
         from ..notifier import TelegramNotifier
         
         # Initialize database and encryption
-        self.db = DuckDBHandler()
+        self.db = db
         encryption = EncryptionHelper()
         
         # Load API keys

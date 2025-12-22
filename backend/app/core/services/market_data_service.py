@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from ..database import DuckDBHandler
+from ..database import db
 from ..exchange import ExchangeClient
 from .. import config
 
@@ -8,7 +8,7 @@ logger = logging.getLogger("Core.MarketDataService")
 
 class MarketDataService:
     def __init__(self):
-        self.db = DuckDBHandler()
+        self.db = db
         
     async def sync_supported_symbols(self):
         """

@@ -12,7 +12,7 @@ from starlette.requests import Request
 
 router = APIRouter()
 logger = logging.getLogger("API.Bot")
-db = DuckDBHandler()
+from ..core.database import db
 
 # Models
 class ConfigUpdate(BaseModel):

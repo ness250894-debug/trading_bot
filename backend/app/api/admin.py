@@ -6,7 +6,7 @@ from ..core.database import DuckDBHandler
 from ..core.rate_limit import limiter
 
 router = APIRouter()
-db = DuckDBHandler()
+from ..core.database import db
 
 class UserUpdate(BaseModel):
     plan_id: str

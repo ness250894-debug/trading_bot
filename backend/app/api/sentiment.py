@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from typing import Optional
 from ..core.sentiment_analyzer import SentimentAnalyzer
 from ..core import auth
+from ..core.database import db
 from ..core.rate_limit import limiter
 
 router = APIRouter()
@@ -36,8 +37,8 @@ async def get_sentiment_analysis(
         # Enforce Features
         is_admin = current_user.get('is_admin', False)
         if not is_admin:
-            from ..core.database import DuckDBHandler
-            db = DuckDBHandler()
+
+
             
             features = db.get_user_features(current_user['id'])
             if "sentiment_standard" not in features and "sentiment_advanced" not in features:
@@ -76,8 +77,7 @@ async def get_advanced_sentiment(
         # Enforce Features
         is_admin = current_user.get('is_admin', False)
         if not is_admin:
-            from ..core.database import DuckDBHandler
-            db = DuckDBHandler()
+
             
             features = db.get_user_features(current_user['id'])
             if "sentiment_advanced" not in features:
@@ -191,8 +191,7 @@ async def manual_sentiment_analysis(
         # Enforce Features
         is_admin = current_user.get('is_admin', False)
         if not is_admin:
-            from ..core.database import DuckDBHandler
-            db = DuckDBHandler()
+
             
             features = db.get_user_features(current_user['id'])
             if "sentiment_standard" not in features and "sentiment_advanced" not in features:

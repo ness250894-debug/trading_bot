@@ -9,7 +9,7 @@ from ..core import config
 from ..core.exchange import ExchangeClient
 
 router = APIRouter()
-db = DuckDBHandler()
+from ..core.database import db
 
 
 @router.get("/exchanges/tickers")

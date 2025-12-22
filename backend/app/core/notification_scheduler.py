@@ -8,7 +8,7 @@ import time
 import threading
 from datetime import datetime, timedelta
 from typing import Dict, Any
-from .database import DuckDBHandler
+from .database import db
 from .notifier import TelegramNotifier
 
 logger = logging.getLogger("NotificationScheduler")
@@ -25,7 +25,7 @@ class NotificationScheduler:
             user_id: User ID for personalized reports
         """
         self.user_id = user_id
-        self.db = DuckDBHandler()
+        self.db = db
         self.running = False
         self.thread = None
         
