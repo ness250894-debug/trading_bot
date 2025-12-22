@@ -333,3 +333,42 @@ class BillingRepository(BaseRepository):
         except Exception as e:
             self.logger.error(f"Error updating user subscription: {e}")
             return False
+
+    def get_user_features(self, user_id, is_admin=False):
+        """
+        Get list of features enabled for the user.
+        Returns a list of feature strings (e.g. ['live_trading', 'max_bots_10']).
+        """
+        if is_admin:
+            # Admins have all features implicitly, but explicitly returning a set of super-features 
+            # might be safer. For now, we return a special flag or just all known features?
+            # Creating a super-set of keys for admins:
+            return [
+                "live_trading", "max_bots_unlimited", "visual_builder", "backtesting", 
+                "optimization_ultimate", "sentiment_advanced", "quick_scalp", 
+                "priority_support", "unlimited_exchanges"
+            ]
+
+        try:
+            # 1. Check if subscription is active
+            if not self.is_subscription_active(user_id):
+                return [] # Free plan has no "features" currently, or add defaults here if needed.
+
+            # 2. Get Plan ID from subscription
+            sub = self.get_subscription(user_id)
+            if not sub:
+                return []
+            
+            plan_id = sub['plan_id']
+            
+            # 3. Get Features from Plan
+            # Join would be more efficient but we have helpers.
+            plan = self.get_plan(plan_id)
+            if not plan:
+                return []
+            
+            return plan.get('features', [])
+            
+        except Exception as e:
+            self.logger.error(f"Error getting user features: {e}")
+            return []

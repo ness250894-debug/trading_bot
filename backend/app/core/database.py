@@ -235,6 +235,9 @@ class DuckDBHandler:
     def update_user_subscription(self, user_id, plan_id, status):
         return self.billing_repo.update_user_subscription(user_id, plan_id, status)
 
+    def get_user_features(self, user_id, is_admin=False):
+        return self.billing_repo.get_user_features(user_id, is_admin)
+
     # --- System Repository Delegates ---
     def get_exchanges(self):
         return self.system_repo.get_exchanges()
