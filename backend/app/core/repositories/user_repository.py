@@ -147,27 +147,43 @@ class UserRepository(BaseRepository):
             
             # 1. Complex dependencies (Public Strategies & Clones)
             # Delete clones created BY this user
+
             self.conn.execute("DELETE FROM strategy_clones WHERE user_id = ?", [user_id])
-            # Delete clones referencing strategies created BY this user (to allow deleting public_strategies)
+
             self.conn.execute("DELETE FROM strategy_clones WHERE public_strategy_id IN (SELECT id FROM public_strategies WHERE user_id = ?)", [user_id])
-            # Now safe to delete public strategies
+
             self.conn.execute("DELETE FROM public_strategies WHERE user_id = ?", [user_id])
             
             # 2. Other User Data
+
             self.conn.execute("DELETE FROM visual_strategies WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM trade_notes WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM trading_goals WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM backtest_templates WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM bot_configurations WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM subscriptions WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM user_strategies WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM api_keys WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM trades WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM backtest_results WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM payments WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM risk_profiles WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM watchlists WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM price_alerts WHERE user_id = ?", [user_id])
+
             self.conn.execute("DELETE FROM dashboard_preferences WHERE user_id = ?", [user_id])
             self.conn.execute("DELETE FROM audit_log WHERE user_id = ?", [user_id])
             
