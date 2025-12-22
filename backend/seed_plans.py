@@ -18,6 +18,22 @@ def seed_plans():
     db = DuckDBHandler(config.DB_PATH)
     
     plans = [
+        # Free Tier
+        {
+            "id": "free",
+            "name": "Free Tier",
+            "price": 0.0,
+            "currency": "USD",
+            "duration_days": 36500, # indefinitely
+            "features": [
+                "paper_trading",
+                "strategy_mean_reversion",
+                "max_bots_1",
+                "price_alerts",
+                "manual_trading_history",
+                "market_data_access"
+            ]
+        },
         # Basic
         {
             "id": "basic_monthly",

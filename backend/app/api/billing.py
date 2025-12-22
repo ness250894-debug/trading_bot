@@ -39,10 +39,51 @@ class PlanUpdate(BaseModel):
     features: Optional[List[str]] = None
     is_active: Optional[bool] = None
 
+
+# Feature Display Names Mapping
+FEATURE_DISPLAY_NAMES = {
+    "live_trading": "Live Trading Enabled",
+    "paper_trading": "Unlimited Paper Trading",
+    "max_bots_1": "1 Active Bot Limit",
+    "max_bots_3": "3 Active Bots Limit",
+    "max_bots_10": "10 Active Bots Limit",
+    "max_bots_unlimited": "Unlimited Active Bots",
+    "standard_strategies": "Access to Standard Strategies",
+    "strategy_mean_reversion": "Basic Mean Reversion Strategy",
+    "visual_builder": "Visual Strategy Builder",
+    "backtesting": "Backtesting Engine Access",
+    "optimization_standard": "Standard Strategy Optimization",
+    "optimization_ultimate": "Ultimate Strategy Optimization",
+    "sentiment_standard": "Basic AI Sentiment Analysis",
+    "sentiment_advanced": "Advanced AI Sentiment & News",
+    "quick_scalp": "Quick Scalp Bot Access",
+    "realtime_data": "Real-time Market Data",
+    "price_alerts": "Price Alerts",
+    "manual_trading_history": "Manual Trading History",
+    "market_data_access": "Market Data Access",
+    "priority_support": "Priority Support",
+    "unlimited_exchanges": "Unlimited Exchange Connections"
+}
+
 @router.get("/billing/plans")
 async def get_plans():
-    """Get all active subscription plans."""
-    return db.get_plans()
+    """Get all active subscription plans with formatted features."""
+    plans = db.get_plans()
+    formatted_plans = []
+    
+    for plan in plans:
+        # Create display features
+        features = plan.get('features', [])
+        display_features = []
+        for feature_key in features:
+            # Map key to display name, fallback to key if not found
+            display_name = FEATURE_DISPLAY_NAMES.get(feature_key, feature_key.replace('_', ' ').title())
+            display_features.append(display_name)
+            
+        plan['display_features'] = display_features
+        formatted_plans.append(plan)
+        
+    return formatted_plans
 
 @router.post("/billing/charge")
 @limiter.limit("10/minute")
