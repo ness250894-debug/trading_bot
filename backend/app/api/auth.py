@@ -82,6 +82,15 @@ async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequ
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+@router.post("/logout")
+async def logout(request: Request):
+    """
+    Logout endpoint.
+    Since we use stateless JWTs, the backend doesn't need to do much,
+    but this endpoint allows the frontend to clear its state gracefully.
+    """
+    return {"status": "success", "message": "Logged out successfully"}
+
 @router.get("/me")
 async def get_current_user_info(current_user: dict = Depends(auth.get_current_user)):
     """Get current user information including admin status."""

@@ -22,8 +22,12 @@ export default function UserDropdown({ user }) {
     }, []);
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        navigate('/');
+        // Use secureStorage to clear the correct token from the correct place
+        import('../lib/secureStorage').then(module => {
+            const secureStorage = module.default;
+            secureStorage.clearAll();
+            navigate('/');
+        });
     };
 
     const handleNavigate = (path) => {

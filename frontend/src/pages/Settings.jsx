@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../lib/api';
 import { useStaticData } from '../lib/swr';
+import { useNavigate } from 'react-router-dom';
+import secureStorage from '../lib/secureStorage';
 import { z } from 'zod';
 import { apiKeySchema } from '../lib/validators';
 
@@ -18,6 +20,7 @@ export default function Settings() {
     const [activeTab, setActiveTab] = useState('profile');
     const toast = useToast();
     const modal = useModal();
+    const navigate = useNavigate();
 
     // API Keys state
     const [apiKey, setApiKey] = useState('');
@@ -272,6 +275,19 @@ export default function Settings() {
         });
     };
 
+    const handleLogoutAll = () => {
+        modal.confirm({
+            title: 'Logout All Sessions',
+            message: 'Are you sure you want to log out from all devices? (Currently this will just log you out here)',
+            confirmText: 'Logout',
+            type: 'warning',
+            onConfirm: () => {
+                secureStorage.clearAll();
+                navigate('/');
+            }
+        });
+    };
+
     const tabs = [
         { id: 'profile', label: 'Profile', icon: User },
         { id: 'trading', label: 'Trading', icon: Key },
@@ -363,7 +379,9 @@ export default function Settings() {
                                             <div className="font-medium">Active Sessions</div>
                                             <div className="text-sm text-muted-foreground">Manage devices logged into your account</div>
                                         </div>
-                                        <button className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                        <button
+                                            onClick={handleLogoutAll}
+                                            className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
                                             <LogOut size={16} />
                                             Logout All
                                         </button>
