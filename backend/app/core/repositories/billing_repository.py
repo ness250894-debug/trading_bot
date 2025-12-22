@@ -301,13 +301,23 @@ class BillingRepository(BaseRepository):
             return False
 
     def delete_plan(self, plan_id):
-        """Delete (deactivate) a plan."""
+        """Delete a plan permanently."""
         try:
-            # We don't actually delete to preserve history, just deactivate
-            self.conn.execute("UPDATE plans SET is_active = FALSE WHERE id = ?", [plan_id])
+            # Check if plan is in use
+            usage = self.conn.execute("SELECT count(*) FROM subscriptions WHERE plan_id = ?", [plan_id]).fetchone()
+            if usage and usage[0] > 0:
+                self.logger.warning(f"Cannot delete plan {plan_id}: In use by {usage[0]} subscriptions.")
+                return False # Or raise error to inform user? User said "should delete".
+                # If I return False, the API returns 500 "Failed to delete".
+                # Standard SQL behavior is to fail if FK exists (if protected).
+                # But DuckDB might not enforce FKs rigorously unless configured.
+                # Safer to block here if used.
+            
+            # Hard delete
+            self.conn.execute("DELETE FROM plans WHERE id = ?", [plan_id])
             return True
         except Exception as e:
-            self.logger.error(f"Error deactivating plan: {e}")
+            self.logger.error(f"Error deleting plan: {e}")
             return False
 
     def update_user_subscription(self, user_id, plan_id, status):
