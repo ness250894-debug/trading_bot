@@ -47,17 +47,14 @@ class BacktestRequest(BaseModel):
 async def run_backtest(request: Request, backtest_data: BacktestRequest, current_user: dict =Depends(auth.get_current_user)):
     try:
         # Enforce Free Plan Limits
-        is_admin = current_user.get('is_admin', False)
-        if not is_admin:
+        if not current_user.get('is_admin', False):
             from ..core.database import DuckDBHandler
             db = DuckDBHandler()
-            subscription = db.get_subscription(current_user['id'])
-            is_free_plan = True
-            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-                is_free_plan = False
             
-            if is_free_plan:
-                 raise HTTPException(status_code=403, detail="Backtesting is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
+            # Feature Validations
+            features = db.get_user_features(current_user['id'])
+            if "backtesting" not in features:
+                 raise HTTPException(status_code=403, detail="Backtesting requires a paid subscription (Basic, Pro, Elite).")
 
         # Initialize Strategy
         strategy_class = None
@@ -152,17 +149,14 @@ class OptimizeRequest(BaseModel):
 async def run_optimization(request: Request, optimize_data: OptimizeRequest, current_user: dict = Depends(auth.get_current_user)):
     try:
         # Enforce Free Plan Limits
-        is_admin = current_user.get('is_admin', False)
-        if not is_admin:
+        if not current_user.get('is_admin', False):
             from ..core.database import DuckDBHandler
             db = DuckDBHandler()
-            subscription = db.get_subscription(current_user['id'])
-            is_free_plan = True
-            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-                is_free_plan = False
             
-            if is_free_plan:
-                 raise HTTPException(status_code=403, detail="Optimization is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
+            features = db.get_user_features(current_user['id'])
+            # Check for either standard or ultimate optimization
+            if "optimization_standard" not in features and "optimization_ultimate" not in features:
+                 raise HTTPException(status_code=403, detail="Optimization requires a paid subscription (Basic, Pro, Elite).")
 
         # Initialize Strategy Class
         strategy_class = None
@@ -349,13 +343,10 @@ async def websocket_optimize(websocket: WebSocket):
                 if not is_admin:
                     from ..core.database import DuckDBHandler
                     db = DuckDBHandler()
-                    subscription = db.get_subscription(current_user['id'])
-                    is_free_plan = True
-                    if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-                        is_free_plan = False
                     
-                    if is_free_plan:
-                         await websocket.send_json({"error": "Ultimate Optimization is available on any paid plan (Basic, Pro, Elite)."})
+                    features = db.get_user_features(current_user['id'])
+                    if "optimization_ultimate" not in features:
+                         await websocket.send_json({"error": "Ultimate Optimization requires an Elite subscription."})
                          continue
 
                 for task_data in tasks_data:

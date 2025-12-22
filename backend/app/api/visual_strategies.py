@@ -167,24 +167,26 @@ async def create_strategy(
         Created strategy
     """
     try:
-        # Enforce Free Plan Limits
+        # Enforce Features
         # Assuming I can fetch subscription by user_id.
         from ..core.database import DuckDBHandler
         db = DuckDBHandler()
         
-        # Check subscription
-        subscription = db.get_subscription(user_id)
-        is_free_plan = True
-        if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-            is_free_plan = False
-            
-        # Check admin status - need to fetch user
+        # Check features
+        # Need to re-fetch user for admin check just in case, but Depends already provides user_id?
+        # Ideally we pass current_user object but the Depends(get_current_user) returns ID? 
+        # Ah, looking at imports: `from ..core.auth import get_current_user`. 
+        # Wait, get_current_user usually returns dict. Let's check visual_strategies.py:110
+        # It says `user_id: int = Depends(get_current_user)`. 
+        # In `auth.py`, get_current_user returns dict? 
+        # Let's assume user_id is passed as int, we need to handle admin check via DB.
+        
         user = db.get_user_by_id(user_id)
-        if user and user.get('is_admin'):
-            is_free_plan = False
-            
-        if is_free_plan:
-             raise HTTPException(status_code=403, detail="Visual Strategy Builder is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
+        is_admin = user.get('is_admin', False) if user else False
+        
+        features = db.get_user_features(user_id, is_admin=is_admin)
+        if "visual_builder" not in features:
+             raise HTTPException(status_code=403, detail="Visual Strategy Builder requires a Pro or Elite subscription.")
 
         # Validate strategy first
         executor = JSONStrategyExecutor(strategy.json_config)
@@ -367,18 +369,13 @@ async def delete_strategy(
         from ..core.database import DuckDBHandler
         db = DuckDBHandler()
         
-        # Enforce Free Plan Limits
-        subscription = db.get_subscription(user_id)
-        is_free_plan = True
-        if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-            is_free_plan = False
-            
+        # Enforce Features
         user = db.get_user_by_id(user_id)
-        if user and user.get('is_admin'):
-            is_free_plan = False
-            
-        if is_free_plan:
-             raise HTTPException(status_code=403, detail="Visual Strategy Builder is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
+        is_admin = user.get('is_admin', False) if user else False
+        
+        features = db.get_user_features(user_id, is_admin=is_admin)
+        if "visual_builder" not in features:
+             raise HTTPException(status_code=403, detail="Visual Strategy Builder requires a Pro or Elite subscription.")
 
         
         result = db.conn.execute("""

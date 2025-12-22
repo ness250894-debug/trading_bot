@@ -33,16 +33,14 @@ async def get_sentiment_analysis(
     """
     try:
         # Enforce Free Plan Limits
+        # Enforce Features
         is_admin = current_user.get('is_admin', False)
         if not is_admin:
             from ..core.database import DuckDBHandler
             db = DuckDBHandler()
-            subscription = db.get_subscription(current_user['id'])
-            is_free_plan = True
-            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-                is_free_plan = False
             
-            if is_free_plan:
+            features = db.get_user_features(current_user['id'])
+            if "sentiment_standard" not in features and "sentiment_advanced" not in features:
                  raise HTTPException(status_code=403, detail="AI Sentiment is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
 
         # Normalize symbol (remove common suffixes)
@@ -75,17 +73,15 @@ async def get_advanced_sentiment(
     """
     try:
         # Enforce Free Plan Limits
+        # Enforce Features
         is_admin = current_user.get('is_admin', False)
         if not is_admin:
             from ..core.database import DuckDBHandler
             db = DuckDBHandler()
-            subscription = db.get_subscription(current_user['id'])
-            is_free_plan = True
-            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-                is_free_plan = False
             
-            if is_free_plan:
-                 raise HTTPException(status_code=403, detail="Advanced Sentiment is available on any paid plan (Basic, Pro, Elite).")
+            features = db.get_user_features(current_user['id'])
+            if "sentiment_advanced" not in features:
+                 raise HTTPException(status_code=403, detail="Advanced Sentiment is available on the Pro and Elite plans.")
 
         symbol = symbol.upper().replace('USDT', '').replace('USD', '').replace('/','')
         
@@ -192,16 +188,14 @@ async def manual_sentiment_analysis(
     """
     try:
         # Enforce Free Plan Limits
+        # Enforce Features
         is_admin = current_user.get('is_admin', False)
         if not is_admin:
             from ..core.database import DuckDBHandler
             db = DuckDBHandler()
-            subscription = db.get_subscription(current_user['id'])
-            is_free_plan = True
-            if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-                is_free_plan = False
             
-            if is_free_plan:
+            features = db.get_user_features(current_user['id'])
+            if "sentiment_standard" not in features and "sentiment_advanced" not in features:
                  raise HTTPException(status_code=403, detail="AI Sentiment is available on any paid plan (Basic, Pro, Elite). Please upgrade.")
 
         symbol = data.get('symbol', 'CRYPTO')

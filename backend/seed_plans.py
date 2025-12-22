@@ -3,8 +3,12 @@ import os
 import json
 from datetime import datetime
 
-# Add backend to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add project root to path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+# current_dir is .../backend
+# We want to import app from backend.app
+sys.path.append(current_dir) # Add backend folder
+sys.path.append(os.path.dirname(current_dir)) # Add root folder
 
 from app.core.database import DuckDBHandler
 from app.core import config
