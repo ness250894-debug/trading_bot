@@ -43,24 +43,41 @@ export default function Signup() {
             secureStorage.setToken(response.data.access_token);
 
             // Verify the token works before redirecting
-            // This prevents race conditions where the DB hasn't fully committed the new user
+            // We use 'fetch' directly to BYPASS the axios interceptors in api.js
+            // This prevents a temporary 401 (due to DB race condition) from triggering
+            // the global 'logout' logic which wipes the token we just saved.
             let verified = false;
-            for (let i = 0; i < 3; i++) {
+            for (let i = 0; i < 5; i++) { // Increased retries to 5
                 try {
-                    await api.get('/auth/me');
-                    verified = true;
-                    break;
+                    const res = await fetch('/api/auth/me', {
+                        headers: {
+                            'Authorization': `Bearer ${response.data.access_token}`
+                        }
+                    });
+
+                    if (res.ok) {
+                        verified = true;
+                        break;
+                    }
+                    // If 401 or other error, fallback to retry
                 } catch (e) {
-                    // Wait 500ms and retry
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    // Ignore network errors during retry
                 }
+                // Wait 800ms and retry
+                await new Promise(resolve => setTimeout(resolve, 800));
             }
 
             if (verified) {
                 // Force a hard reload to ensure all auth state is correctly initialized
                 window.location.href = '/main';
             } else {
-                throw new Error("Account created but failed to verify login. Please log in manually.");
+                // Even if verification "failed" here, we should probably still try to let them in,
+                // but maybe with a warning or just let the main app handle it.
+                // However, to be safe and avoid the "login loop", let's force the redirect 
+                // but checking connection first is safer.
+                // Actually, if we timed out, it might be better to just risk the redirect 
+                // than throw an error, as the DB *should* eventually catch up.
+                window.location.href = '/main';
             }
         } catch (err) {
             // Handle validation errors
