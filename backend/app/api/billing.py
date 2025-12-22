@@ -73,14 +73,16 @@ async def get_plans():
     
     for plan in plans:
         # Create display features
-        features = plan.get('features', [])
+        raw_features = plan.get('features', [])
         display_features = []
-        for feature_key in features:
+        for feature_key in raw_features:
             # Map key to display name, fallback to key if not found
             display_name = FEATURE_DISPLAY_NAMES.get(feature_key, feature_key.replace('_', ' ').title())
             display_features.append(display_name)
             
-        plan['display_features'] = display_features
+        # Swap: features becomes the display list (for UI), features_raw keeps codes
+        plan['features_raw'] = raw_features
+        plan['features'] = display_features
         formatted_plans.append(plan)
         
     return formatted_plans

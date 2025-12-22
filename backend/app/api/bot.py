@@ -203,22 +203,8 @@ async def create_bot_config(request: Request, config: BotConfigCreate, current_u
     # Check limits first - reusing logic from service or duplicating? 
     # Let's use service for creation if we had a method. We implemented quick_scalp but not generic create in service.
     # Checks are simple:
-    is_admin = current_user.get('is_admin', False)
-    if not is_admin:
-        sub = db.get_subscription(current_user['id'])
-        is_free = sub and sub['status'] == 'active' and sub['plan_id'].startswith('free')
-        if isinstance(sub, dict) and (not sub or sub.get('plan_id', 'free').startswith('free')):
-             # Actually safer to say: if not PRO, then Free.
-             # Logic: if not admin and not pro, check limit.
-             pass 
-             # Logic is duplicated here from original file. 
-             # For a pure refactor, we should move `create_bot_config` to service too.
-             # But let's leave DB interactions here if they are simple CRUD, 
-             # OR move strict business logic (limits) to service.
-             
-             # Better: service.verify_access(user_id, feature='multiple_bots')
-    
-    # For now, simplistic implementation to match previous behavior
+    # Config creation is open to all plans (limits enforced at startup)
+    # We could restrict total config count here if desired, but for now we allow creation.
     config_id = db.create_bot_config(current_user['id'], config.dict())
     if config_id:
         return {"status": "success", "config": db.get_bot_config(current_user['id'], config_id)}

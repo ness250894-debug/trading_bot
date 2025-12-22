@@ -47,17 +47,15 @@ async def get_marketplace_strategies(
         db = DuckDBHandler()
         
         # Enforce Free Plan Limits
-        subscription = db.get_subscription(user_id)
-        is_free_plan = True
-        if subscription and subscription['status'] == 'active' and not subscription['plan_id'].startswith('free'):
-            is_free_plan = False
-            
+        # Enforce Feature Access
+        # Social Trading requires 'standard_strategies' (Available on Basic+) or explicit 'marketplace_access' if we added it.
+        # Using 'standard_strategies' as proxy for Paid Plans as per seed_plans.py
         user = db.get_user_by_id(user_id)
-        if user and user.get('is_admin'):
-            is_free_plan = False
-            
-        if is_free_plan:
-             raise HTTPException(status_code=403, detail="Social Trading is not available on the Free plan. Please upgrade.")
+        is_admin = user.get('is_admin', False) if user else False
+        
+        features = db.get_user_features(user_id, is_admin)
+        if "standard_strategies" not in features:
+             raise HTTPException(status_code=403, detail="Social Trading is available on Basic, Pro, and Elite plans.")
 
         
         # Determine sort column
