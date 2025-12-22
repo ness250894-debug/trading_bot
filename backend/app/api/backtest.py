@@ -5,7 +5,7 @@ from typing import Dict, Any, List, Optional
 import pandas as pd
 import logging
 import asyncio
-from ..core.backtesting.backtest_engine import BacktestEngine
+from ..core.vectorized_backtest import VectorizedBacktester
 from ..core.database import db
 from ..core.hyperopt import Hyperopt
 from ..core.strategies.mean_reversion import MeanReversion
